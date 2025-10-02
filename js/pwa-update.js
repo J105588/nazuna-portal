@@ -17,7 +17,7 @@ class PWAUpdater {
 
     async registerServiceWorker() {
         try {
-            this.registration = await navigator.serviceWorker.register('/sw.js');
+            this.registration = await navigator.serviceWorker.register('./sw.js');
             console.log('Service Worker registered successfully');
 
             // アップデートをチェック

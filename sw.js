@@ -1,9 +1,14 @@
 const CACHE_NAME = 'student-council-v1';
 const urlsToCache = [
-  '/',
-  '/css/style.css',
-  '/js/app.js',
-  '/manifest.json'
+  './',
+  './css/style.css',
+  './js/app.js',
+  './js/config.js',
+  './js/pwa-install.js',
+  './js/pwa-update.js',
+  './manifest.json',
+  './index.html',
+  './images/icon-192x192.png'
 ];
 
 // インストール時のキャッシュ
@@ -68,8 +73,8 @@ self.addEventListener('activate', event => {
 self.addEventListener('push', event => {
   const options = {
     body: event.data ? event.data.text() : 'お知らせがあります',
-    icon: '/images/icon-192x192.png',
-    badge: '/images/badge-72x72.png',
+    icon: './images/icon-192x192.png',
+    badge: './images/badge-72x72.png',
     vibrate: [200, 100, 200],
     data: {
       dateOfArrival: Date.now(),
@@ -87,6 +92,6 @@ self.addEventListener('notificationclick', event => {
   event.notification.close();
   
   event.waitUntil(
-    clients.openWindow('/')
+    clients.openWindow('./')
   );
 });

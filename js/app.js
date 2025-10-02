@@ -269,13 +269,6 @@ function getCurrentPage() {
 
 // ナビゲーション初期化
 function initNavigation() {
-    const hamburger = document.querySelector('.hamburger');
-    const navMenu = document.querySelector('.nav-menu');
-    
-    hamburger?.addEventListener('click', () => {
-        navMenu.classList.toggle('active');
-    });
-    
     // ページ内リンクのスムーススクロール
     document.querySelectorAll('a[href^="#"]').forEach(anchor => {
         anchor.addEventListener('click', function(e) {
@@ -283,19 +276,12 @@ function initNavigation() {
             const target = document.querySelector(this.getAttribute('href'));
             if (target) {
                 target.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                navMenu?.classList.remove('active');
+                closeSidebar(); // サイドバーが開いている場合は閉じる
             }
         });
     });
     
-    // メニューの外側をクリックしたら閉じる
-    document.addEventListener('click', (e) => {
-        if (navMenu?.classList.contains('active') && 
-            !navMenu.contains(e.target) && 
-            !hamburger?.contains(e.target)) {
-            navMenu.classList.remove('active');
-        }
-    });
+    console.log('Navigation initialized - using sidebar navigation');
 }
 
 // サイドバー初期化
@@ -345,12 +331,21 @@ function toggleSidebar() {
     const sidebar = document.querySelector('.sidebar');
     const overlay = document.querySelector('.sidebar-overlay');
     
+    const isActive = sidebar?.classList.contains('active');
+    
     hamburger?.classList.toggle('active');
     sidebar?.classList.toggle('active');
     overlay?.classList.toggle('active');
     
+    // アクセシビリティ属性を更新
+    if (hamburger) {
+        const newExpanded = !isActive;
+        hamburger.setAttribute('aria-expanded', newExpanded.toString());
+        hamburger.setAttribute('aria-label', newExpanded ? 'メニューを閉じる' : 'メニューを開く');
+    }
+    
     // ボディのスクロールを制御
-    if (sidebar?.classList.contains('active')) {
+    if (!isActive) {
         document.body.style.overflow = 'hidden';
     } else {
         document.body.style.overflow = '';
@@ -673,9 +668,13 @@ function initPWA() {
     // PWAアップデーターとインストーラーは別ファイルで初期化されるため、
     // ここでは基本的なService Worker登録のみ行う
     if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.register('/sw.js')
+        navigator.serviceWorker.register('./sw.js')
             .then(registration => {
                 console.log('ServiceWorker registered successfully');
+                
+                // iOS向け通知許可の要求
+                requestIOSNotificationPermission();
+                
                 return registration;
             })
             .catch(err => {
@@ -683,6 +682,80 @@ function initPWA() {
             });
     } else {
         console.log('Service Worker not supported');
+    }
+}
+
+// iOS向け通知許可要求
+async function requestIOSNotificationPermission() {
+    // iOSデバイスの検出
+    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+    const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
+    
+    if (isIOS || isSafari) {
+        console.log('iOS device detected, requesting notification permission...');
+        
+        // 通知がサポートされているかチェック
+        if ('Notification' in window) {
+            try {
+                const permission = await Notification.requestPermission();
+                
+                if (permission === 'granted') {
+                    console.log('iOS notification permission granted');
+                    showNotification('通知が有効になりました', '重要なお知らせをお届けします', 'success');
+                    
+                    // PWAインストール促進（iOS Safari用）
+                    showIOSInstallPrompt();
+                } else if (permission === 'denied') {
+                    console.log('iOS notification permission denied');
+                } else {
+                    console.log('iOS notification permission default');
+                }
+            } catch (error) {
+                console.error('Error requesting iOS notification permission:', error);
+            }
+        }
+    }
+}
+
+// iOS向けインストール促進メッセージ
+function showIOSInstallPrompt() {
+    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+    const isInStandaloneMode = window.navigator.standalone === true;
+    
+    if (isIOS && !isInStandaloneMode) {
+        // PWAがまだインストールされていない場合のみ表示
+        setTimeout(() => {
+            const installPrompt = document.createElement('div');
+            installPrompt.className = 'ios-install-prompt';
+            installPrompt.innerHTML = `
+                <div class="ios-install-content">
+                    <div class="ios-install-icon">
+                        <i class="fas fa-mobile-alt"></i>
+                    </div>
+                    <div class="ios-install-text">
+                        <h4>アプリとしてインストール</h4>
+                        <p>ホーム画面に追加して、アプリのように使用できます</p>
+                        <div class="ios-install-steps">
+                            <span><i class="fas fa-share"></i> 共有ボタン</span>
+                            <span>→</span>
+                            <span><i class="fas fa-plus-square"></i> ホーム画面に追加</span>
+                        </div>
+                    </div>
+                    <button class="ios-install-close" onclick="this.parentElement.parentElement.remove()">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+            `;
+            
+            document.body.appendChild(installPrompt);
+            
+            // 10秒後に自動で消す
+            setTimeout(() => {
+                if (installPrompt.parentElement) {
+                    installPrompt.remove();
+                }
+            }, 10000);
+        }, 3000);
     }
 }
 
