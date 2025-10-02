@@ -157,8 +157,12 @@ function sendJsonpRequest(action, params = {}, callback) {
 document.addEventListener('DOMContentLoaded', function() {
     console.log('DOM loaded, initializing...');
     
-    // オープニング画面を表示
-    showOpeningScreen();
+    // 初回アクセスかチェックしてオープニング画面を表示
+    const isFirstVisit = checkAndMarkFirstVisit();
+    if (isFirstVisit) {
+        console.log('First visit detected, showing opening screen');
+        showOpeningScreen();
+    }
     
     // Supabaseを初期化
     initSupabase();
@@ -206,30 +210,55 @@ document.addEventListener('DOMContentLoaded', function() {
             console.error('Error during content initialization:', error);
         }
         
-        // オープニング画面を隠す
-        const elapsedTime = Date.now() - startTime;
-        const remainingTime = Math.max(minDisplayTime - elapsedTime, 0);
-        
-        console.log(`Elapsed time: ${elapsedTime}ms, remaining time: ${remainingTime}ms`);
-        
-        setTimeout(() => {
-            console.log('Hiding opening screen...');
-            hideOpeningScreen();
-        }, remainingTime);
+        // 初回アクセスの場合のみオープニング画面を隠す
+        if (isFirstVisit) {
+            const elapsedTime = Date.now() - startTime;
+            const remainingTime = Math.max(minDisplayTime - elapsedTime, 0);
+            
+            console.log(`Elapsed time: ${elapsedTime}ms, remaining time: ${remainingTime}ms`);
+            
+            setTimeout(() => {
+                console.log('Hiding opening screen...');
+                hideOpeningScreen();
+            }, remainingTime);
+        }
     };
     
     // コンテンツの初期化を開始
     initializeContent();
     
-    // フォールバック：5秒後に強制的にオープニング画面を閉じる
-    setTimeout(() => {
-        const openingScreen = document.getElementById('opening-screen');
-        if (openingScreen) {
-            console.log('Force hiding opening screen after 5 seconds');
-            hideOpeningScreen();
-        }
-    }, 5000);
+    // フォールバック：初回アクセスの場合のみ5秒後に強制的にオープニング画面を閉じる
+    if (isFirstVisit) {
+        setTimeout(() => {
+            const openingScreen = document.getElementById('opening-screen');
+            if (openingScreen) {
+                console.log('Force hiding opening screen after 5 seconds');
+                hideOpeningScreen();
+            }
+        }, 5000);
+    }
 });
+
+// 初回アクセスかチェックして記録
+function checkAndMarkFirstVisit() {
+    const FIRST_VISIT_KEY = 'nazuna-portal-first-visit';
+    const isFirstVisit = !localStorage.getItem(FIRST_VISIT_KEY);
+    
+    if (isFirstVisit) {
+        localStorage.setItem(FIRST_VISIT_KEY, Date.now().toString());
+        console.log('Marking first visit');
+    } else {
+        console.log('Returning visitor');
+    }
+    
+    return isFirstVisit;
+}
+
+// 初回アクセス状態をリセット（デバッグ用）
+function resetFirstVisit() {
+    localStorage.removeItem('nazuna-portal-first-visit');
+    console.log('First visit status reset');
+}
 
 // 現在のページを取得
 function getCurrentPage() {
@@ -286,10 +315,19 @@ function initSidebar() {
         closeSidebar();
     });
     
-    // サイドバー内のリンクをクリックしたらサイドバーを閉じる
+    // サイドバー内のリンクをクリックしたらサイドバーを閉じて画面遷移
     document.querySelectorAll('.sidebar-nav a').forEach(link => {
-        link.addEventListener('click', () => {
+        link.addEventListener('click', (e) => {
+            e.preventDefault(); // デフォルトのリンク動作を防ぐ
+            const href = link.getAttribute('href');
+            
+            // サイドバーを閉じる
             closeSidebar();
+            
+            // 少し遅延してから画面遷移（アニメーションのため）
+            setTimeout(() => {
+                window.location.href = href;
+            }, 300); // サイドバーのアニメーション時間と同じ
         });
     });
     
@@ -901,4 +939,12 @@ function initSurveyForm() {
             });
         }, 2000);
     });
+}
+
+// デバッグ用関数をグローバルに公開
+if (CONFIG.APP.DEBUG) {
+    window.resetFirstVisit = resetFirstVisit;
+    window.showOpeningScreen = showOpeningScreen;
+    window.hideOpeningScreen = hideOpeningScreen;
+    console.log('Debug functions available: resetFirstVisit(), showOpeningScreen(), hideOpeningScreen()');
 }
