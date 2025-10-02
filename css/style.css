@@ -2384,6 +2384,120 @@ textarea.form-control {
     flex-wrap: wrap;
 }
 
+/* PWAインストール通知 */
+.pwa-install-notification {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    background: var(--surface-color);
+    border-radius: 12px;
+    box-shadow: var(--shadow-xl);
+    border: 1px solid var(--border-color);
+    z-index: 10000;
+    max-width: 400px;
+    width: 90%;
+    animation: slideInRight 0.3s ease;
+    overflow: hidden;
+}
+
+.pwa-install-notification-content {
+    padding: 1.5rem;
+    display: flex;
+    gap: 1rem;
+    align-items: flex-start;
+    position: relative;
+}
+
+.pwa-install-notification-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.pwa-install-info .pwa-install-notification-icon {
+    background: rgba(52, 152, 219, 0.1);
+}
+
+.pwa-install-success .pwa-install-notification-icon {
+    background: rgba(39, 174, 96, 0.1);
+}
+
+.pwa-install-error .pwa-install-notification-icon {
+    background: rgba(231, 76, 60, 0.1);
+}
+
+.pwa-install-notification-icon i {
+    font-size: 1.2rem;
+}
+
+.pwa-install-info .pwa-install-notification-icon i {
+    color: var(--secondary-color);
+}
+
+.pwa-install-success .pwa-install-notification-icon i {
+    color: var(--success-color);
+}
+
+.pwa-install-error .pwa-install-notification-icon i {
+    color: var(--accent-color);
+}
+
+.pwa-install-notification-text {
+    flex: 1;
+}
+
+.pwa-install-notification-text h4 {
+    margin-bottom: 0.5rem;
+    color: var(--primary-color);
+    font-size: 1rem;
+    font-weight: 600;
+}
+
+.pwa-install-notification-text p {
+    margin: 0;
+    color: var(--text-light);
+    font-size: 0.9rem;
+    line-height: 1.4;
+}
+
+.pwa-install-notification-close {
+    position: absolute;
+    top: 0.75rem;
+    right: 0.75rem;
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: var(--text-light);
+    padding: 0.25rem;
+    border-radius: 0.25rem;
+    transition: all 0.3s ease;
+    width: 24px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.pwa-install-notification-close:hover {
+    background: var(--background-color);
+    color: var(--text-color);
+}
+
+@keyframes slideInRight {
+    from {
+        opacity: 0;
+        transform: translateX(100%);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
 /* iOS PWAインストール促進メッセージ */
 .ios-install-prompt {
     position: fixed;

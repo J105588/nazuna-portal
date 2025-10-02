@@ -58,8 +58,18 @@ class PWAInstaller {
     }
 
     async installPWA() {
+        // iOS Safari の場合は特別な案内を表示
+        const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+        const isInStandaloneMode = window.navigator.standalone === true;
+        
+        if (isIOS && !isInStandaloneMode) {
+            this.showIOSInstallInstructions();
+            return;
+        }
+        
         if (!this.deferredPrompt) {
             console.log('PWA install prompt not available');
+            this.showFallbackInstallMessage();
             return;
         }
 
@@ -150,6 +160,83 @@ class PWAInstaller {
 
         console.log('PWA Features:', features);
         return features;
+    }
+
+    // iOS向けインストール案内
+    showIOSInstallInstructions() {
+        this.showNotification(
+            'アプリをインストール',
+            'Safari で共有ボタン → "ホーム画面に追加" を選択してください',
+            'info'
+        );
+    }
+
+    // フォールバック案内メッセージ
+    showFallbackInstallMessage() {
+        this.showNotification(
+            'アプリのインストール',
+            'このブラウザではワンクリックインストールをサポートしていませんが、ブックマークに追加してアプリのように使用できます',
+            'info'
+        );
+    }
+
+    // エラーメッセージ
+    showInstallErrorMessage() {
+        this.showNotification(
+            'インストールエラー',
+            'アプリのインストールに失敗しました。再度お試しください',
+            'error'
+        );
+    }
+
+    // 共通通知表示メソッド
+    showNotification(title, message, type = 'info') {
+        // 既存の通知があれば削除
+        const existingNotification = document.querySelector('.pwa-install-notification');
+        if (existingNotification) {
+            existingNotification.remove();
+        }
+
+        const notification = document.createElement('div');
+        notification.className = `pwa-install-notification pwa-install-${type}`;
+        notification.innerHTML = `
+            <div class="pwa-install-notification-content">
+                <div class="pwa-install-notification-icon">
+                    <i class="fas ${this.getIconForType(type)}"></i>
+                </div>
+                <div class="pwa-install-notification-text">
+                    <h4>${title}</h4>
+                    <p>${message}</p>
+                </div>
+                <button class="pwa-install-notification-close">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+        `;
+
+        // 閉じるボタンのイベント
+        const closeBtn = notification.querySelector('.pwa-install-notification-close');
+        closeBtn.addEventListener('click', () => notification.remove());
+
+        document.body.appendChild(notification);
+
+        // 10秒後に自動で削除
+        setTimeout(() => {
+            if (notification.parentElement) {
+                notification.remove();
+            }
+        }, 10000);
+    }
+
+    // タイプに応じたアイコンを取得
+    getIconForType(type) {
+        const icons = {
+            success: 'fa-check-circle',
+            error: 'fa-exclamation-circle',
+            info: 'fa-info-circle',
+            warning: 'fa-exclamation-triangle'
+        };
+        return icons[type] || 'fa-info-circle';
     }
 }
 

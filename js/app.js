@@ -272,11 +272,23 @@ function initNavigation() {
     // ページ内リンクのスムーススクロール
     document.querySelectorAll('a[href^="#"]').forEach(anchor => {
         anchor.addEventListener('click', function(e) {
+            const href = this.getAttribute('href');
+            
+            // 空のhrefや単純な#の場合はスキップ
+            if (!href || href === '#' || href.length <= 1) {
+                return;
+            }
+            
             e.preventDefault();
-            const target = document.querySelector(this.getAttribute('href'));
-            if (target) {
-                target.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                closeSidebar(); // サイドバーが開いている場合は閉じる
+            
+            try {
+                const target = document.querySelector(href);
+                if (target) {
+                    target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    closeSidebar(); // サイドバーが開いている場合は閉じる
+                }
+            } catch (error) {
+                console.warn('Invalid selector for smooth scroll:', href);
             }
         });
     });
