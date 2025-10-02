@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>アンケート・投票 - 生徒会ポータルサイト</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="manifest" href="manifest.json">
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <meta name="theme-color" content="#2c3e50">
+</head>
+<body>
+    <header>
+        <nav class="navbar">
+            <div class="nav-container">
+                <h1 class="logo">生徒会ポータル</h1>
+                <ul class="nav-menu">
+                    <li><a href="index.html" class="nav-link">ホーム</a></li>
+                    <li><a href="council.html" class="nav-link">生徒会紹介</a></li>
+                    <li><a href="clubs.html" class="nav-link">部活動</a></li>
+                    <li><a href="forum.html" class="nav-link">なずなフォーラム</a></li>
+                    <li><a href="news.html" class="nav-link">お知らせ</a></li>
+                    <li><a href="survey.html" class="nav-link active">アンケート</a></li>
+                </ul>
+                <div class="hamburger">
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                </div>
+            </div>
+        </nav>
+    </header>
+
+    <main>
+        <!-- ページヘッダー -->
+        <section class="page-header">
+            <div class="container">
+                <div class="page-header-content">
+                    <h1><i class="fas fa-poll"></i> アンケート・投票</h1>
+                    <p>あなたの意見で学校生活をより良くしましょう</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- 現在実施中のアンケート -->
+        <section class="active-surveys">
+            <div class="container">
+                <h2 class="section-title">実施中のアンケート・投票</h2>
+                <div class="surveys-grid" id="active-surveys">
+                    <div class="loading">読み込み中...</div>
+                </div>
+            </div>
+        </section>
+
+        <!-- サンプルアンケート -->
+        <section class="sample-survey">
+            <div class="container">
+                <div class="survey-card active-survey">
+                    <div class="survey-header">
+                        <div class="survey-status">
+                            <span class="status-badge active">実施中</span>
+                            <span class="survey-deadline">締切: 2024年2月15日</span>
+                        </div>
+                        <h3>文化祭の企画について</h3>
+                        <p>来年度の文化祭をより楽しいものにするため、皆さんのご意見をお聞かせください。</p>
+                    </div>
+                    
+                    <div class="survey-content">
+                        <div class="question">
+                            <h4>Q1. 文化祭で最も楽しみにしているのは何ですか？</h4>
+                            <div class="options">
+                                <label class="option">
+                                    <input type="radio" name="q1" value="stage">
+                                    <span class="checkmark"></span>
+                                    ステージ発表
+                                </label>
+                                <label class="option">
+                                    <input type="radio" name="q1" value="exhibition">
+                                    <span class="checkmark"></span>
+                                    展示・体験コーナー
+                                </label>
+                                <label class="option">
+                                    <input type="radio" name="q1" value="food">
+                                    <span class="checkmark"></span>
+                                    模擬店・食べ物
+                                </label>
+                                <label class="option">
+                                    <input type="radio" name="q1" value="game">
+                                    <span class="checkmark"></span>
+                                    ゲーム・アトラクション
+                                </label>
+                            </div>
+                        </div>
+                        
+                        <div class="question">
+                            <h4>Q2. 新しく追加してほしい企画はありますか？（複数選択可）</h4>
+                            <div class="options">
+                                <label class="option">
+                                    <input type="checkbox" name="q2" value="concert">
+                                    <span class="checkmark"></span>
+                                    コンサート・ライブ
+                                </label>
+                                <label class="option">
+                                    <input type="checkbox" name="q2" value="contest">
+                                    <span class="checkmark"></span>
+                                    コンテスト・大会
+                                </label>
+                                <label class="option">
+                                    <input type="checkbox" name="q2" value="workshop">
+                                    <span class="checkmark"></span>
+                                    ワークショップ
+                                </label>
+                                <label class="option">
+                                    <input type="checkbox" name="q2" value="market">
+                                    <span class="checkmark"></span>
+                                    フリーマーケット
+                                </label>
+                            </div>
+                        </div>
+                        
+                        <div class="question">
+                            <h4>Q3. その他のご意見・ご要望があればお聞かせください</h4>
+                            <textarea class="form-control" placeholder="自由にご記入ください"></textarea>
+                        </div>
+                        
+                        <div class="survey-actions">
+                            <button class="btn btn-primary">
+                                <i class="fas fa-paper-plane"></i>
+                                回答を送信
+                            </button>
+                            <div class="survey-info">
+                                <small>
+                                    <i class="fas fa-info-circle"></i>
+                                    回答は匿名で処理されます
+                                </small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 過去のアンケート結果 -->
+        <section class="past-surveys">
+            <div class="container">
+                <h2 class="section-title">過去のアンケート結果</h2>
+                <div class="results-grid">
+                    <div class="result-card">
+                        <div class="result-header">
+                            <h3>体育祭の種目について</h3>
+                            <span class="result-date">2024年1月実施</span>
+                        </div>
+                        <div class="result-summary">
+                            <p>回答者数: 245名</p>
+                            <div class="result-chart">
+                                <div class="chart-item">
+                                    <span class="chart-label">リレー</span>
+                                    <div class="chart-bar">
+                                        <div class="chart-fill" style="width: 85%"></div>
+                                    </div>
+                                    <span class="chart-value">85%</span>
+                                </div>
+                                <div class="chart-item">
+                                    <span class="chart-label">綱引き</span>
+                                    <div class="chart-bar">
+                                        <div class="chart-fill" style="width: 72%"></div>
+                                    </div>
+                                    <span class="chart-value">72%</span>
+                                </div>
+                                <div class="chart-item">
+                                    <span class="chart-label">玉入れ</span>
+                                    <div class="chart-bar">
+                                        <div class="chart-fill" style="width: 68%"></div>
+                                    </div>
+                                    <span class="chart-value">68%</span>
+                                </div>
+                            </div>
+                        </div>
+                        <a href="#" class="btn btn-outline">詳細を見る</a>
+                    </div>
+                    
+                    <div class="result-card">
+                        <div class="result-header">
+                            <h3>給食メニューの満足度</h3>
+                            <span class="result-date">2023年12月実施</span>
+                        </div>
+                        <div class="result-summary">
+                            <p>回答者数: 312名</p>
+                            <div class="satisfaction-chart">
+                                <div class="satisfaction-item">
+                                    <span>とても満足</span>
+                                    <div class="satisfaction-bar" style="width: 35%">35%</div>
+                                </div>
+                                <div class="satisfaction-item">
+                                    <span>満足</span>
+                                    <div class="satisfaction-bar" style="width: 45%">45%</div>
+                                </div>
+                                <div class="satisfaction-item">
+                                    <span>普通</span>
+                                    <div class="satisfaction-bar" style="width: 15%">15%</div>
+                                </div>
+                                <div class="satisfaction-item">
+                                    <span>不満</span>
+                                    <div class="satisfaction-bar" style="width: 5%">5%</div>
+                                </div>
+                            </div>
+                        </div>
+                        <a href="#" class="btn btn-outline">詳細を見る</a>
+                    </div>
+                    
+                    <div class="result-card">
+                        <div class="result-header">
+                            <h3>部活動の活動時間について</h3>
+                            <span class="result-date">2023年11月実施</span>
+                        </div>
+                        <div class="result-summary">
+                            <p>回答者数: 189名</p>
+                            <div class="pie-chart-text">
+                                <p>現在の活動時間が「適切」と回答した生徒が78%、「長すぎる」が15%、「短すぎる」が7%でした。</p>
+                            </div>
+                        </div>
+                        <a href="#" class="btn btn-outline">詳細を見る</a>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- アンケート作成依頼 -->
+        <section class="survey-request">
+            <div class="container">
+                <div class="request-content">
+                    <h2>アンケートの実施を依頼する</h2>
+                    <p>学校生活に関するアンケートの実施を希望される場合は、生徒会までご相談ください。適切な内容であれば、アンケートの作成・実施をサポートいたします。</p>
+                    <div class="request-steps">
+                        <div class="step">
+                            <div class="step-number">1</div>
+                            <div class="step-content">
+                                <h4>相談・提案</h4>
+                                <p>なずなフォーラムまたは生徒会室で相談</p>
+                            </div>
+                        </div>
+                        <div class="step">
+                            <div class="step-number">2</div>
+                            <div class="step-content">
+                                <h4>内容検討</h4>
+                                <p>アンケートの目的と内容を検討</p>
+                            </div>
+                        </div>
+                        <div class="step">
+                            <div class="step-number">3</div>
+                            <div class="step-content">
+                                <h4>実施・公開</h4>
+                                <p>アンケート実施と結果の公開</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="request-buttons">
+                        <a href="forum.html" class="btn btn-primary">
+                            <i class="fas fa-comments"></i>
+                            フォーラムで相談
+                        </a>
+                        <a href="council.html" class="btn btn-secondary">
+                            <i class="fas fa-users"></i>
+                            生徒会について
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <footer>
+        <div class="footer-content">
+            <div class="footer-section">
+                <h3>生徒会ポータル</h3>
+                <p>みんなでつくる学校生活</p>
+            </div>
+            <div class="footer-section">
+                <h4>リンク</h4>
+                <ul>
+                    <li><a href="council.html">生徒会紹介</a></li>
+                    <li><a href="clubs.html">部活動</a></li>
+                    <li><a href="forum.html">なずなフォーラム</a></li>
+                </ul>
+            </div>
+            <div class="footer-section">
+                <h4>お問い合わせ</h4>
+                <p>生徒会室まで</p>
+                <p>平日 12:30-13:00</p>
+            </div>
+        </div>
+        <div class="footer-bottom">
+            <p>&copy; 2024 生徒会. All rights reserved.</p>
+        </div>
+    </footer>
+
+    <script src="js/config.js"></script>
+    <script src="js/app.js"></script>
+</body>
+</html>

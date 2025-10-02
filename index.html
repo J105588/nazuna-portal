@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>生徒会ポータルサイト - ホーム</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="manifest" href="manifest.json">
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <meta name="theme-color" content="#2c3e50">
+</head>
+<body>
+    <header>
+        <nav class="navbar">
+            <div class="nav-container">
+                <h1 class="logo">生徒会ポータル</h1>
+                <ul class="nav-menu">
+                    <li><a href="index.html" class="nav-link active">ホーム</a></li>
+                    <li><a href="council.html" class="nav-link">生徒会紹介</a></li>
+                    <li><a href="clubs.html" class="nav-link">部活動</a></li>
+                    <li><a href="forum.html" class="nav-link">なずなフォーラム</a></li>
+                    <li><a href="news.html" class="nav-link">お知らせ</a></li>
+                    <li><a href="survey.html" class="nav-link">アンケート</a></li>
+                </ul>
+                <div class="hamburger">
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                </div>
+            </div>
+        </nav>
+    </header>
+
+    <main>
+        <!-- ヒーローセクション -->
+        <section class="hero">
+            <div class="hero-content">
+                <div class="hero-text">
+                    <h1>みんなでつくる学校生活</h1>
+                    <p class="hero-subtitle">生徒会ポータルサイトへようこそ</p>
+                    <p class="hero-description">
+                        私たちは生徒一人ひとりの声を大切にし、<br>
+                        より良い学校生活の実現を目指しています。
+                    </p>
+                    <div class="hero-buttons">
+                        <a href="forum.html" class="btn btn-primary">
+                            <i class="fas fa-comments"></i>
+                            意見を投稿する
+                        </a>
+                        <a href="council.html" class="btn btn-secondary">
+                            <i class="fas fa-users"></i>
+                            生徒会について
+                        </a>
+                    </div>
+                </div>
+                <div class="hero-image">
+                    <div class="hero-graphic">
+                        <i class="fas fa-graduation-cap"></i>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 機能紹介セクション -->
+        <section class="features">
+            <div class="container">
+                <h2 class="section-title">主な機能</h2>
+                <div class="features-grid">
+                    <div class="feature-card">
+                        <div class="feature-icon">
+                            <i class="fas fa-users"></i>
+                        </div>
+                        <h3>生徒会紹介</h3>
+                        <p>生徒会メンバーの紹介と活動内容をご覧いただけます。</p>
+                        <a href="council.html" class="feature-link">詳しく見る <i class="fas fa-arrow-right"></i></a>
+                    </div>
+                    
+                    <div class="feature-card">
+                        <div class="feature-icon">
+                            <i class="fas fa-running"></i>
+                        </div>
+                        <h3>部活動紹介</h3>
+                        <p>各部活動の詳細情報や活動スケジュールを確認できます。</p>
+                        <a href="clubs.html" class="feature-link">詳しく見る <i class="fas fa-arrow-right"></i></a>
+                    </div>
+                    
+                    <div class="feature-card">
+                        <div class="feature-icon">
+                            <i class="fas fa-comments"></i>
+                        </div>
+                        <h3>なずなフォーラム</h3>
+                        <p>匿名で意見や要望を投稿し、生徒会と対話できます。</p>
+                        <a href="forum.html" class="feature-link">詳しく見る <i class="fas fa-arrow-right"></i></a>
+                    </div>
+                    
+                    <div class="feature-card">
+                        <div class="feature-icon">
+                            <i class="fas fa-bell"></i>
+                        </div>
+                        <h3>お知らせ</h3>
+                        <p>学校行事や生徒会からの重要なお知らせをチェックできます。</p>
+                        <a href="news.html" class="feature-link">詳しく見る <i class="fas fa-arrow-right"></i></a>
+                    </div>
+                    
+                    <div class="feature-card">
+                        <div class="feature-icon">
+                            <i class="fas fa-poll"></i>
+                        </div>
+                        <h3>アンケート・投票</h3>
+                        <p>学校生活に関するアンケートや投票に参加できます。</p>
+                        <a href="survey.html" class="feature-link">詳しく見る <i class="fas fa-arrow-right"></i></a>
+                    </div>
+                    
+                    <div class="feature-card">
+                        <div class="feature-icon">
+                            <i class="fas fa-mobile-alt"></i>
+                        </div>
+                        <h3>PWA対応</h3>
+                        <p>スマートフォンにアプリとしてインストールして利用できます。</p>
+                        <a href="#" class="feature-link" id="install-pwa">インストール <i class="fas fa-download"></i></a>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 最新情報セクション -->
+        <section class="latest-updates">
+            <div class="container">
+                <h2 class="section-title">最新情報</h2>
+                <div class="updates-grid">
+                    <div class="update-card news-update">
+                        <div class="update-header">
+                            <i class="fas fa-bell"></i>
+                            <span>最新のお知らせ</span>
+                        </div>
+                        <div class="update-content" id="latest-news">
+                            <div class="loading">読み込み中...</div>
+                        </div>
+                        <a href="news.html" class="update-link">すべて見る</a>
+                    </div>
+                    
+                    <div class="update-card forum-update">
+                        <div class="update-header">
+                            <i class="fas fa-comments"></i>
+                            <span>最新の投稿</span>
+                        </div>
+                        <div class="update-content" id="latest-posts">
+                            <div class="loading">読み込み中...</div>
+                        </div>
+                        <a href="forum.html" class="update-link">フォーラムを見る</a>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <footer>
+        <div class="footer-content">
+            <div class="footer-section">
+                <h3>生徒会ポータル</h3>
+                <p>みんなでつくる学校生活</p>
+            </div>
+            <div class="footer-section">
+                <h4>リンク</h4>
+                <ul>
+                    <li><a href="council.html">生徒会紹介</a></li>
+                    <li><a href="clubs.html">部活動</a></li>
+                    <li><a href="forum.html">なずなフォーラム</a></li>
+                </ul>
+            </div>
+            <div class="footer-section">
+                <h4>お問い合わせ</h4>
+                <p>生徒会室まで</p>
+                <p>平日 12:30-13:00</p>
+            </div>
+        </div>
+        <div class="footer-bottom">
+            <p>&copy; 2024 生徒会. All rights reserved.</p>
+        </div>
+    </footer>
+
+    <script src="js/config.js"></script>
+    <script src="js/app.js"></script>
+</body>
+</html>

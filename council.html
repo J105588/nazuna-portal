@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>生徒会紹介 - 生徒会ポータルサイト</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="manifest" href="manifest.json">
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <meta name="theme-color" content="#2c3e50">
+</head>
+<body>
+    <header>
+        <nav class="navbar">
+            <div class="nav-container">
+                <h1 class="logo">生徒会ポータル</h1>
+                <ul class="nav-menu">
+                    <li><a href="index.html" class="nav-link">ホーム</a></li>
+                    <li><a href="council.html" class="nav-link active">生徒会紹介</a></li>
+                    <li><a href="clubs.html" class="nav-link">部活動</a></li>
+                    <li><a href="forum.html" class="nav-link">なずなフォーラム</a></li>
+                    <li><a href="news.html" class="nav-link">お知らせ</a></li>
+                    <li><a href="survey.html" class="nav-link">アンケート</a></li>
+                </ul>
+                <div class="hamburger">
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                </div>
+            </div>
+        </nav>
+    </header>
+
+    <main>
+        <!-- ページヘッダー -->
+        <section class="page-header">
+            <div class="container">
+                <div class="page-header-content">
+                    <h1><i class="fas fa-users"></i> 生徒会紹介</h1>
+                    <p>私たちと一緒に、より良い学校生活を作りましょう</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- 生徒会について -->
+        <section class="council-about">
+            <div class="container">
+                <div class="about-content">
+                    <div class="about-text">
+                        <h2>生徒会について</h2>
+                        <p>私たち生徒会は、全校生徒の代表として学校生活の向上に取り組んでいます。生徒一人ひとりの声を大切にし、みんなが楽しく充実した学校生活を送れるよう、様々な活動を行っています。</p>
+                        <div class="mission-points">
+                            <div class="mission-point">
+                                <i class="fas fa-heart"></i>
+                                <div>
+                                    <h4>生徒の声を大切に</h4>
+                                    <p>なずなフォーラムを通じて、みなさんの意見や要望をお聞きしています</p>
+                                </div>
+                            </div>
+                            <div class="mission-point">
+                                <i class="fas fa-hands-helping"></i>
+                                <div>
+                                    <h4>協力とサポート</h4>
+                                    <p>部活動や学校行事のサポート、生徒同士の交流促進に努めています</p>
+                                </div>
+                            </div>
+                            <div class="mission-point">
+                                <i class="fas fa-lightbulb"></i>
+                                <div>
+                                    <h4>新しいアイデア</h4>
+                                    <p>創造的な企画や改善提案で、学校生活をより楽しくしています</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="about-image">
+                        <div class="council-graphic">
+                            <i class="fas fa-users-cog"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- メンバー紹介 -->
+        <section class="council-members-section">
+            <div class="container">
+                <h2 class="section-title">メンバー紹介</h2>
+                <div class="council-members" id="council-members">
+                    <!-- メンバー情報はJavaScriptで動的に生成 -->
+                </div>
+            </div>
+        </section>
+
+        <!-- 活動内容 -->
+        <section class="council-activities">
+            <div class="container">
+                <h2 class="section-title">主な活動内容</h2>
+                <div class="activities-grid">
+                    <div class="activity-card">
+                        <div class="activity-icon">
+                            <i class="fas fa-calendar-alt"></i>
+                        </div>
+                        <h3>学校行事の企画・運営</h3>
+                        <p>体育祭、文化祭、卒業式などの学校行事の企画・運営を行っています。生徒のみなさんに楽しんでもらえるよう、工夫を凝らした企画を考えています。</p>
+                    </div>
+                    
+                    <div class="activity-card">
+                        <div class="activity-icon">
+                            <i class="fas fa-bullhorn"></i>
+                        </div>
+                        <h3>生徒の意見集約</h3>
+                        <p>なずなフォーラムやアンケートを通じて、生徒のみなさんの意見や要望を集め、学校側との橋渡し役を務めています。</p>
+                    </div>
+                    
+                    <div class="activity-card">
+                        <div class="activity-icon">
+                            <i class="fas fa-handshake"></i>
+                        </div>
+                        <h3>部活動サポート</h3>
+                        <p>各部活動の活動支援や、部活動間の交流促進、新入生への部活動紹介などを行っています。</p>
+                    </div>
+                    
+                    <div class="activity-card">
+                        <div class="activity-icon">
+                            <i class="fas fa-newspaper"></i>
+                        </div>
+                        <h3>情報発信</h3>
+                        <p>生徒会だよりの発行や、このポータルサイトを通じて、学校生活に関する情報を発信しています。</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 生徒会に参加しよう -->
+        <section class="join-council">
+            <div class="container">
+                <div class="join-content">
+                    <h2>生徒会に参加しませんか？</h2>
+                    <p>生徒会では、一緒に活動してくれる仲間を募集しています。学校生活をより良くしたい、みんなの役に立ちたいという気持ちがあれば、誰でも参加できます。</p>
+                    <div class="join-buttons">
+                        <a href="forum.html" class="btn btn-primary">
+                            <i class="fas fa-comments"></i>
+                            質問・相談する
+                        </a>
+                        <a href="news.html" class="btn btn-secondary">
+                            <i class="fas fa-bell"></i>
+                            募集情報を見る
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <footer>
+        <div class="footer-content">
+            <div class="footer-section">
+                <h3>生徒会ポータル</h3>
+                <p>みんなでつくる学校生活</p>
+            </div>
+            <div class="footer-section">
+                <h4>リンク</h4>
+                <ul>
+                    <li><a href="council.html">生徒会紹介</a></li>
+                    <li><a href="clubs.html">部活動</a></li>
+                    <li><a href="forum.html">なずなフォーラム</a></li>
+                </ul>
+            </div>
+            <div class="footer-section">
+                <h4>お問い合わせ</h4>
+                <p>生徒会室まで</p>
+                <p>平日 12:30-13:00</p>
+            </div>
+        </div>
+        <div class="footer-bottom">
+            <p>&copy; 2024 生徒会. All rights reserved.</p>
+        </div>
+    </footer>
+
+    <script src="js/config.js"></script>
+    <script src="js/app.js"></script>
+</body>
+</html>

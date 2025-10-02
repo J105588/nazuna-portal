@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>お知らせ - 生徒会ポータルサイト</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="manifest" href="manifest.json">
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <meta name="theme-color" content="#2c3e50">
+</head>
+<body>
+    <header>
+        <nav class="navbar">
+            <div class="nav-container">
+                <h1 class="logo">生徒会ポータル</h1>
+                <ul class="nav-menu">
+                    <li><a href="index.html" class="nav-link">ホーム</a></li>
+                    <li><a href="council.html" class="nav-link">生徒会紹介</a></li>
+                    <li><a href="clubs.html" class="nav-link">部活動</a></li>
+                    <li><a href="forum.html" class="nav-link">なずなフォーラム</a></li>
+                    <li><a href="news.html" class="nav-link active">お知らせ</a></li>
+                    <li><a href="survey.html" class="nav-link">アンケート</a></li>
+                </ul>
+                <div class="hamburger">
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                </div>
+            </div>
+        </nav>
+    </header>
+
+    <main>
+        <!-- ページヘッダー -->
+        <section class="page-header">
+            <div class="container">
+                <div class="page-header-content">
+                    <h1><i class="fas fa-bell"></i> お知らせ</h1>
+                    <p>学校行事や生徒会からの重要な情報をお届けします</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- フィルター -->
+        <section class="news-filter">
+            <div class="container">
+                <div class="filter-controls">
+                    <h3>カテゴリで絞り込み</h3>
+                    <div class="filter-buttons">
+                        <button class="filter-btn active" data-category="all">
+                            <i class="fas fa-th"></i> すべて
+                        </button>
+                        <button class="filter-btn" data-category="event">
+                            <i class="fas fa-calendar-alt"></i> イベント
+                        </button>
+                        <button class="filter-btn" data-category="newsletter">
+                            <i class="fas fa-newspaper"></i> 生徒会だより
+                        </button>
+                        <button class="filter-btn" data-category="recruitment">
+                            <i class="fas fa-users"></i> 募集
+                        </button>
+                        <button class="filter-btn" data-category="important">
+                            <i class="fas fa-exclamation-triangle"></i> 重要
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- お知らせ一覧 -->
+        <section class="news-list">
+            <div class="container">
+                <div class="news-container" id="news-container">
+                    <div class="loading">読み込み中...</div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 生徒会だより -->
+        <section class="newsletter-section">
+            <div class="container">
+                <h2 class="section-title">生徒会だより</h2>
+                <div class="newsletter-grid">
+                    <div class="newsletter-item">
+                        <div class="newsletter-cover">
+                            <i class="fas fa-file-alt"></i>
+                        </div>
+                        <div class="newsletter-info">
+                            <h3>生徒会だより 1月号</h3>
+                            <p class="newsletter-date">2024年1月15日発行</p>
+                            <p class="newsletter-description">新年のご挨拶、1月の活動報告、2月の予定など</p>
+                            <a href="#" class="btn btn-outline">
+                                <i class="fas fa-download"></i>
+                                ダウンロード
+                            </a>
+                        </div>
+                    </div>
+                    
+                    <div class="newsletter-item">
+                        <div class="newsletter-cover">
+                            <i class="fas fa-file-alt"></i>
+                        </div>
+                        <div class="newsletter-info">
+                            <h3>生徒会だより 12月号</h3>
+                            <p class="newsletter-date">2023年12月15日発行</p>
+                            <p class="newsletter-description">文化祭の振り返り、冬休みの過ごし方、新年の抱負など</p>
+                            <a href="#" class="btn btn-outline">
+                                <i class="fas fa-download"></i>
+                                ダウンロード
+                            </a>
+                        </div>
+                    </div>
+                    
+                    <div class="newsletter-item">
+                        <div class="newsletter-cover">
+                            <i class="fas fa-file-alt"></i>
+                        </div>
+                        <div class="newsletter-info">
+                            <h3>生徒会だより 11月号</h3>
+                            <p class="newsletter-date">2023年11月15日発行</p>
+                            <p class="newsletter-description">体育祭の報告、部活動紹介、生徒会選挙について</p>
+                            <a href="#" class="btn btn-outline">
+                                <i class="fas fa-download"></i>
+                                ダウンロード
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 重要なお知らせ -->
+        <section class="important-notices">
+            <div class="container">
+                <h2 class="section-title">重要なお知らせ</h2>
+                <div class="important-list">
+                    <div class="important-item">
+                        <div class="important-icon">
+                            <i class="fas fa-exclamation-triangle"></i>
+                        </div>
+                        <div class="important-content">
+                            <h3>台風接近に伴う臨時休校について</h3>
+                            <p class="important-date">2024年1月20日</p>
+                            <p>明日1月21日は台風の影響により臨時休校となります。詳細は学校からの連絡をご確認ください。</p>
+                        </div>
+                    </div>
+                    
+                    <div class="important-item">
+                        <div class="important-icon">
+                            <i class="fas fa-calendar-times"></i>
+                        </div>
+                        <div class="important-content">
+                            <h3>定期考査時間割変更のお知らせ</h3>
+                            <p class="important-date">2024年1月18日</p>
+                            <p>2月の定期考査の時間割に一部変更があります。変更内容は各クラスで配布される資料をご確認ください。</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 通知設定 -->
+        <section class="notification-settings">
+            <div class="container">
+                <div class="notification-content">
+                    <h2>お知らせ通知を受け取る</h2>
+                    <p>重要なお知らせをプッシュ通知で受け取ることができます。</p>
+                    <div class="notification-buttons">
+                        <button id="enable-notifications" class="btn btn-primary">
+                            <i class="fas fa-bell"></i>
+                            通知を有効にする
+                        </button>
+                        <button id="disable-notifications" class="btn btn-secondary" style="display: none;">
+                            <i class="fas fa-bell-slash"></i>
+                            通知を無効にする
+                        </button>
+                    </div>
+                    <div class="notification-status" id="notification-status">
+                        <p><i class="fas fa-info-circle"></i> 通知設定の状態を確認中...</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <footer>
+        <div class="footer-content">
+            <div class="footer-section">
+                <h3>生徒会ポータル</h3>
+                <p>みんなでつくる学校生活</p>
+            </div>
+            <div class="footer-section">
+                <h4>リンク</h4>
+                <ul>
+                    <li><a href="council.html">生徒会紹介</a></li>
+                    <li><a href="clubs.html">部活動</a></li>
+                    <li><a href="forum.html">なずなフォーラム</a></li>
+                </ul>
+            </div>
+            <div class="footer-section">
+                <h4>お問い合わせ</h4>
+                <p>生徒会室まで</p>
+                <p>平日 12:30-13:00</p>
+            </div>
+        </div>
+        <div class="footer-bottom">
+            <p>&copy; 2024 生徒会. All rights reserved.</p>
+        </div>
+    </footer>
+
+    <script src="js/config.js"></script>
+    <script src="js/app.js"></script>
+</body>
+</html>
