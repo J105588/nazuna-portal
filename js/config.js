@@ -1,12 +1,31 @@
 // 生徒会ポータルサイト設定ファイル
 
+// Supabase設定
+const SUPABASE_CONFIG = {
+    URL: 'YOUR_SUPABASE_URL_HERE', // Supabase Project URL
+    ANON_KEY: 'YOUR_SUPABASE_ANON_KEY_HERE', // Supabase Anon Key
+};
+
 // API設定
 const CONFIG = {
-    // Google Apps Script WebApp URL
-    // デプロイ後にこのURLを更新してください
+    // Google Apps Script WebApp URL (後方互換性のため保持)
     GAS_URL: 'YOUR_GAS_WEBAPP_URL_HERE',
     
-    // APIエンドポイント
+    // Supabase設定
+    SUPABASE: SUPABASE_CONFIG,
+    
+    // Supabaseテーブル名
+    TABLES: {
+        CLUBS: 'clubs',
+        POSTS: 'posts',
+        NEWS: 'news',
+        SURVEYS: 'surveys',
+        SURVEY_RESPONSES: 'survey_responses',
+        COUNCIL_MEMBERS: 'council_members',
+        CHATS: 'chats'
+    },
+    
+    // APIエンドポイント（後方互換性のため保持）
     API: {
         // 部活動関連
         GET_CLUBS: 'getClubs',
@@ -48,7 +67,35 @@ const CONFIG = {
         NOTIFICATION_ICON: '/images/icon-192x192.png',
         
         // デバッグモード
-        DEBUG: false
+        DEBUG: false,
+        
+        // データベース接続タイムアウト（ミリ秒）
+        DB_TIMEOUT: 10000,
+        
+        // リトライ回数
+        MAX_RETRIES: 3
+    },
+    
+    // メッセージ設定
+    MESSAGES: {
+        SUCCESS: {
+            POST_SUBMITTED: '投稿が送信されました。確認後に公開されます。',
+            SURVEY_SUBMITTED: 'アンケートの回答を送信しました。',
+            NOTIFICATION_ENABLED: '通知が有効になりました。'
+        },
+        ERROR: {
+            NETWORK: 'ネットワークエラーが発生しました。',
+            SERVER: 'サーバーエラーが発生しました。',
+            DATABASE: 'データベースエラーが発生しました。',
+            NO_DATA: 'データが見つかりませんでした。',
+            LOADING_FAILED: 'データの読み込みに失敗しました。'
+        },
+        INFO: {
+            OFFLINE: 'オフラインです。オンラインになったら再試行します。',
+            LOADING: '読み込み中...',
+            NO_ITEMS: 'まだ項目がありません。',
+            EMPTY_STATE: 'データがありません。'
+        }
     },
     
     // UI設定
@@ -67,6 +114,21 @@ const CONFIG = {
             MAX_POST_LENGTH: 1000,
             MAX_COMMENT_LENGTH: 500,
             REQUIRED_FIELDS_MARK: '*'
+        }
+    },
+    
+    // ステータス設定
+    STATUS: {
+        POSTS: {
+            pending: '確認中',
+            approved: '承認済み',
+            resolved: '対応済み',
+            rejected: '却下'
+        },
+        SURVEYS: {
+            active: '実施中',
+            closed: '終了',
+            draft: '下書き'
         }
     },
     

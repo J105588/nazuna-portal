@@ -130,36 +130,55 @@ function sendJsonpRequest(action, params = {}, callback) {
 
 // ページ初期化
 document.addEventListener('DOMContentLoaded', function() {
-    initNavigation();
-    initPWA();
+    // オープニングスクリーンを表示
+    showOpeningScreen();
     
-    // ページ別の初期化
-    const currentPage = getCurrentPage();
-    
-    switch(currentPage) {
-        case 'index':
-            initHomePage();
-            break;
-        case 'council':
-            loadCouncilMembers();
-            break;
-        case 'clubs':
-            loadClubs();
-            initClubsFilter();
-            break;
-        case 'forum':
-            initForum();
-            break;
-        case 'news':
-            loadNews();
-            initNewsFilter();
-            initNotifications();
-            break;
-        case 'survey':
-            loadSurveys();
-            initSurveyForm();
-            break;
-    }
+    // メイン初期化を遅延実行
+    setTimeout(async () => {
+        // Supabaseを初期化
+        const supabaseInitialized = initializeSupabase();
+        
+        initNavigation();
+        initSidebar();
+        initPWA();
+        
+        // ページ別の初期化
+        const currentPage = getCurrentPage();
+        
+        if (supabaseInitialized) {
+            switch(currentPage) {
+                case 'index':
+                    await initHomePage();
+                    break;
+                case 'council':
+                    await loadCouncilMembers();
+                    break;
+                case 'clubs':
+                    await loadClubs();
+                    initClubsFilter();
+                    break;
+                case 'forum':
+                    await initForum();
+                    break;
+                case 'news':
+                    await loadNews();
+                    initNewsFilter();
+                    initNotifications();
+                    break;
+                case 'survey':
+                    await loadSurveys();
+                    initSurveyForm();
+                    break;
+            }
+        } else {
+            // Supabase初期化失敗時はフォールバック
+            console.warn('Supabase initialization failed, using fallback data');
+            initFallbackMode(currentPage);
+        }
+        
+        // オープニングスクリーンを非表示
+        hideOpeningScreen();
+    }, 2500);
 });
 
 // 現在のページを取得
@@ -169,15 +188,104 @@ function getCurrentPage() {
     return filename.replace('.html', '') || 'index';
 }
 
-// ナビゲーション初期化
-function initNavigation() {
-    const hamburger = document.querySelector('.hamburger');
-    const navMenu = document.querySelector('.nav-menu');
+// オープニングスクリーン表示
+function showOpeningScreen() {
+    const openingScreen = document.getElementById('opening-screen');
+    if (openingScreen) {
+        openingScreen.style.display = 'flex';
+        document.body.style.overflow = 'hidden';
+    }
+}
+
+// オープニングスクリーン非表示
+function hideOpeningScreen() {
+    const openingScreen = document.getElementById('opening-screen');
+    if (openingScreen) {
+        openingScreen.classList.add('fade-out');
+        document.body.style.overflow = '';
+        
+        setTimeout(() => {
+            openingScreen.style.display = 'none';
+        }, 1000);
+    }
+}
+
+// サイドバー初期化
+function initSidebar() {
+    const menuToggle = document.getElementById('menu-toggle');
+    const sidebar = document.getElementById('sidebar');
+    const overlay = document.getElementById('sidebar-overlay');
+    const body = document.body;
     
-    hamburger?.addEventListener('click', () => {
-        navMenu.classList.toggle('active');
+    // メニュートグルボタンのクリックイベント
+    menuToggle?.addEventListener('click', () => {
+        toggleSidebar();
     });
     
+    // オーバーレイのクリックイベント
+    overlay?.addEventListener('click', () => {
+        closeSidebar();
+    });
+    
+    // ESCキーでサイドバーを閉じる
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && sidebar?.classList.contains('open')) {
+            closeSidebar();
+        }
+    });
+    
+    // サイドバー内のリンククリック時に閉じる
+    sidebar?.querySelectorAll('.nav-link').forEach(link => {
+        link.addEventListener('click', () => {
+            // モバイルでのみ閉じる
+            if (window.innerWidth <= 768) {
+                closeSidebar();
+            }
+        });
+    });
+}
+
+// サイドバーをトグル
+function toggleSidebar() {
+    const sidebar = document.getElementById('sidebar');
+    const overlay = document.getElementById('sidebar-overlay');
+    const body = document.body;
+    
+    if (sidebar?.classList.contains('open')) {
+        closeSidebar();
+    } else {
+        openSidebar();
+    }
+}
+
+// サイドバーを開く
+function openSidebar() {
+    const sidebar = document.getElementById('sidebar');
+    const overlay = document.getElementById('sidebar-overlay');
+    const body = document.body;
+    
+    sidebar?.classList.add('open');
+    overlay?.classList.add('show');
+    
+    // デスクトップではメインコンテンツをシフト
+    if (window.innerWidth > 768) {
+        body.classList.add('sidebar-open');
+    }
+}
+
+// サイドバーを閉じる
+function closeSidebar() {
+    const sidebar = document.getElementById('sidebar');
+    const overlay = document.getElementById('sidebar-overlay');
+    const body = document.body;
+    
+    sidebar?.classList.remove('open');
+    overlay?.classList.remove('show');
+    body.classList.remove('sidebar-open');
+}
+
+// ナビゲーション初期化（旧システムとの互換性のため保持）
+function initNavigation() {
     // ページ内リンクのスムーススクロール
     document.querySelectorAll('a[href^="#"]').forEach(anchor => {
         anchor.addEventListener('click', function(e) {
@@ -185,119 +293,200 @@ function initNavigation() {
             const target = document.querySelector(this.getAttribute('href'));
             if (target) {
                 target.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                navMenu?.classList.remove('active');
+                closeSidebar();
             }
         });
     });
     
-    // メニューの外側をクリックしたら閉じる
-    document.addEventListener('click', (e) => {
-        if (navMenu?.classList.contains('active') && 
-            !navMenu.contains(e.target) && 
-            !hamburger?.contains(e.target)) {
-            navMenu.classList.remove('active');
-        }
-    });
+    // アクティブリンクの設定
+    setActiveNavLink();
 }
 
-// 生徒会メンバー読み込み
-function loadCouncilMembers() {
-    const members = [
-        { name: '会長 山田太郎', role: '全体統括', image: 'images/member1.jpg', message: '皆さんの声を大切にします！' },
-        { name: '副会長 田中花子', role: '企画運営', image: 'images/member2.jpg', message: 'イベント企画頑張ります！' },
-        { name: '書記 鈴木一郎', role: '議事録作成', image: 'images/member3.jpg', message: '透明性のある活動を目指します' },
-        { name: '会計 佐藤美咲', role: '予算管理', image: 'images/member4.jpg', message: '予算を有効活用します' }
-    ];
+// アクティブリンクを設定
+function setActiveNavLink() {
+    const currentPage = getCurrentPage();
+    const navLinks = document.querySelectorAll('.nav-link');
     
-    const container = document.querySelector('.council-members');
-    if (container) {
-        container.innerHTML = members.map(member => `
-            <div class="member-card">
-                <div class="member-image" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); height: 150px; border-radius: 50%; width: 150px; margin: 0 auto 1rem;"></div>
-                <h3>${member.name}</h3>
-                <p class="member-role">${member.role}</p>
-                <p class="member-message">"${member.message}"</p>
-            </div>
-        `).join('');
-    }
-}
-
-// 部活動データ読み込み
-function loadClubs() {
-    const loadingEl = document.getElementById('clubs-loading');
-    const container = document.getElementById('clubs-container');
-    
-    if (loadingEl) loadingEl.style.display = 'block';
-    
-    sendJsonpRequest(CONFIG.API.GET_CLUBS, {}, function(data) {
-        if (loadingEl) loadingEl.style.display = 'none';
-        
-        if (data.success && container) {
-            container.innerHTML = data.clubs.map(club => `
-                <div class="club-card">
-                    ${club.image_url ? `<img src="${club.image_url}" alt="${club.name}" class="club-image">` : 
-                      `<div class="club-image" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);"></div>`}
-                    <h3>${club.name}</h3>
-                    <p>${club.description}</p>
-                    ${club.members ? `<p class="club-members">部員数: ${club.members}名</p>` : ''}
-                    ${club.schedule ? `<p class="club-schedule">活動日: ${club.schedule}</p>` : ''}
-                </div>
-            `).join('');
-        } else {
-            // デモデータを表示
-            const demoClubs = [
-                { name: 'サッカー部', description: '全国大会を目指して日々練習に励んでいます', members: 45, schedule: '月・水・金' },
-                { name: '吹奏楽部', description: '美しいハーモニーを奏でることを目標に活動中', members: 32, schedule: '火・木・土' },
-                { name: '美術部', description: '個性豊かな作品制作を通じて表現力を磨いています', members: 18, schedule: '月・木' },
-                { name: '科学部', description: '実験や研究を通じて科学の楽しさを追求', members: 24, schedule: '水・金' }
-            ];
-            
-            if (container) {
-                container.innerHTML = demoClubs.map(club => `
-                    <div class="club-card">
-                        <div class="club-image" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);"></div>
-                        <h3>${club.name}</h3>
-                        <p>${club.description}</p>
-                        <p class="club-members">部員数: ${club.members}名</p>
-                        <p class="club-schedule">活動日: ${club.schedule}</p>
-                    </div>
-                `).join('');
+    navLinks.forEach(link => {
+        link.classList.remove('active');
+        const href = link.getAttribute('href');
+        if (href) {
+            const linkPage = href.replace('.html', '').replace('index', '') || 'index';
+            if (linkPage === currentPage || (currentPage === 'index' && href === 'index.html')) {
+                link.classList.add('active');
             }
         }
     });
 }
 
-// お知らせ読み込み
-function loadNews() {
-    const newsContainer = document.querySelector('.news-container');
+// ウィンドウリサイズ時の処理
+window.addEventListener('resize', () => {
+    const body = document.body;
+    const sidebar = document.getElementById('sidebar');
     
-    if (newsContainer) {
-        // デモデータ（実際はGASから取得）
-        const newsItems = [
-            { date: '2024/01/15', title: '体育祭のお知らせ', content: '来月20日に体育祭を開催します。詳細は後日配布します。', type: 'event' },
-            { date: '2024/01/10', title: '生徒会だより1月号', content: '今月の活動報告と来月の予定をまとめました。', type: 'newsletter' },
-            { date: '2024/01/05', title: '文化祭実行委員募集', content: '文化祭の企画・運営に参加してくれる生徒を募集しています。', type: 'recruitment' }
-        ];
+    // モバイルからデスクトップに切り替わった時の処理
+    if (window.innerWidth > 768 && sidebar?.classList.contains('open')) {
+        body.classList.add('sidebar-open');
+    } else if (window.innerWidth <= 768) {
+        body.classList.remove('sidebar-open');
+    }
+});
+
+// 生徒会メンバー読み込み（Supabaseから動的取得）
+async function loadCouncilMembers() {
+    const container = document.querySelector('.council-members');
+    if (!container) return;
+    
+    // ローディング表示
+    showLoadingState(container, 'メンバー情報を読み込み中...');
+    
+    try {
+        const members = await dbHelper.getCouncilMembers();
         
-        newsContainer.innerHTML = `
-            <div class="news-list">
-                ${newsItems.map(item => `
-                    <div class="news-item">
-                        <div class="news-date">${item.date}</div>
-                        <div class="news-content">
-                            <h3>${item.title}</h3>
-                            <p>${item.content}</p>
+        if (members && members.length > 0) {
+            container.innerHTML = members.map(member => `
+                <div class="member-card">
+                    <div class="member-image" style="
+                        background: ${member.image_url ? `url(${member.image_url})` : 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'};
+                        height: 150px; 
+                        border-radius: 50%; 
+                        width: 150px; 
+                        margin: 0 auto 1rem;
+                        background-size: cover;
+                        background-position: center;
+                    "></div>
+                    <h3>${escapeHtml(member.name)}</h3>
+                    <p class="member-role">${escapeHtml(member.role)}</p>
+                    <p class="member-message">"${escapeHtml(member.message || '頑張ります！')}"</p>
+                </div>
+            `).join('');
+        } else {
+            showEmptyState(container, {
+                icon: 'fas fa-users',
+                title: '生徒会メンバー情報がありません',
+                message: 'まだメンバー情報が登録されていません。',
+                actionText: 'お知らせをチェック',
+                actionLink: 'news.html'
+            });
+        }
+    } catch (error) {
+        console.error('Error loading council members:', error);
+        showErrorState(container, {
+            title: 'メンバー情報の読み込みに失敗しました',
+            message: 'ネットワーク接続を確認してページを再読み込みしてください。',
+            actionText: '再読み込み',
+            actionCallback: () => location.reload()
+        });
+    }
+}
+
+// 部活動データ読み込み（Supabaseから動的取得）
+async function loadClubs() {
+    const loadingEl = document.getElementById('clubs-loading');
+    const container = document.getElementById('clubs-container');
+    
+    if (!container) return;
+    
+    // ローディング表示
+    if (loadingEl) loadingEl.style.display = 'block';
+    showLoadingState(container, '部活動情報を読み込み中...');
+    
+    try {
+        const clubs = await dbHelper.getClubs();
+        
+        if (loadingEl) loadingEl.style.display = 'none';
+        
+        if (clubs && clubs.length > 0) {
+            container.innerHTML = clubs.map(club => `
+                <div class="club-card" data-category="${club.category || 'other'}">
+                    ${club.image_url ? 
+                        `<img src="${club.image_url}" alt="${escapeHtml(club.name)}" class="club-image">` : 
+                        `<div class="club-image" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);"></div>`
+                    }
+                    <h3>${escapeHtml(club.name)}</h3>
+                    <p>${escapeHtml(club.description)}</p>
+                    ${club.members ? `<p class="club-members"><i class="fas fa-users"></i> 部員数: ${club.members}名</p>` : ''}
+                    ${club.schedule ? `<p class="club-schedule"><i class="fas fa-calendar"></i> 活動日: ${escapeHtml(club.schedule)}</p>` : ''}
+                    ${club.contact ? `<p class="club-contact"><i class="fas fa-envelope"></i> 連絡先: ${escapeHtml(club.contact)}</p>` : ''}
+                </div>
+            `).join('');
+        } else {
+            showEmptyState(container, {
+                icon: 'fas fa-futbol',
+                title: '部活動情報がありません',
+                message: 'まだ部活動情報が登録されていません。新しい部活動の情報をお待ちください。',
+                actionText: '生徒会に問い合わせ',
+                actionLink: 'forum.html'
+            });
+        }
+    } catch (error) {
+        console.error('Error loading clubs:', error);
+        if (loadingEl) loadingEl.style.display = 'none';
+        
+        showErrorState(container, {
+            title: '部活動情報の読み込みに失敗しました',
+            message: 'ネットワーク接続を確認してページを再読み込みしてください。',
+            actionText: '再読み込み',
+            actionCallback: () => location.reload()
+        });
+    }
+}
+
+// お知らせ読み込み（Supabaseから動的取得）
+async function loadNews() {
+    const newsContainer = document.querySelector('.news-container');
+    if (!newsContainer) return;
+    
+    // ローディング表示
+    showLoadingState(newsContainer, 'お知らせを読み込み中...');
+    
+    try {
+        const newsItems = await dbHelper.getNews({ limit: 10 });
+        
+        if (newsItems && newsItems.length > 0) {
+            newsContainer.innerHTML = `
+                <div class="news-list">
+                    ${newsItems.map(item => `
+                        <div class="news-item" data-category="${item.type || 'general'}">
+                            <div class="news-date">${formatDate(item.date || item.created_at)}</div>
+                            <div class="news-content">
+                                <h3>${escapeHtml(item.title)}</h3>
+                                <p>${escapeHtml(item.content)}</p>
+                            </div>
+                            <span class="news-type ${item.type || 'general'}">${getNewsTypeLabel(item.type)}</span>
                         </div>
-                        <span class="news-type ${item.type}">${getNewsTypeLabel(item.type)}</span>
-                    </div>
-                `).join('')}
-            </div>
-        `;
+                    `).join('')}
+                </div>
+            `;
+        } else {
+            showEmptyState(newsContainer, {
+                icon: 'fas fa-newspaper',
+                title: 'お知らせがありません',
+                message: 'まだお知らせが投稿されていません。新しい情報をお待ちください。',
+                actionText: 'フォーラムをチェック',
+                actionLink: 'forum.html'
+            });
+        }
+    } catch (error) {
+        console.error('Error loading news:', error);
+        showErrorState(newsContainer, {
+            title: 'お知らせの読み込みに失敗しました',
+            message: 'ネットワーク接続を確認してページを再読み込みしてください。',
+            actionText: '再読み込み',
+            actionCallback: () => location.reload()
+        });
     }
 }
 
 function getNewsTypeLabel(type) {
-    return CONFIG.CATEGORIES.NEWS[type] || 'お知らせ';
+    const labels = {
+        event: 'イベント',
+        newsletter: 'だより',
+        recruitment: '募集',
+        important: '重要',
+        general: 'お知らせ'
+    };
+    return labels[type] || 'お知らせ';
 }
 
 // なずなフォーラム初期化
@@ -405,51 +594,289 @@ function escapeHtml(unsafe) {
 }
 
 function getStatusLabel(status) {
-    return CONFIG.STATUS.POSTS[status] || status;
+    const labels = {
+        pending: '確認中',
+        approved: '承認済み',
+        resolved: '対応済み',
+        rejected: '却下'
+    };
+    return labels[status] || status;
+}
+
+// ローディング状態を表示
+function showLoadingState(container, message = CONFIG.MESSAGES.INFO.LOADING) {
+    container.innerHTML = `
+        <div class="loading-state">
+            <div class="loading-spinner"></div>
+            <p>${message}</p>
+        </div>
+    `;
+}
+
+// 空の状態を表示
+function showEmptyState(container, options = {}) {
+    const {
+        icon = 'fas fa-inbox',
+        title = CONFIG.MESSAGES.INFO.NO_ITEMS,
+        message = CONFIG.MESSAGES.INFO.EMPTY_STATE,
+        actionText = null,
+        actionLink = null,
+        actionCallback = null
+    } = options;
+    
+    const actionButton = actionText ? `
+        <button class="btn btn-primary empty-action" 
+                ${actionLink ? `onclick="location.href='${actionLink}'"` : ''}
+                ${actionCallback ? `onclick="(${actionCallback.toString()})()"` : ''}>
+            ${actionText}
+        </button>
+    ` : '';
+    
+    container.innerHTML = `
+        <div class="empty-state">
+            <div class="empty-icon">
+                <i class="${icon}"></i>
+            </div>
+            <h3 class="empty-title">${title}</h3>
+            <p class="empty-message">${message}</p>
+            ${actionButton}
+        </div>
+    `;
+}
+
+// エラー状態を表示
+function showErrorState(container, options = {}) {
+    const {
+        title = CONFIG.MESSAGES.ERROR.LOADING_FAILED,
+        message = CONFIG.MESSAGES.ERROR.NETWORK,
+        actionText = '再読み込み',
+        actionCallback = () => location.reload()
+    } = options;
+    
+    container.innerHTML = `
+        <div class="error-state">
+            <div class="error-icon">
+                <i class="fas fa-exclamation-triangle"></i>
+            </div>
+            <h3 class="error-title">${title}</h3>
+            <p class="error-message">${message}</p>
+            <button class="btn btn-secondary error-action" onclick="(${actionCallback.toString()})()">
+                <i class="fas fa-redo"></i>
+                ${actionText}
+            </button>
+        </div>
+    `;
+}
+
+// フォールバックモード初期化
+function initFallbackMode(currentPage) {
+    console.log('Initializing fallback mode for:', currentPage);
+    
+    // 各ページに対してフォールバックデータを表示
+    switch(currentPage) {
+        case 'index':
+            showFallbackHomePage();
+            break;
+        case 'council':
+            showFallbackCouncilPage();
+            break;
+        case 'clubs':
+            showFallbackClubsPage();
+            break;
+        case 'forum':
+            showFallbackForumPage();
+            break;
+        case 'news':
+            showFallbackNewsPage();
+            break;
+        case 'survey':
+            showFallbackSurveyPage();
+            break;
+    }
+}
+
+// フォールバックホームページ
+function showFallbackHomePage() {
+    const latestNewsContainer = document.getElementById('latest-news');
+    const latestPostsContainer = document.getElementById('latest-posts');
+    
+    if (latestNewsContainer) {
+        showEmptyState(latestNewsContainer, {
+            icon: 'fas fa-database',
+            title: 'データベースに接続できません',
+            message: 'Supabaseの設定を確認してください。'
+        });
+    }
+    
+    if (latestPostsContainer) {
+        showEmptyState(latestPostsContainer, {
+            icon: 'fas fa-database',
+            title: 'データベースに接続できません',
+            message: 'Supabaseの設定を確認してください。'
+        });
+    }
+}
+
+// 他のフォールバック関数も同様に実装...
+function showFallbackCouncilPage() {
+    const container = document.querySelector('.council-members');
+    if (container) {
+        showEmptyState(container, {
+            icon: 'fas fa-database',
+            title: 'データベースに接続できません',
+            message: 'Supabaseの設定を確認してください。'
+        });
+    }
+}
+
+function showFallbackClubsPage() {
+    const container = document.getElementById('clubs-container');
+    if (container) {
+        showEmptyState(container, {
+            icon: 'fas fa-database',
+            title: 'データベースに接続できません',
+            message: 'Supabaseの設定を確認してください。'
+        });
+    }
+}
+
+function showFallbackForumPage() {
+    const container = document.getElementById('posts-container');
+    if (container) {
+        showEmptyState(container, {
+            icon: 'fas fa-database',
+            title: 'データベースに接続できません',
+            message: 'Supabaseの設定を確認してください。'
+        });
+    }
+}
+
+function showFallbackNewsPage() {
+    const container = document.querySelector('.news-container');
+    if (container) {
+        showEmptyState(container, {
+            icon: 'fas fa-database',
+            title: 'データベースに接続できません',
+            message: 'Supabaseの設定を確認してください。'
+        });
+    }
+}
+
+function showFallbackSurveyPage() {
+    const container = document.getElementById('active-surveys');
+    if (container) {
+        showEmptyState(container, {
+            icon: 'fas fa-database',
+            title: 'データベースに接続できません',
+            message: 'Supabaseの設定を確認してください。'
+        });
+    }
 }
 
 // ホームページ初期化
-function initHomePage() {
-    loadLatestNews();
-    loadLatestPosts();
+async function initHomePage() {
+    await loadLatestNews();
+    await loadLatestPosts();
     initPWAInstall();
+    initScrollAnimations();
 }
 
-// 最新ニュース読み込み
-function loadLatestNews() {
+// スクロールアニメーション初期化
+function initScrollAnimations() {
+    const observerOptions = {
+        threshold: 0.1,
+        rootMargin: '0px 0px -50px 0px'
+    };
+    
+    const observer = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+            if (entry.isIntersecting) {
+                entry.target.style.opacity = '1';
+                entry.target.style.transform = 'translateY(0)';
+            }
+        });
+    }, observerOptions);
+    
+    // アニメーション対象要素を初期化
+    const animatedElements = document.querySelectorAll('.feature-card, .update-card, .club-card, .post-item');
+    animatedElements.forEach((el, index) => {
+        el.style.opacity = '0';
+        el.style.transform = 'translateY(30px)';
+        el.style.transition = `opacity 0.6s ease ${index * 0.1}s, transform 0.6s ease ${index * 0.1}s`;
+        observer.observe(el);
+    });
+}
+
+// 最新ニュース読み込み（Supabaseから動的取得）
+async function loadLatestNews() {
     const container = document.getElementById('latest-news');
     if (!container) return;
     
-    // デモデータ（実際はGASから取得）
-    const latestNews = [
-        { date: '2024/01/15', title: '体育祭のお知らせ', type: 'event' },
-        { date: '2024/01/10', title: '生徒会だより1月号', type: 'newsletter' }
-    ];
-    
-    container.innerHTML = latestNews.map(item => `
-        <div class="news-preview">
-            <span class="news-type ${item.type}">${getNewsTypeLabel(item.type)}</span>
-            <h4>${item.title}</h4>
-            <span class="news-date">${item.date}</span>
-        </div>
-    `).join('');
+    try {
+        const latestNews = await dbHelper.getNews({ limit: 3 });
+        
+        if (latestNews && latestNews.length > 0) {
+            container.innerHTML = latestNews.map(item => `
+                <div class="news-preview">
+                    <span class="news-type ${item.type || 'general'}">${getNewsTypeLabel(item.type)}</span>
+                    <h4>${escapeHtml(item.title)}</h4>
+                    <span class="news-date">${formatDate(item.date || item.created_at)}</span>
+                </div>
+            `).join('');
+        } else {
+            container.innerHTML = `
+                <div class="empty-state-small">
+                    <i class="fas fa-newspaper"></i>
+                    <p>まだお知らせがありません</p>
+                </div>
+            `;
+        }
+    } catch (error) {
+        console.error('Error loading latest news:', error);
+        container.innerHTML = `
+            <div class="error-state-small">
+                <i class="fas fa-exclamation-triangle"></i>
+                <p>読み込みに失敗しました</p>
+            </div>
+        `;
+    }
 }
 
-// 最新投稿読み込み
-function loadLatestPosts() {
+// 最新投稿読み込み（Supabaseから動的取得）
+async function loadLatestPosts() {
     const container = document.getElementById('latest-posts');
     if (!container) return;
     
-    container.innerHTML = `
-        <div class="post-preview">
-            <p>図書室の開館時間を延長してほしいです。</p>
-            <span class="post-status status-resolved">対応済み</span>
-        </div>
-        <div class="post-preview">
-            <p>体育祭の種目について提案があります。</p>
-            <span class="post-status status-pending">確認中</span>
-        </div>
-    `;
+    try {
+        const latestPosts = await dbHelper.getPosts({ 
+            limit: 3,
+            filters: [{ method: 'neq', args: ['status', 'rejected'] }]
+        });
+        
+        if (latestPosts && latestPosts.length > 0) {
+            container.innerHTML = latestPosts.map(post => `
+                <div class="post-preview">
+                    <p>${escapeHtml(post.content.substring(0, 100))}${post.content.length > 100 ? '...' : ''}</p>
+                    <span class="post-status status-${post.status}">${getStatusLabel(post.status)}</span>
+                </div>
+            `).join('');
+        } else {
+            container.innerHTML = `
+                <div class="empty-state-small">
+                    <i class="fas fa-comments"></i>
+                    <p>まだ投稿がありません</p>
+                </div>
+            `;
+        }
+    } catch (error) {
+        console.error('Error loading latest posts:', error);
+        container.innerHTML = `
+            <div class="error-state-small">
+                <i class="fas fa-exclamation-triangle"></i>
+                <p>読み込みに失敗しました</p>
+            </div>
+        `;
+    }
 }
 
 // PWAインストール機能
