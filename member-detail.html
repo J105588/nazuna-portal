@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>メンバー詳細 - なずなポータル</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="manifest" href="manifest.json">
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <meta name="theme-color" content="#2c3e50">
+    <!-- Supabase CDN -->
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+</head>
+<body>
+    <!-- サイドバー -->
+    <div class="sidebar" id="sidebar">
+        <div class="sidebar-header">
+            <h2>なずなポータル</h2>
+            <p>みんなでつくる学校生活</p>
+        </div>
+        <nav class="sidebar-nav">
+            <ul>
+                <li>
+                    <a href="index.html">
+                        <i class="fas fa-home"></i>
+                        <span>ホーム</span>
+                    </a>
+                </li>
+                <li>
+                    <a href="council.html" class="active">
+                        <i class="fas fa-users"></i>
+                        <span>生徒会紹介</span>
+                    </a>
+                </li>
+                <li>
+                    <a href="clubs.html">
+                        <i class="fas fa-running"></i>
+                        <span>部活動</span>
+                    </a>
+                </li>
+                <li>
+                    <a href="forum.html">
+                        <i class="fas fa-comments"></i>
+                        <span>なずなフォーラム</span>
+                    </a>
+                </li>
+                <li>
+                    <a href="news.html">
+                        <i class="fas fa-bell"></i>
+                        <span>お知らせ</span>
+                    </a>
+                </li>
+                <li>
+                    <a href="survey.html">
+                        <i class="fas fa-poll"></i>
+                        <span>アンケート</span>
+                    </a>
+                </li>
+            </ul>
+        </nav>
+    </div>
+    
+    <!-- サイドバーオーバーレイ -->
+    <div class="sidebar-overlay" id="sidebar-overlay"></div>
+    <header>
+        <nav class="navbar">
+            <div class="nav-container">
+                <button class="hamburger" id="hamburger" aria-label="メニューを開く" aria-expanded="false">
+                    <span aria-hidden="true"></span>
+                    <span aria-hidden="true"></span>
+                    <span aria-hidden="true"></span>
+                </button>
+                <h1 class="logo">なずなポータル</h1>
+                <div class="nav-spacer"></div>
+            </div>
+        </nav>
+    </header>
+
+    <main>
+        <!-- 戻るボタン -->
+        <section class="breadcrumb-section">
+            <div class="container">
+                <div class="breadcrumb">
+                    <a href="council.html" class="breadcrumb-link">
+                        <i class="fas fa-arrow-left"></i>
+                        生徒会紹介に戻る
+                    </a>
+                </div>
+            </div>
+        </section>
+
+        <!-- メンバー詳細ヘッダー -->
+        <section class="member-detail-header">
+            <div class="container">
+                <div class="member-hero" id="member-hero">
+                    <!-- メンバー情報がJavaScriptで動的に生成されます -->
+                </div>
+            </div>
+        </section>
+
+        <!-- メンバー詳細情報 -->
+        <section class="member-detail-content">
+            <div class="container">
+                <div class="detail-grid">
+                    <div class="detail-main">
+                        <div class="detail-section">
+                            <h3><i class="fas fa-user"></i> プロフィール</h3>
+                            <div class="profile-content" id="profile-content">
+                                <!-- プロフィール情報がここに表示されます -->
+                            </div>
+                        </div>
+
+                        <div class="detail-section">
+                            <h3><i class="fas fa-heart"></i> メッセージ</h3>
+                            <div class="message-content" id="message-content">
+                                <!-- メッセージがここに表示されます -->
+                            </div>
+                        </div>
+
+                        <div class="detail-section">
+                            <h3><i class="fas fa-tasks"></i> 担当業務</h3>
+                            <div class="responsibilities-content" id="responsibilities-content">
+                                <!-- 担当業務がここに表示されます -->
+                            </div>
+                        </div>
+
+                        <div class="detail-section">
+                            <h3><i class="fas fa-trophy"></i> 活動実績</h3>
+                            <div class="achievements-content" id="achievements-content">
+                                <!-- 活動実績がここに表示されます -->
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="detail-sidebar">
+                        <div class="sidebar-card">
+                            <h4><i class="fas fa-envelope"></i> お問い合わせ</h4>
+                            <p>このメンバーへの質問や相談がありましたら、なずなフォーラムをご利用ください。</p>
+                            <a href="forum.html" class="btn btn-primary">
+                                <i class="fas fa-comments"></i>
+                                フォーラムで質問
+                            </a>
+                        </div>
+
+                        <div class="sidebar-card">
+                            <h4><i class="fas fa-users"></i> 他のメンバー</h4>
+                            <div class="other-members" id="other-members">
+                                <!-- 他のメンバーがここに表示されます -->
+                            </div>
+                        </div>
+
+                        <div class="sidebar-card">
+                            <h4><i class="fas fa-calendar"></i> 活動予定</h4>
+                            <div class="upcoming-activities">
+                                <div class="activity-item">
+                                    <div class="activity-date">2/15</div>
+                                    <div class="activity-info">
+                                        <h5>生徒会会議</h5>
+                                        <p>定例会議</p>
+                                    </div>
+                                </div>
+                                <div class="activity-item">
+                                    <div class="activity-date">2/20</div>
+                                    <div class="activity-info">
+                                        <h5>体育祭準備会</h5>
+                                        <p>企画検討</p>
+                                    </div>
+                                </div>
+                                <div class="activity-item">
+                                    <div class="activity-date">2/25</div>
+                                    <div class="activity-info">
+                                        <h5>文化祭実行委員会</h5>
+                                        <p>実行委員との打ち合わせ</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 関連情報 -->
+        <section class="related-info">
+            <div class="container">
+                <h2 class="section-title">関連情報</h2>
+                <div class="related-grid">
+                    <div class="related-card">
+                        <div class="related-icon">
+                            <i class="fas fa-newspaper"></i>
+                        </div>
+                        <h3>生徒会だより</h3>
+                        <p>最新の活動報告や今後の予定をお知らせします。</p>
+                        <a href="news.html" class="related-link">詳しく見る <i class="fas fa-arrow-right"></i></a>
+                    </div>
+
+                    <div class="related-card">
+                        <div class="related-icon">
+                            <i class="fas fa-calendar-alt"></i>
+                        </div>
+                        <h3>活動スケジュール</h3>
+                        <p>生徒会の年間活動予定をご確認いただけます。</p>
+                        <a href="council.html#activities" class="related-link">詳しく見る <i class="fas fa-arrow-right"></i></a>
+                    </div>
+
+                    <div class="related-card">
+                        <div class="related-icon">
+                            <i class="fas fa-handshake"></i>
+                        </div>
+                        <h3>生徒会に参加</h3>
+                        <p>一緒に活動してくれる仲間を募集しています。</p>
+                        <a href="council.html#join" class="related-link">詳しく見る <i class="fas fa-arrow-right"></i></a>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <footer>
+        <div class="footer-content">
+            <div class="footer-section">
+                <h3>なずなポータル</h3>
+                <p>みんなでつくる学校生活</p>
+            </div>
+            <div class="footer-section">
+                <h4>リンク</h4>
+                <ul>
+                    <li><a href="council.html">生徒会紹介</a></li>
+                    <li><a href="clubs.html">部活動</a></li>
+                    <li><a href="forum.html">なずなフォーラム</a></li>
+                </ul>
+            </div>
+            <div class="footer-section">
+                <h4>お問い合わせ</h4>
+                <p>生徒会室まで</p>
+            </div>
+        </div>
+        <div class="footer-bottom">
+            <p>&copy; 2025 市川学園生徒会. All rights reserved.</p>
+            <p class="admin-link"><a href="admin.html">管理者ログイン</a></p>
+        </div>
+    </footer>
+
+    <script src="js/config.js"></script>
+    <script src="js/app.js"></script>
+    <script src="js/member-detail.js"></script>
+    <script src="js/pwa-install.js"></script>
+    <script src="js/pwa-update.js"></script>
+</body>
+</html>

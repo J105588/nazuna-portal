@@ -71,27 +71,198 @@ self.addEventListener('activate', event => {
 
 // プッシュ通知の受信
 self.addEventListener('push', event => {
-  const options = {
-    body: event.data ? event.data.text() : 'お知らせがあります',
+  console.log('Push message received:', event);
+  
+  let notificationData = {
+    title: '生徒会ポータル',
+    body: 'お知らせがあります',
     icon: './images/icon-192x192.png',
     badge: './images/badge-72x72.png',
+    url: './',
+    tag: 'general'
+  };
+  
+  // プッシュデータがある場合は解析
+  if (event.data) {
+    try {
+      const data = event.data.json();
+      notificationData = {
+        title: data.title || notificationData.title,
+        body: data.body || data.message || notificationData.body,
+        icon: data.icon || notificationData.icon,
+        badge: data.badge || notificationData.badge,
+        url: data.url || notificationData.url,
+        tag: data.tag || notificationData.tag,
+        requireInteraction: data.requireInteraction || false,
+        actions: data.actions || []
+      };
+    } catch (error) {
+      console.error('Error parsing push data:', error);
+      notificationData.body = event.data.text();
+    }
+  }
+  
+  const options = {
+    body: notificationData.body,
+    icon: notificationData.icon,
+    badge: notificationData.badge,
     vibrate: [200, 100, 200],
+    requireInteraction: notificationData.requireInteraction,
+    tag: notificationData.tag,
+    renotify: true,
+    actions: notificationData.actions,
     data: {
+      url: notificationData.url,
       dateOfArrival: Date.now(),
-      primaryKey: 1
+      originalData: event.data ? event.data.json() : null
     }
   };
   
   event.waitUntil(
-    self.registration.showNotification('生徒会ポータル', options)
+    self.registration.showNotification(notificationData.title, options)
   );
 });
 
 // 通知のクリック処理
 self.addEventListener('notificationclick', event => {
+  console.log('Notification clicked:', event);
+  
   event.notification.close();
   
+  const urlToOpen = event.notification.data?.url || './';
+  
   event.waitUntil(
-    clients.openWindow('./')
+    clients.matchAll({
+      type: 'window',
+      includeUncontrolled: true
+    }).then(clientList => {
+      // 既に開いているタブがあるかチェック
+      for (let i = 0; i < clientList.length; i++) {
+        const client = clientList[i];
+        if (client.url.includes(self.location.origin) && 'focus' in client) {
+          // 既存のタブにフォーカスして、必要に応じてナビゲート
+          return client.focus().then(() => {
+            if (urlToOpen !== './') {
+              return client.navigate(urlToOpen);
+            }
+          });
+        }
+      }
+      
+      // 新しいタブを開く
+      if (clients.openWindow) {
+        return clients.openWindow(urlToOpen);
+      }
+    })
   );
 });
+
+// 通知のアクションボタンクリック処理
+self.addEventListener('notificationclick', event => {
+  if (event.action) {
+    console.log('Notification action clicked:', event.action);
+    
+    event.notification.close();
+    
+    // アクションに応じた処理
+    let urlToOpen = './';
+    switch (event.action) {
+      case 'view_news':
+        urlToOpen = './news.html';
+        break;
+      case 'view_forum':
+        urlToOpen = './forum.html';
+        break;
+      case 'view_survey':
+        urlToOpen = './survey.html';
+        break;
+      case 'dismiss':
+        return; // 何もしない
+    }
+    
+    event.waitUntil(clients.openWindow(urlToOpen));
+  }
+});
+
+// バックグラウンド同期
+self.addEventListener('sync', event => {
+  console.log('Background sync:', event.tag);
+  
+  if (event.tag === 'background-sync') {
+    event.waitUntil(doBackgroundSync());
+  }
+});
+
+// バックグラウンド同期処理
+async function doBackgroundSync() {
+  try {
+    console.log('Performing background sync...');
+    
+    // オフライン時に蓄積されたデータを送信
+    const offlineData = await getOfflineData();
+    if (offlineData.length > 0) {
+      for (const data of offlineData) {
+        await sendToServer(data);
+      }
+      await clearOfflineData();
+    }
+    
+    console.log('Background sync completed');
+  } catch (error) {
+    console.error('Background sync failed:', error);
+  }
+}
+
+// オフラインデータの取得
+async function getOfflineData() {
+  try {
+    const cache = await caches.open('offline-data');
+    const requests = await cache.keys();
+    const data = [];
+    
+    for (const request of requests) {
+      const response = await cache.match(request);
+      if (response) {
+        const json = await response.json();
+        data.push(json);
+      }
+    }
+    
+    return data;
+  } catch (error) {
+    console.error('Error getting offline data:', error);
+    return [];
+  }
+}
+
+// サーバーへのデータ送信
+async function sendToServer(data) {
+  try {
+    const response = await fetch('/api/sync', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(data)
+    });
+    
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    
+    return await response.json();
+  } catch (error) {
+    console.error('Error sending data to server:', error);
+    throw error;
+  }
+}
+
+// オフラインデータのクリア
+async function clearOfflineData() {
+  try {
+    await caches.delete('offline-data');
+    console.log('Offline data cleared');
+  } catch (error) {
+    console.error('Error clearing offline data:', error);
+  }
+}

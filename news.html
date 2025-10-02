@@ -11,6 +11,10 @@
     <meta name="theme-color" content="#2c3e50">
     <!-- Supabase CDN -->
     <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-messaging-compat.js"></script>
 </head>
 <body>
     <!-- サイドバー -->
@@ -207,23 +211,42 @@
         </section>
 
         <!-- 通知設定 -->
-        <section class="notification-settings">
+        <section class="notification-settings-section">
             <div class="container">
-                <div class="notification-content">
-                    <h2>お知らせ通知を受け取る</h2>
-                    <p>重要なお知らせをプッシュ通知で受け取ることができます。</p>
-                    <div class="notification-buttons">
-                        <button id="enable-notifications" class="btn btn-primary">
-                            <i class="fas fa-bell"></i>
-                            通知を有効にする
-                        </button>
-                        <button id="disable-notifications" class="btn btn-secondary" style="display: none;">
-                            <i class="fas fa-bell-slash"></i>
-                            通知を無効にする
-                        </button>
-                    </div>
-                    <div class="notification-status" id="notification-status">
-                        <p><i class="fas fa-info-circle"></i> 通知設定の状態を確認中...</p>
+                <div class="notification-settings-card">
+                    <h3><i class="fas fa-bell"></i> プッシュ通知設定</h3>
+                    <div class="notification-controls">
+                        <div class="notification-control-group">
+                            <div id="notification-status">
+                                <!-- 通知ステータスがここに表示されます -->
+                            </div>
+                            <div class="notification-buttons">
+                                <button class="btn btn-primary" id="enable-notifications">
+                                    <i class="fas fa-bell"></i>
+                                    通知を有効にする
+                                </button>
+                                <button class="btn btn-secondary" id="disable-notifications" style="display: none;">
+                                    <i class="fas fa-bell-slash"></i>
+                                    通知を無効にする
+                                </button>
+                                <button class="btn btn-outline" id="test-notification" style="display: none;">
+                                    <i class="fas fa-paper-plane"></i>
+                                    テスト通知
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <div class="notification-info">
+                            <h4><i class="fas fa-info-circle"></i> プッシュ通知について</h4>
+                            <p>プッシュ通知を有効にすると、以下のお知らせをリアルタイムで受け取ることができます：</p>
+                            <ul>
+                                <li>緊急のお知らせ</li>
+                                <li>新しい生徒会だより</li>
+                                <li>イベントの開催情報</li>
+                                <li>アンケートの開始通知</li>
+                                <li>フォーラムへの返信</li>
+                            </ul>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -252,11 +275,14 @@
         </div>
         <div class="footer-bottom">
             <p>&copy; 2025 市川学園生徒会. All rights reserved.</p>
+            <p class="admin-link"><a href="admin.html">管理者ログイン</a></p>
         </div>
     </footer>
 
     <script src="js/config.js"></script>
+    <script src="js/firebase-config.js"></script>
     <script src="js/app.js"></script>
+    <script src="js/notification-manager.js"></script>
     <script src="js/pwa-install.js"></script>
     <script src="js/pwa-update.js"></script>
 </body>

@@ -157,10 +157,10 @@ function sendJsonpRequest(action, params = {}, callback) {
 document.addEventListener('DOMContentLoaded', function() {
     console.log('DOM loaded, initializing...');
     
-    // 初回アクセスかチェックしてオープニング画面を表示
-    const isFirstVisit = checkAndMarkFirstVisit();
-    if (isFirstVisit) {
-        console.log('First visit detected, showing opening screen');
+    // セッションごとにオープニング画面を表示
+    const shouldShowOpening = checkAndMarkSessionVisit();
+    if (shouldShowOpening) {
+        console.log('New session detected, showing opening screen');
         showOpeningScreen();
     }
     
@@ -210,8 +210,8 @@ document.addEventListener('DOMContentLoaded', function() {
             console.error('Error during content initialization:', error);
         }
         
-        // 初回アクセスの場合のみオープニング画面を隠す
-        if (isFirstVisit) {
+        // オープニング画面を表示した場合のみ隠す
+        if (shouldShowOpening) {
             const elapsedTime = Date.now() - startTime;
             const remainingTime = Math.max(minDisplayTime - elapsedTime, 0);
             
@@ -227,8 +227,8 @@ document.addEventListener('DOMContentLoaded', function() {
     // コンテンツの初期化を開始
     initializeContent();
     
-    // フォールバック：初回アクセスの場合のみ5秒後に強制的にオープニング画面を閉じる
-    if (isFirstVisit) {
+    // フォールバック：オープニング画面を表示した場合のみ5秒後に強制的に閉じる
+    if (shouldShowOpening) {
         setTimeout(() => {
             const openingScreen = document.getElementById('opening-screen');
             if (openingScreen) {
@@ -239,7 +239,36 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 });
 
-// 初回アクセスかチェックして記録
+// セッションごとのアクセスをチェックして記録
+function checkAndMarkSessionVisit() {
+    const SESSION_KEY = 'nazuna-portal-session';
+    const OPENING_SHOWN_KEY = 'nazuna-portal-opening-shown';
+    
+    // セッション開始時刻を取得または設定
+    let sessionStart = sessionStorage.getItem(SESSION_KEY);
+    if (!sessionStart) {
+        sessionStart = Date.now().toString();
+        sessionStorage.setItem(SESSION_KEY, sessionStart);
+        console.log('New session started');
+        
+        // 新しいセッションでは必ずオープニングを表示
+        sessionStorage.removeItem(OPENING_SHOWN_KEY);
+        return true;
+    }
+    
+    // 同一セッション内でオープニングが既に表示されたかチェック
+    const openingShown = sessionStorage.getItem(OPENING_SHOWN_KEY);
+    if (!openingShown) {
+        sessionStorage.setItem(OPENING_SHOWN_KEY, 'true');
+        console.log('First page load in this session');
+        return true;
+    }
+    
+    console.log('Opening already shown in this session');
+    return false;
+}
+
+// 初回アクセスかチェックして記録（後方互換性のため保持）
 function checkAndMarkFirstVisit() {
     const FIRST_VISIT_KEY = 'nazuna-portal-first-visit';
     const isFirstVisit = !localStorage.getItem(FIRST_VISIT_KEY);
@@ -252,6 +281,13 @@ function checkAndMarkFirstVisit() {
     }
     
     return isFirstVisit;
+}
+
+// セッション状態をリセット（デバッグ用）
+function resetSession() {
+    sessionStorage.removeItem('nazuna-portal-session');
+    sessionStorage.removeItem('nazuna-portal-opening-shown');
+    console.log('Session reset - opening will show on next page load');
 }
 
 // 初回アクセス状態をリセット（デバッグ用）
@@ -434,23 +470,64 @@ function hideOpeningScreen() {
 // 生徒会メンバー読み込み
 async function loadCouncilMembers() {
     const members = [
-        { name: '会長 山田太郎', role: '全体統括', image: 'images/member1.jpg', message: '皆さんの声を大切にします！' },
-        { name: '副会長 田中花子', role: '企画運営', image: 'images/member2.jpg', message: 'イベント企画頑張ります！' },
-        { name: '書記 鈴木一郎', role: '議事録作成', image: 'images/member3.jpg', message: '透明性のある活動を目指します' },
-        { name: '会計 佐藤美咲', role: '予算管理', image: 'images/member4.jpg', message: '予算を有効活用します' }
+        { id: 1, name: '会長 山田太郎', role: '全体統括', image: 'images/member1.jpg', message: '皆さんの声を大切にします！' },
+        { id: 2, name: '副会長 田中花子', role: '企画運営', image: 'images/member2.jpg', message: 'イベント企画頑張ります！' },
+        { id: 3, name: '書記 鈴木一郎', role: '議事録作成', image: 'images/member3.jpg', message: '透明性のある活動を目指します' },
+        { id: 4, name: '会計 佐藤美咲', role: '予算管理', image: 'images/member4.jpg', message: '予算を有効活用します' }
     ];
     
     const container = document.querySelector('.council-members');
     if (container) {
         container.innerHTML = members.map(member => `
-            <div class="member-card">
+            <div class="member-card clickable" data-member-id="${member.id}" tabindex="0" role="button" aria-label="${member.name}の詳細を見る">
                 <div class="member-image" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); height: 150px; border-radius: 50%; width: 150px; margin: 0 auto 1rem;"></div>
                 <h3>${member.name}</h3>
                 <p class="member-role">${member.role}</p>
                 <p class="member-message">"${member.message}"</p>
+                <div class="member-card-overlay">
+                    <i class="fas fa-eye"></i>
+                    <span>詳細を見る</span>
+                </div>
             </div>
         `).join('');
+        
+        // メンバーカードをクリック可能にする
+        makeCouncilMembersClickable();
     }
+}
+
+// 生徒会メンバーカードをクリック可能にする
+function makeCouncilMembersClickable() {
+    const memberCards = document.querySelectorAll('.member-card.clickable');
+    
+    memberCards.forEach(card => {
+        // クリックイベント
+        card.addEventListener('click', function() {
+            const memberId = this.dataset.memberId;
+            if (memberId) {
+                window.location.href = `member-detail.html?id=${memberId}`;
+            }
+        });
+        
+        // キーボード操作対応
+        card.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                this.click();
+            }
+        });
+        
+        // ホバー効果
+        card.addEventListener('mouseenter', function() {
+            this.style.transform = 'translateY(-8px) scale(1.02)';
+            this.style.boxShadow = '0 8px 25px rgba(0,0,0,0.15)';
+        });
+        
+        card.addEventListener('mouseleave', function() {
+            this.style.transform = 'translateY(0) scale(1)';
+            this.style.boxShadow = '';
+        });
+    });
 }
 
 // Supabaseからデータを読み込む汎用関数
@@ -1029,7 +1106,9 @@ function initSurveyForm() {
 // デバッグ用関数をグローバルに公開
 if (CONFIG.APP.DEBUG) {
     window.resetFirstVisit = resetFirstVisit;
+    window.resetSession = resetSession;
     window.showOpeningScreen = showOpeningScreen;
     window.hideOpeningScreen = hideOpeningScreen;
-    console.log('Debug functions available: resetFirstVisit(), showOpeningScreen(), hideOpeningScreen()');
+    window.checkAndMarkSessionVisit = checkAndMarkSessionVisit;
+    console.log('Debug functions available: resetFirstVisit(), resetSession(), showOpeningScreen(), hideOpeningScreen(), checkAndMarkSessionVisit()');
 }

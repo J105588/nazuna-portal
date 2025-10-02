@@ -8,9 +8,16 @@ const CONFIG = {
         ANON_KEY: 'YOUR_SUPABASE_ANON_KEY_HERE'
     },
     
-    // Google Apps Script WebApp URL（後方互換性のため）
+    // Google Apps Script WebApp URL
     // デプロイ後にこのURLを更新してください
     GAS_URL: 'YOUR_GAS_WEBAPP_URL_HERE',
+    
+    // Firebase設定（通知システム用）
+    FIREBASE: {
+        PROJECT_ID: 'your-project-id',
+        VAPID_KEY: 'your-vapid-key-here',
+        MESSAGING_SENDER_ID: 'your-sender-id'
+    },
     
     // APIエンドポイント
     API: {
