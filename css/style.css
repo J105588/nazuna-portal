@@ -26,6 +26,158 @@
     --gradient-hero: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
 }
 
+/* 汎用アニメーション/トランジション */
+@keyframes fadeInUp {
+    from { opacity: 0; transform: translateY(12px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+/* モーダル（共通） */
+.modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.5);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 9999;
+    opacity: 0;
+    transition: opacity 0.25s ease;
+    pointer-events: none;
+}
+
+.modal-overlay.active {
+    display: flex;
+    opacity: 1;
+    pointer-events: auto;
+}
+
+.modal-overlay.opening {
+    display: flex;
+    opacity: 0;
+    pointer-events: none;
+}
+
+.modal-overlay.closing {
+    opacity: 0;
+}
+
+.modal {
+    width: 100%;
+    max-width: 420px;
+    background: #fff;
+    border-radius: 12px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+    overflow: hidden;
+    transform: translateY(8px) scale(0.98);
+    opacity: 0;
+    transition: transform 0.25s ease, opacity 0.25s ease;
+}
+
+.modal-overlay.active .modal {
+    transform: translateY(0) scale(1);
+    opacity: 1;
+}
+
+.modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--border-color);
+    background: var(--surface-color);
+}
+
+.modal-header h3 {
+    margin: 0;
+    font-size: 1.1rem;
+    color: var(--primary-color);
+}
+
+.modal-close {
+    background: transparent;
+    border: none;
+    width: 36px;
+    height: 36px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 8px;
+    cursor: pointer;
+    color: var(--text-light);
+    transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+.modal-close:hover {
+    background: var(--background-color);
+    color: var(--text-color);
+}
+
+.modal-body {
+    padding: 16px;
+}
+
+/* 認証モーダルの中央揃え */
+#auth-modal .modal-body {
+    text-align: center;
+}
+
+#auth-modal .auth-step {
+    text-align: center;
+}
+
+#auth-modal .form-group {
+    display: inline-block;
+    text-align: left;
+    width: 100%;
+    max-width: 360px;
+}
+
+#auth-modal .form-control {
+    max-width: 320px;
+    margin: 0 auto;
+}
+
+#auth-modal .btn {
+    margin-left: auto;
+    margin-right: auto;
+}
+
+/* スマホサイズでの閉じるボタン統一 */
+@media (max-width: 768px) {
+    .modal-close,
+    .sidebar-close-btn {
+        width: 36px;
+        height: 36px;
+        border-radius: 8px;
+    }
+
+    .modal-close i,
+    .sidebar-close-btn i {
+        font-size: 1.1rem;
+    }
+}
+
+.login-error {
+    display: none;
+    padding: 10px 12px;
+    border-radius: 8px;
+    background: rgba(231, 76, 60, 0.08);
+    border: 1px solid rgba(231, 76, 60, 0.25);
+    color: var(--accent-color);
+    font-size: 0.9rem;
+}
+
+/* ページトランジション */
+body.page-enter { opacity: 0; }
+body.page-enter-active { animation: fadeIn 0.25s ease forwards; }
+body.page-exit { animation: fadeIn 0.2s ease reverse forwards; }
+
 body {
     font-family: 'Noto Sans JP', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
     color: var(--text-color);
@@ -1017,6 +1169,8 @@ main {
     padding: 1.5rem;
     box-shadow: 0 2px 10px rgba(0,0,0,0.1);
     transition: transform 0.3s, box-shadow 0.3s;
+    opacity: 0;
+    animation: fadeInUp 0.45s ease forwards;
 }
 
 .club-card:hover {
@@ -1122,6 +1276,8 @@ main {
     margin-bottom: 1rem;
     border-radius: 8px;
     box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    opacity: 0;
+    animation: fadeInUp 0.45s ease forwards;
 }
 
 .post-header {
@@ -1461,6 +1617,8 @@ footer {
     text-align: center;
     transition: all 0.3s ease;
     border: 1px solid var(--border-color);
+    opacity: 0;
+    animation: fadeInUp 0.45s ease forwards;
 }
 
 .feature-card:hover {
@@ -1528,6 +1686,8 @@ footer {
     padding: 2rem;
     box-shadow: var(--shadow-sm);
     border: 1px solid var(--border-color);
+    opacity: 0;
+    animation: fadeInUp 0.45s ease forwards;
 }
 
 .update-header {
@@ -1653,6 +1813,8 @@ footer {
     box-shadow: var(--shadow-sm);
     border: 1px solid var(--border-color);
     transition: all 0.3s ease;
+    opacity: 0;
+    animation: fadeInUp 0.45s ease forwards;
 }
 
 .member-card:hover {
@@ -1694,6 +1856,8 @@ footer {
     box-shadow: var(--shadow-sm);
     border: 1px solid var(--border-color);
     transition: all 0.3s ease;
+    opacity: 0;
+    animation: fadeInUp 0.45s ease forwards;
 }
 
 .activity-card:hover {
@@ -1822,6 +1986,8 @@ footer {
     text-align: center;
     box-shadow: var(--shadow-sm);
     border: 1px solid var(--border-color);
+    opacity: 0;
+    animation: fadeInUp 0.45s ease forwards;
 }
 
 .info-icon {
@@ -1929,6 +2095,8 @@ footer {
     text-align: center;
     box-shadow: var(--shadow-sm);
     border: 1px solid var(--border-color);
+    opacity: 0;
+    animation: fadeInUp 0.45s ease forwards;
 }
 
 .about-icon {
@@ -2048,6 +2216,14 @@ textarea.form-control {
     gap: 1rem;
 }
 
+/* 投稿一覧の絞り込みを中央揃え */
+.posts-filter {
+    width: 100%;
+    display: flex;
+    justify-content: center;
+    text-align: center;
+}
+
 .posts-header h2 {
     color: var(--primary-color);
     display: flex;
@@ -2128,6 +2304,8 @@ textarea.form-control {
     display: flex;
     gap: 2rem;
     align-items: flex-start;
+    opacity: 0;
+    animation: fadeInUp 0.45s ease forwards;
 }
 
 .news-date {
@@ -2200,6 +2378,8 @@ textarea.form-control {
     box-shadow: var(--shadow-sm);
     border: 1px solid var(--border-color);
     transition: all 0.3s ease;
+    opacity: 0;
+    animation: fadeInUp 0.45s ease forwards;
 }
 
 .newsletter-item:hover {
@@ -2345,6 +2525,8 @@ textarea.form-control {
     box-shadow: var(--shadow-md);
     border: 1px solid var(--border-color);
     overflow: hidden;
+    opacity: 0;
+    animation: fadeInUp 0.45s ease forwards;
 }
 
 .survey-card.active-survey {
@@ -2468,6 +2650,8 @@ textarea.form-control {
     border-radius: 1rem;
     box-shadow: var(--shadow-sm);
     border: 1px solid var(--border-color);
+    opacity: 0;
+    animation: fadeInUp 0.45s ease forwards;
 }
 
 .result-header {
@@ -3203,6 +3387,8 @@ textarea.form-control {
     padding: 2rem;
     box-shadow: var(--shadow-sm);
     border: 1px solid var(--border-color);
+    opacity: 0;
+    animation: fadeInUp 0.45s ease forwards;
 }
 
 .sidebar-card h4 {
@@ -3349,6 +3535,8 @@ textarea.form-control {
     border: 1px solid var(--border-color);
     text-align: center;
     transition: all 0.3s ease;
+    opacity: 0;
+    animation: fadeInUp 0.45s ease forwards;
 }
 
 .related-card:hover {

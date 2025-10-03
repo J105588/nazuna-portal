@@ -76,6 +76,10 @@
                 </button>
                 <h1 class="logo">なずなポータル</h1>
                 <div class="nav-spacer"></div>
+                <div class="nav-auth" style="display:flex; gap:8px; align-items:center;">
+                    <button id="nav-login-button" class="btn btn-outline" aria-label="ログイン" title="ログイン"><i class="fas fa-sign-in-alt"></i></button>
+                    <button id="nav-logout-button" class="btn btn-outline" style="display:none;"><i class="fas fa-sign-out-alt"></i> ログアウト</button>
+                </div>
             </div>
         </nav>
     </header>
@@ -86,7 +90,7 @@
             <div class="container">
                 <div class="page-header-content">
                     <h1><i class="fas fa-comments"></i> なずなフォーラム</h1>
-                    <p>あなたの声を聞かせてください - 匿名で安心して投稿できます</p>
+                    <p>あなたの声を聞かせてください</p>
                 </div>
             </div>
         </section>
@@ -100,7 +104,7 @@
                             <i class="fas fa-user-secret"></i>
                         </div>
                         <h3>匿名投稿</h3>
-                        <p>名前を明かすことなく、安心して意見や要望を投稿できます</p>
+                        <p>名前はここに表示されません。安心して意見や要望を投稿できます</p>
                     </div>
                     
                     <div class="about-card">
@@ -141,7 +145,8 @@
                         </div>
                         <div class="form-group">
                             <label for="forum-content">内容</label>
-                            <textarea id="forum-content" class="form-control" placeholder="あなたの声を聞かせてください（匿名投稿可）&#10;&#10;例：&#10;・図書室の開館時間を延長してほしい&#10;・体育祭の種目について提案があります&#10;・校内の設備で困っていることがあります"></textarea>
+                            <textarea id="forum-content" class="form-control" placeholder="あなたの声を聞かせてください（匿名投稿可）&#10;&#10;例：&#10;・図書室の開館時間を延長してほしい&#10;・体育祭の種目について提案があります&#10;・校内の設備で困っていることがあります" maxlength="1000"></textarea>
+                            <div class="char-counter" id="forum-char-counter" style="text-align:right; font-size:12px; color:#666; margin-top:4px;">0 / 1000</div>
                         </div>
                         <div class="form-actions">
                             <button id="submit-post" class="btn btn-primary">
@@ -165,17 +170,39 @@
             <div class="container">
                 <div class="posts-header">
                     <h2><i class="fas fa-list"></i> 投稿一覧</h2>
-                    <div class="posts-filter">
+                    <div class="auth-actions">
+                        <button id="login-button" class="btn btn-outline"><i class="fas fa-sign-in-alt"></i> ログイン</button>
+                        <button id="logout-button" class="btn btn-outline" style="display:none;"><i class="fas fa-sign-out-alt"></i> ログアウト</button>
+                    </div>
+                    <div class="posts-filter" style="display:flex; gap:8px; flex-wrap:wrap; align-items:center;">
                         <select id="status-filter" class="form-control">
                             <option value="all">すべて</option>
                             <option value="pending">確認中</option>
                             <option value="in_progress">対応中</option>
                             <option value="resolved">対応済み</option>
                         </select>
+                        <input type="text" id="search-posts" class="form-control" placeholder="キーワード検索" style="min-width:180px;">
+                        <select id="sort-posts" class="form-control">
+                            <option value="created_at_desc">新しい順</option>
+                            <option value="created_at_asc">古い順</option>
+                        </select>
+                        <div class="pagination" style="display:flex; gap:6px; align-items:center;">
+                            <button id="page-prev" class="btn btn-outline" aria-label="前のページ"><i class="fas fa-chevron-left"></i></button>
+                            <span id="page-info" style="min-width:80px; text-align:center;">1 / 1</span>
+                            <button id="page-next" class="btn btn-outline" aria-label="次のページ"><i class="fas fa-chevron-right"></i></button>
+                        </div>
                     </div>
                 </div>
                 <div class="posts-list" id="posts-container">
                     <div class="loading">読み込み中...</div>
+                </div>
+                <div class="chat-panel" id="chat-panel" style="display:none; margin-top:16px;">
+                    <h3><i class="fas fa-comments"></i> 生徒会とのチャット</h3>
+                    <div id="chat-messages" class="chat-messages" style="border:1px solid #ddd; border-radius:8px; padding:12px; min-height:120px; max-height:240px; overflow:auto;"></div>
+                    <div class="chat-input" style="display:flex; gap:8px; margin-top:8px;">
+                        <input type="text" id="chat-text" class="form-control" placeholder="メッセージを入力">
+                        <button id="chat-send" class="btn btn-primary"><i class="fas fa-paper-plane"></i></button>
+                    </div>
                 </div>
             </div>
         </section>
@@ -247,8 +274,62 @@
     </footer>
 
     <script src="js/config.js"></script>
+    <script src="js/supabase-queries.js"></script>
     <script src="js/app.js"></script>
     <script src="js/pwa-install.js"></script>
     <script src="js/pwa-update.js"></script>
+    
+    <!-- 認証モーダル -->
+    <div class="modal-overlay" id="auth-modal-overlay">
+        <div class="modal" id="auth-modal">
+            <div class="modal-header">
+                <h3 id="auth-modal-title">ログイン</h3>
+                <button class="modal-close" id="auth-modal-close">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div id="step-student-number" class="auth-step">
+                    <p style="margin-top:0; color:#555; font-size:14px;">生徒番号を入力して、登録済みか確認します。</p>
+                    <div class="form-group">
+                        <label for="student-number-input">生徒番号</label>
+                        <input type="text" id="student-number-input" class="form-control" placeholder="例: 2400123" autocomplete="off">
+                    </div>
+                    <button id="check-student-number" class="btn btn-primary">次へ</button>
+                </div>
+                <div id="step-register" class="auth-step" style="display:none;">
+                    <p style="margin-top:0; color:#555; font-size:14px;">はじめての方は、氏名とパスワードを設定してください。</p>
+                    <div class="form-group">
+                        <label for="student-name-input">氏名</label>
+                        <input type="text" id="student-name-input" class="form-control" placeholder="山田 太郎" autocomplete="off">
+                    </div>
+                    <div class="form-group">
+                        <label for="password-set-input">パスワード設定</label>
+                        <div style="position:relative;">
+                            <input type="password" id="password-set-input" class="form-control" placeholder="6文字以上" autocomplete="new-password">
+                            <button id="toggle-password-set" class="btn btn-outline" style="position:absolute; right:6px; top:50%; transform:translateY(-50%); padding:4px 8px;">
+                                <i class="fas fa-eye"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <button id="register-student" class="btn btn-primary">登録してログイン</button>
+                </div>
+                <div id="step-login" class="auth-step" style="display:none;">
+                    <p style="margin-top:0; color:#555; font-size:14px;">登録済みの方は、パスワードを入力してください。</p>
+                    <div class="form-group">
+                        <label for="password-login-input">パスワード</label>
+                        <div style="position:relative;">
+                            <input type="password" id="password-login-input" class="form-control" placeholder="パスワードを入力" autocomplete="current-password">
+                            <button id="toggle-password-login" class="btn btn-outline" style="position:absolute; right:6px; top:50%; transform:translateY(-50%); padding:4px 8px;">
+                                <i class="fas fa-eye"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <button id="login-student" class="btn btn-primary">ログイン</button>
+                </div>
+                <div id="auth-error" class="login-error" style="display:none; margin-top:8px; color:#c00;"></div>
+            </div>
+        </div>
+    </div>
 </body>
 </html>

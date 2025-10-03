@@ -42,39 +42,7 @@ homepage/
 
 1. [Supabase](https://supabase.com/) にアクセスしてアカウントを作成
 2. 新しいプロジェクトを作成
-3. データベースに以下のテーブルを作成：
-
-```sql
--- 部活動テーブル
-CREATE TABLE clubs (
-    id SERIAL PRIMARY KEY,
-    name VARCHAR(255) NOT NULL,
-    description TEXT,
-    members INTEGER,
-    schedule VARCHAR(255),
-    image_url VARCHAR(255),
-    category VARCHAR(50),
-    created_at TIMESTAMP DEFAULT NOW()
-);
-
--- お知らせテーブル
-CREATE TABLE news (
-    id SERIAL PRIMARY KEY,
-    title VARCHAR(255) NOT NULL,
-    content TEXT NOT NULL,
-    type VARCHAR(50) DEFAULT 'general',
-    created_at TIMESTAMP DEFAULT NOW()
-);
-
--- フォーラム投稿テーブル
-CREATE TABLE forum_posts (
-    id SERIAL PRIMARY KEY,
-    content TEXT NOT NULL,
-    status VARCHAR(50) DEFAULT 'pending',
-    reply TEXT,
-    created_at TIMESTAMP DEFAULT NOW()
-);
-```
+3. データベース初期化: ルートの `nazuna.sql` をSupabase SQL Editorで実行してください（スキーマ・RLS・初期データを一括作成）
 
 4. Settings > API からプロジェクトURLとAnonキーを取得
 

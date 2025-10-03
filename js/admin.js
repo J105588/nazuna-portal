@@ -659,26 +659,30 @@ async function loadForumData() {
     const tableBody = document.getElementById('forum-table-body');
     if (!tableBody) return;
     
-    // デモデータ
-    const forumData = [
-        {
-            id: 'POST001',
-            content: '図書室の開館時間を延長してほしいです。',
-            status: 'resolved',
-            created_at: '2025-01-15 14:30'
-        },
-        {
-            id: 'POST002',
-            content: '体育祭の種目について提案があります。',
-            status: 'pending',
-            created_at: '2025-01-14 16:20'
+    let forumData = [];
+    let nameMap = {};
+    try {
+        if (window.supabaseQueries) {
+            const { data: posts, error } = await window.supabaseQueries.getPostsForAdmin({ limit: 200 });
+            if (!error && posts) {
+                forumData = posts;
+                const numbers = Array.from(new Set(posts.map(p => p.student_number).filter(Boolean)));
+                if (numbers.length > 0) {
+                    const { data: students, error: sErr } = await window.supabaseQueries.getStudentsByNumbers(numbers);
+                    if (!sErr && students) {
+                        students.forEach(s => { nameMap[s.student_number] = s.name; });
+                    }
+                }
+            }
         }
-    ];
-    
+    } catch (e) {
+        console.warn('Admin posts load fallback:', e);
+    }
+
     tableBody.innerHTML = forumData.map(item => `
         <tr>
             <td>${item.id}</td>
-            <td>${truncateText(item.content, 50)}</td>
+            <td>${truncateText(item.content, 50)}<div class="small" style="opacity:.7;">投稿者: ${nameMap[item.student_number] || '匿名'}</div></td>
             <td><span class="status-badge status-${item.status}">${getStatusLabel(item.status)}</span></td>
             <td>${formatDateTime(item.created_at)}</td>
             <td>

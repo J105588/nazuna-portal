@@ -61,7 +61,20 @@ const CONFIG = {
         NOTIFICATION_ICON: './images/icon-192x192.png',
         
         // デバッグモード
-        DEBUG: true
+        DEBUG: true,
+
+        // ページごとの公開フラグ（falseで準備中）
+        PAGES: {
+            'index': true,
+            'council': true,
+            'clubs': true,
+            'forum': true,
+            'news': true,
+            'survey': false,
+            'member-detail': true,
+            'admin': true,
+            '404': true
+        }
     },
     
     // UI設定

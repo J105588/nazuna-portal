@@ -1,5 +1,6 @@
 // Supabaseクライアント
 let supabaseClient = null;
+let supabaseQueries = null;
 
 // Supabaseクライアントを初期化
 function initSupabase() {
@@ -11,15 +12,18 @@ function initSupabase() {
         
         try {
             supabaseClient = supabase.createClient(CONFIG.SUPABASE.URL, CONFIG.SUPABASE.ANON_KEY);
-            console.log('Supabase client initialized successfully');
+            supabaseQueries = new SupabaseQueries(supabaseClient);
+            console.log('Supabase client and queries initialized successfully');
         } catch (error) {
             console.error('Failed to initialize Supabase client:', error);
             supabaseClient = null;
+            supabaseQueries = null;
         }
     } else {
         console.warn('Supabase not available or not configured properly');
         console.log('Using demo mode with fallback data');
         supabaseClient = null;
+        supabaseQueries = null;
     }
 }
 
@@ -175,6 +179,13 @@ document.addEventListener('DOMContentLoaded', function() {
     // ページ別の初期化
     const currentPage = getCurrentPage();
     console.log('Current page:', currentPage);
+
+    // ページ公開フラグを確認
+    if (CONFIG?.APP?.PAGES && CONFIG.APP.PAGES[currentPage] === false) {
+        alert('このページは現在準備中です。');
+        window.location.href = '404.html?from=' + encodeURIComponent(currentPage);
+        return;
+    }
     
     // 最小2秒間はオープニング画面を表示
     const startTime = Date.now();
@@ -224,8 +235,13 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     };
     
-    // コンテンツの初期化を開始
-    initializeContent();
+    // ページ入場アニメーション
+    document.body.classList.add('page-enter');
+    requestAnimationFrame(() => {
+        document.body.classList.add('page-enter-active');
+        // コンテンツの初期化を開始
+        initializeContent();
+    });
     
     // フォールバック：オープニング画面を表示した場合のみ5秒後に強制的に閉じる
     if (shouldShowOpening) {
@@ -251,8 +267,8 @@ function checkAndMarkSessionVisit() {
         sessionStorage.setItem(SESSION_KEY, sessionStart);
         console.log('New session started');
         
-        // 新しいセッションでは必ずオープニングを表示
-        sessionStorage.removeItem(OPENING_SHOWN_KEY);
+        // 新しいセッション: この1回だけ表示し、以後のページでは表示しない
+        sessionStorage.setItem(OPENING_SHOWN_KEY, 'true');
         return true;
     }
     
@@ -352,16 +368,12 @@ function initSidebar() {
     // サイドバー内のリンクをクリックしたらサイドバーを閉じて画面遷移
     document.querySelectorAll('.sidebar-nav a').forEach(link => {
         link.addEventListener('click', (e) => {
-            e.preventDefault(); // デフォルトのリンク動作を防ぐ
+            e.preventDefault();
             const href = link.getAttribute('href');
-            
-            // サイドバーを閉じる
+            // ページトランジション: フェードアウト → 遷移
+            document.body.classList.add('page-exit');
             closeSidebar();
-            
-            // 少し遅延してから画面遷移（アニメーションのため）
-            setTimeout(() => {
-                window.location.href = href;
-            }, 300); // サイドバーのアニメーション時間と同じ
+            setTimeout(() => { window.location.href = href; }, 220);
         });
     });
 
@@ -545,24 +557,21 @@ function makeCouncilMembersClickable() {
     });
 }
 
-// Supabaseからデータを読み込む汎用関数
-async function loadFromSupabase(table, container, renderFunction, fallbackData = null) {
+// Supabaseからデータを読み込む汎用関数（統一版）
+async function loadFromSupabase(table, container, renderFunction, fallbackData = null, options = {}) {
     const loadingEl = document.getElementById(`${table}-loading`);
     
     if (loadingEl) loadingEl.style.display = 'block';
     
     try {
-        if (supabaseClient) {
-            const { data, error } = await supabaseClient
-                .from(table)
-                .select('*')
-                .order('created_at', { ascending: false });
+        if (supabaseQueries) {
+            const { data, error } = await supabaseQueries.getTableData(table, options);
             
             if (loadingEl) loadingEl.style.display = 'none';
             
             if (error) {
                 console.error('Supabase error:', error);
-                showNoDataMessage(container, `${table}の読み込み中にエラーが発生しました。`);
+                showNoDataMessage(container, supabaseQueries.getErrorMessage(error, `${table}の読み込み`));
                 return;
             }
             
@@ -670,22 +679,79 @@ async function initForum() {
     const submitBtn = document.getElementById('submit-post');
     const contentInput = document.getElementById('forum-content');
     const postsContainer = document.getElementById('posts-container');
+    const loginBtn = document.getElementById('login-button');
+    const logoutBtn = document.getElementById('logout-button');
+    const navLoginBtn = document.getElementById('nav-login-button');
+    const navLogoutBtn = document.getElementById('nav-logout-button');
+    const chatPanel = document.getElementById('chat-panel');
+    const chatMessages = document.getElementById('chat-messages');
+    const chatSend = document.getElementById('chat-send');
+    const chatText = document.getElementById('chat-text');
+    const categorySelect = document.getElementById('post-category');
+    const statusFilter = document.getElementById('status-filter');
+    const searchInput = document.getElementById('search-posts');
+    const sortSelect = document.getElementById('sort-posts');
+    const pagePrev = document.getElementById('page-prev');
+    const pageNext = document.getElementById('page-next');
+    const pageInfo = document.getElementById('page-info');
+    const charCounter = document.getElementById('forum-char-counter');
+
+    // フォーラム状態（検索・並び替え・ページング）
+    window.forumState = window.forumState || {
+        search: '',
+        status: 'all',
+        orderBy: 'created_at',
+        orderDirection: 'desc',
+        page: 1,
+        pageSize: 10,
+        totalPages: 1
+    };
     
+    const bindLogout = (el) => el && el.addEventListener('click', () => {
+        localStorage.removeItem('nazuna-auth');
+        updateAuthUI();
+    });
+    const bindLogin = (el) => el && el.addEventListener('click', openAuthModal);
+    bindLogin(loginBtn);
+    bindLogin(navLoginBtn);
+    bindLogout(logoutBtn);
+    bindLogout(navLogoutBtn);
+
+    updateAuthUI();
+
     if (submitBtn && contentInput) {
+        // 文字数カウンタ
+        if (charCounter) {
+            const updateCounter = () => {
+                const max = contentInput.getAttribute('maxlength') ? parseInt(contentInput.getAttribute('maxlength')) : 1000;
+                const len = contentInput.value.length;
+                charCounter.textContent = `${len} / ${max}`;
+            };
+            contentInput.addEventListener('input', updateCounter);
+            updateCounter();
+        }
+
         submitBtn.addEventListener('click', function() {
+            // 先に認証チェック：未ログインなら即モーダルへ
+            const auth = getAuth();
+            if (!auth) {
+                openAuthModal();
+                return;
+            }
+
             const content = contentInput.value.trim();
-            
             if (!content) {
                 alert('投稿内容を入力してください');
                 return;
             }
+            const category = categorySelect ? categorySelect.value : 'general';
             
             // 投稿を送信
             submitBtn.disabled = true;
             submitBtn.textContent = '送信中...';
             
             // Supabaseに投稿を送信
-            submitToSupabase(content).then(success => {
+            submitToSupabase(content, auth.student_number, category).then(success => {
                 submitBtn.disabled = false;
                 submitBtn.textContent = '投稿する';
                 
@@ -693,6 +759,11 @@ async function initForum() {
                     contentInput.value = '';
                     alert(CONFIG.MESSAGES.SUCCESS.POST_SUBMITTED);
                     loadPosts();
+                    // 投稿後にチャットパネルを表示
+                    if (chatPanel) {
+                        chatPanel.style.display = '';
+                        // 直近の投稿IDは取得していないため、簡易にリスト再取得後の最初のアイテムを対象にするなどの実装は将来拡張
+                    }
                 } else {
                     alert(CONFIG.MESSAGES.ERROR.SERVER);
                 }
@@ -700,14 +771,91 @@ async function initForum() {
         });
     }
     
+    // ステータスフィルター
+    if (statusFilter) {
+        statusFilter.addEventListener('change', () => {
+            window.forumState.status = statusFilter.value || 'all';
+            window.forumState.page = 1;
+            loadPosts();
+        });
+    }
+    // 検索
+    if (searchInput) {
+        let searchTimer = null;
+        searchInput.addEventListener('input', () => {
+            clearTimeout(searchTimer);
+            searchTimer = setTimeout(() => {
+                window.forumState.search = searchInput.value.trim();
+                window.forumState.page = 1;
+                loadPosts();
+            }, 300);
+        });
+    }
+
+    // 並び替え
+    if (sortSelect) {
+        sortSelect.addEventListener('change', () => {
+            const v = sortSelect.value;
+            window.forumState.orderBy = 'created_at';
+            window.forumState.orderDirection = v === 'created_at_asc' ? 'asc' : 'desc';
+            window.forumState.page = 1;
+            loadPosts();
+        });
+    }
+
+    // ページング
+    const updatePager = () => {
+        if (!pageInfo) return;
+        pageInfo.textContent = `${window.forumState.page} / ${window.forumState.totalPages}`;
+        if (pagePrev) pagePrev.disabled = window.forumState.page <= 1;
+        if (pageNext) pageNext.disabled = window.forumState.page >= window.forumState.totalPages;
+    };
+    if (pagePrev) {
+        pagePrev.addEventListener('click', () => {
+            if (window.forumState.page > 1) {
+                window.forumState.page -= 1;
+                loadPosts();
+            }
+        });
+    }
+    if (pageNext) {
+        pageNext.addEventListener('click', () => {
+            if (window.forumState.page < window.forumState.totalPages) {
+                window.forumState.page += 1;
+                loadPosts();
+            }
+        });
+    }
+    
     // 投稿一覧を読み込み
-    loadPosts();
+    loadPosts().then(updatePager);
+
+    // チャット送信
+    if (chatSend && chatText) {
+        chatSend.addEventListener('click', async () => {
+            const auth = getAuth();
+            if (!auth) { openAuthModal(); return; }
+            const message = chatText.value.trim();
+            if (!message) return;
+            try {
+                // 簡易: 直近の投稿に紐づけて送る（将来はユーザーごとのスレッド化）
+                const latest = await getLatestUserPostId(auth.student_number);
+                if (!latest) { alert('まず投稿してください。'); return; }
+                await supabaseQueries.sendChat({ post_id: latest, sender: auth.student_number, message, is_admin: false });
+                chatText.value = '';
+                await renderChat(latest);
+            } catch (e) {
+                console.error('Chat send error', e);
+            }
+        });
+    }
 }
 
 // 投稿一覧読み込み
 async function loadPosts() {
     const container = document.getElementById('posts-container');
     if (!container) return;
+    const state = window.forumState || { search: '', status: 'all', orderBy: 'created_at', orderDirection: 'desc', page: 1, pageSize: 10 };
     
     // フォールバックデータ
     const demoPosts = [
@@ -737,19 +885,102 @@ async function loadPosts() {
         </div>
     `;
     
-    await loadFromSupabase('forum_posts', container, renderPost, demoPosts);
+    const options = {
+        orderBy: state.orderBy,
+        orderDirection: state.orderDirection,
+        limit: state.pageSize,
+        offset: (state.page - 1) * state.pageSize
+    };
+    if (state.status && state.status !== 'all') {
+        options.filters = { status: state.status };
+    }
+    if (state.search) {
+        options.search = state.search;
+    }
+
+    // データ取得
+    if (supabaseQueries) {
+        try {
+            // リスト取得
+            const { data, error } = await supabaseQueries.getTableData('posts', options);
+            if (error) {
+                showNoDataMessage(container, supabaseQueries.getErrorMessage(error, '投稿の読み込み'));
+                return;
+            }
+            // 件数取得（簡易: 同条件でcount用クエリ）
+            let countQuery = supabaseClient.from('posts').select('id', { count: 'exact', head: true });
+            if (state.status && state.status !== 'all') countQuery = countQuery.eq('status', state.status);
+            if (state.search) countQuery = countQuery.ilike('content', `%${state.search}%`);
+            const { count } = await countQuery;
+            const total = count || 0;
+            window.forumState.totalPages = Math.max(1, Math.ceil(total / state.pageSize));
+
+            if (data && data.length > 0) {
+                container.innerHTML = data.map(renderPost).join('');
+            } else {
+                showNoDataMessage(container, CONFIG.MESSAGES.INFO.NO_INFO);
+            }
+        } catch (e) {
+            console.error('Error loading posts:', e);
+            showNoDataMessage(container, '投稿の読み込み中にエラーが発生しました。');
+        }
+    } else {
+        // フォールバック
+        container.innerHTML = demoPosts.map(renderPost).join('');
+        window.forumState.totalPages = 1;
+    }
+
+    // ページャ表示更新
+    const pageInfo = document.getElementById('page-info');
+    const pagePrev = document.getElementById('page-prev');
+    const pageNext = document.getElementById('page-next');
+    if (pageInfo) {
+        pageInfo.textContent = `${window.forumState.page} / ${window.forumState.totalPages}`;
+    }
+    if (pagePrev) pagePrev.disabled = window.forumState.page <= 1;
+    if (pageNext) pageNext.disabled = window.forumState.page >= window.forumState.totalPages;
 }
 
-// Supabaseに投稿を送信
-async function submitToSupabase(content) {
+async function getLatestUserPostId(student_number) {
     try {
-        if (supabaseClient) {
-            const { data, error } = await supabaseClient
-                .from('forum_posts')
-                .insert([{ content: content }]);
+        if (!supabaseQueries) return null;
+        const { data, error } = await supabaseClient
+            .from('posts')
+            .select('id')
+            .eq('student_number', student_number)
+            .order('created_at', { ascending: false })
+            .limit(1)
+            .maybeSingle();
+        if (error) return null;
+        return data?.id || null;
+    } catch { return null; }
+}
+
+async function renderChat(post_id) {
+    const chatPanel = document.getElementById('chat-panel');
+    const chatMessages = document.getElementById('chat-messages');
+    if (!chatPanel || !chatMessages) return;
+    const { data, error } = await supabaseQueries.listChats(post_id, { limit: 200 });
+    if (error) return;
+    chatPanel.style.display = '';
+    chatMessages.innerHTML = (data || []).map(m => `
+        <div class="chat-message" style="margin:6px 0; ${m.is_admin ? 'text-align:right;' : ''}">
+            <span class="bubble" style="display:inline-block; padding:8px 12px; border-radius:16px; background:${m.is_admin ? '#eef5ff' : '#f2f2f2'};">
+                ${escapeHtml(m.message)}
+            </span>
+        </div>
+    `).join('');
+    chatMessages.scrollTop = chatMessages.scrollHeight;
+}
+
+// Supabaseに投稿を送信（統一版）
+async function submitToSupabase(content, student_number, category = 'general') {
+    try {
+        if (supabaseQueries) {
+            const result = await supabaseQueries.createPost({ content, student_number, category });
             
-            if (error) {
-                console.error('Supabase insert error:', error);
+            if (result.error) {
+                console.error('Supabase insert error:', result.error);
                 return false;
             }
             
@@ -763,6 +994,163 @@ async function submitToSupabase(content) {
         console.error('Error submitting post:', error);
         return false;
     }
+}
+
+// 認証UI
+function getAuth() {
+    try {
+        const raw = localStorage.getItem('nazuna-auth');
+        if (!raw) return null;
+        const data = JSON.parse(raw);
+        if (!data || !data.student_number) return null;
+        return data;
+    } catch {
+        return null;
+    }
+}
+
+function updateAuthUI() {
+    const auth = getAuth();
+    const loginBtn = document.getElementById('login-button');
+    const logoutBtn = document.getElementById('logout-button');
+    const navLoginBtn = document.getElementById('nav-login-button');
+    const navLogoutBtn = document.getElementById('nav-logout-button');
+    const submitBtn = document.getElementById('submit-post');
+    if (auth) {
+        loginBtn && (loginBtn.style.display = 'none');
+        logoutBtn && (logoutBtn.style.display = 'inline-flex');
+        navLoginBtn && (navLoginBtn.style.display = 'none');
+        navLogoutBtn && (navLogoutBtn.style.display = 'inline-flex');
+        if (submitBtn) {
+            submitBtn.innerHTML = '<i class="fas fa-paper-plane"></i> 投稿する';
+        }
+    } else {
+        loginBtn && (loginBtn.style.display = 'inline-flex');
+        logoutBtn && (logoutBtn.style.display = 'none');
+        navLoginBtn && (navLoginBtn.style.display = 'inline-flex');
+        navLogoutBtn && (navLogoutBtn.style.display = 'none');
+        if (submitBtn) {
+            submitBtn.innerHTML = '<i class="fas fa-sign-in-alt"></i> ログイン';
+        }
+    }
+}
+
+function openAuthModal() {
+    const overlay = document.getElementById('auth-modal-overlay');
+    const closeBtn = document.getElementById('auth-modal-close');
+    const stepNumber = document.getElementById('step-student-number');
+    const stepRegister = document.getElementById('step-register');
+    const stepLogin = document.getElementById('step-login');
+    const err = document.getElementById('auth-error');
+    const checkBtn = document.getElementById('check-student-number');
+    const registerBtn = document.getElementById('register-student');
+    const loginBtn = document.getElementById('login-student');
+    const numberInput = document.getElementById('student-number-input');
+    const nameInput = document.getElementById('student-name-input');
+    const passSetInput = document.getElementById('password-set-input');
+    const passLoginInput = document.getElementById('password-login-input');
+    const togglePassSet = document.getElementById('toggle-password-set');
+    const togglePassLogin = document.getElementById('toggle-password-login');
+
+    if (!overlay) return;
+    err.style.display = 'none';
+    stepNumber.style.display = '';
+    stepRegister.style.display = 'none';
+    stepLogin.style.display = 'none';
+    // 開く（アニメーション：まずopeningでレイアウト→次フレームでactive）
+    overlay.classList.remove('closing');
+    overlay.classList.add('opening');
+    document.body.style.overflow = 'hidden';
+    requestAnimationFrame(() => {
+        overlay.classList.add('active');
+        overlay.classList.remove('opening');
+    });
+
+    // 初期フォーカス
+    setTimeout(() => numberInput?.focus(), 0);
+
+    const closeModal = () => {
+        // 閉じる（アニメーション）
+        overlay.classList.add('closing');
+        setTimeout(() => {
+            overlay.classList.remove('active');
+            overlay.classList.remove('closing');
+            document.body.style.overflow = '';
+        }, 250);
+        document.removeEventListener('keydown', onEscClose, true);
+    };
+    const onEscClose = (e) => {
+        if (e.key === 'Escape') closeModal();
+    };
+    document.addEventListener('keydown', onEscClose, true);
+    closeBtn.onclick = closeModal;
+    overlay.onclick = (e) => { if (e.target === overlay) closeModal(); };
+
+    // パスワード表示切替
+    const bindToggle = (btn, input) => {
+        if (!btn || !input) return;
+        btn.addEventListener('click', (e) => {
+            e.preventDefault();
+            const isPw = input.getAttribute('type') === 'password';
+            input.setAttribute('type', isPw ? 'text' : 'password');
+            btn.innerHTML = isPw ? '<i class="fas fa-eye-slash"></i>' : '<i class="fas fa-eye"></i>';
+            input.focus();
+        });
+    };
+    bindToggle(togglePassSet, passSetInput);
+    bindToggle(togglePassLogin, passLoginInput);
+
+    const doCheck = async () => {
+        const sn = numberInput.value.trim();
+        if (!sn) { showAuthError('生徒番号を入力してください'); return; }
+        if (!supabaseQueries) { showAuthError('Supabase未設定'); return; }
+        const { data, error } = await supabaseQueries.getStudentByNumber(sn);
+        if (error) { showAuthError('確認に失敗しました'); return; }
+        if (!data) {
+            // 初回登録
+            stepNumber.style.display = 'none';
+            stepRegister.style.display = '';
+            document.getElementById('auth-modal-title').textContent = '初回登録';
+            const doRegister = async () => {
+                const name = nameInput.value.trim();
+                const pw = passSetInput.value;
+                if (!name || !pw || pw.length < 6) { showAuthError('氏名と6文字以上のパスワード'); return; }
+                const password_hash = await window.sha256(pw);
+                const { data: created, error: insErr } = await supabaseQueries.registerStudent({ student_number: sn, name, password_hash });
+                if (insErr) { showAuthError('登録に失敗しました'); return; }
+                localStorage.setItem('nazuna-auth', JSON.stringify({ student_number: sn, name }));
+                closeModal();
+                updateAuthUI();
+            };
+            registerBtn.onclick = doRegister;
+            passSetInput.onkeydown = (e) => { if (e.key === 'Enter') doRegister(); };
+        } else {
+            // 既存 -> パスワード入力
+            stepNumber.style.display = 'none';
+            stepLogin.style.display = '';
+            document.getElementById('auth-modal-title').textContent = 'ログイン';
+            const doLogin = async () => {
+                const pw = passLoginInput.value;
+                if (!pw) { showAuthError('パスワードを入力してください'); return; }
+                const hash = await window.sha256(pw);
+                if (hash !== data.password_hash) { showAuthError('認証に失敗しました'); return; }
+                localStorage.setItem('nazuna-auth', JSON.stringify({ student_number: data.student_number, name: data.name }));
+                closeModal();
+                updateAuthUI();
+            };
+            loginBtn.onclick = doLogin;
+            passLoginInput.onkeydown = (e) => { if (e.key === 'Enter') doLogin(); };
+        }
+    };
+    checkBtn.onclick = doCheck;
+    numberInput.onkeydown = (e) => { if (e.key === 'Enter') doCheck(); };
+}
+
+function showAuthError(message) {
+    const err = document.getElementById('auth-error');
+    if (!err) return;
+    err.style.display = 'block';
+    err.textContent = message;
 }
 
 // PWA初期化
