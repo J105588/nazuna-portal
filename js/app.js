@@ -442,7 +442,7 @@ function showOpeningScreen() {
             <div class="opening-logo">
                 <i class="fas fa-users"></i>
             </div>
-            <h1 class="opening-title">生徒会ポータル</h1>
+            <h1 class="opening-title">なずなポータル</h1>
             <p class="opening-subtitle">みんなでつくる学校生活</p>
             <div class="opening-loader"></div>
         </div>
