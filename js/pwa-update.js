@@ -165,8 +165,51 @@ class PWAUpdater {
 
     async applyUpdate() {
         if (this.registration && this.registration.waiting) {
-            // 新しいService Workerにskip waitingを送信
-            this.registration.waiting.postMessage({ type: 'SKIP_WAITING' });
+            try {
+                // ローディング表示を開始
+                this.showUpdateLoading();
+                
+                // タイムアウト設定（30秒）
+                const timeoutId = setTimeout(() => {
+                    console.warn('Update timeout, forcing reload');
+                    this.hideUpdateLoading();
+                    window.location.reload();
+                }, 30000);
+                
+                // 新しいService Workerにskip waitingを送信
+                this.registration.waiting.postMessage({ type: 'SKIP_WAITING' });
+                
+                // アップデート完了を待つ
+                const stateChangeHandler = () => {
+                    if (this.registration.waiting.state === 'activated') {
+                        console.log('Update applied successfully');
+                        clearTimeout(timeoutId);
+                        this.hideUpdateLoading();
+                        // ページをリロードしてアップデートを適用
+                        window.location.reload();
+                    }
+                };
+                
+                this.registration.waiting.addEventListener('statechange', stateChangeHandler);
+                
+                // コントローラー変更も監視
+                const controllerChangeHandler = () => {
+                    console.log('Controller changed, update complete');
+                    clearTimeout(timeoutId);
+                    this.hideUpdateLoading();
+                    window.location.reload();
+                };
+                
+                navigator.serviceWorker.addEventListener('controllerchange', controllerChangeHandler);
+                
+            } catch (error) {
+                console.error('Update failed:', error);
+                this.hideUpdateLoading();
+                this.showUpdateError();
+            }
+        } else {
+            console.warn('No waiting service worker found');
+            this.showUpdateError();
         }
     }
 
@@ -190,6 +233,70 @@ class PWAUpdater {
                 console.error('Update check failed:', error);
             }
         }
+    }
+
+    // アップデートローディング表示
+    showUpdateLoading() {
+        const loadingModal = document.createElement('div');
+        loadingModal.className = 'pwa-update-loading';
+        loadingModal.innerHTML = `
+            <div class="pwa-update-loading-content">
+                <div class="pwa-update-loading-spinner">
+                    <div class="spinner"></div>
+                </div>
+                <div class="pwa-update-loading-text">
+                    <h3>システムをアップデート中...</h3>
+                    <p>しばらくお待ちください</p>
+                </div>
+            </div>
+        `;
+        
+        document.body.appendChild(loadingModal);
+        
+        // アニメーション
+        setTimeout(() => {
+            loadingModal.classList.add('pwa-update-loading-show');
+        }, 100);
+    }
+
+    // アップデートローディング非表示
+    hideUpdateLoading() {
+        const loadingModal = document.querySelector('.pwa-update-loading');
+        if (loadingModal) {
+            loadingModal.classList.remove('pwa-update-loading-show');
+            setTimeout(() => {
+                loadingModal.remove();
+            }, 300);
+        }
+    }
+
+    // アップデートエラー表示
+    showUpdateError() {
+        const errorModal = document.createElement('div');
+        errorModal.className = 'pwa-update-error';
+        errorModal.innerHTML = `
+            <div class="pwa-update-error-content">
+                <div class="pwa-update-error-icon">
+                    <i class="fas fa-exclamation-triangle"></i>
+                </div>
+                <div class="pwa-update-error-text">
+                    <h3>アップデートに失敗しました</h3>
+                    <p>しばらく時間をおいてから再度お試しください</p>
+                </div>
+                <div class="pwa-update-error-actions">
+                    <button class="pwa-update-btn pwa-update-btn-primary" onclick="this.parentElement.parentElement.parentElement.remove()">
+                        閉じる
+                    </button>
+                </div>
+            </div>
+        `;
+        
+        document.body.appendChild(errorModal);
+        
+        // アニメーション
+        setTimeout(() => {
+            errorModal.classList.add('pwa-update-error-show');
+        }, 100);
     }
 
     // PWAの状態を取得

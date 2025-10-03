@@ -1,4 +1,4 @@
-const CACHE_NAME = 'nazuna-portal-v1';
+const CACHE_NAME = 'nazuna-portal-v2';
 const urlsToCache = [
   './',
   './css/style.css',
@@ -266,3 +266,13 @@ async function clearOfflineData() {
     console.error('Error clearing offline data:', error);
   }
 }
+
+// Service Workerからのメッセージ受信
+self.addEventListener('message', event => {
+  console.log('Service Worker received message:', event.data);
+  
+  if (event.data && event.data.type === 'SKIP_WAITING') {
+    console.log('Skipping waiting and activating new service worker');
+    self.skipWaiting();
+  }
+});
