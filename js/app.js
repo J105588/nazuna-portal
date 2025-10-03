@@ -364,6 +364,13 @@ function initSidebar() {
             }, 300); // サイドバーのアニメーション時間と同じ
         });
     });
+
+    // スマホ用の閉じるボタン
+    const sidebarCloseBtn = document.querySelector('#sidebar-close-btn');
+    sidebarCloseBtn?.addEventListener('click', (e) => {
+        e.stopPropagation();
+        closeSidebar();
+    });
     
     // ESCキーでサイドバーを閉じる
     document.addEventListener('keydown', (e) => {
@@ -384,6 +391,13 @@ function toggleSidebar() {
     hamburger?.classList.toggle('active');
     sidebar?.classList.toggle('active');
     overlay?.classList.toggle('active');
+    
+    // ハンバーガーボタンの位置制御用クラス
+    if (!isActive) {
+        document.body.classList.add('sidebar-open');
+    } else {
+        document.body.classList.remove('sidebar-open');
+    }
     
     // アクセシビリティ属性を更新
     if (hamburger) {
@@ -409,6 +423,7 @@ function closeSidebar() {
     hamburger?.classList.remove('active');
     sidebar?.classList.remove('active');
     overlay?.classList.remove('active');
+    document.body.classList.remove('sidebar-open');
     document.body.style.overflow = '';
 }
 

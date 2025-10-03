@@ -4,8 +4,8 @@
 const CONFIG = {
     // Supabase設定
     SUPABASE: {
-        URL: 'YOUR_SUPABASE_URL_HERE',
-        ANON_KEY: 'YOUR_SUPABASE_ANON_KEY_HERE'
+        URL: 'https://nhpohillwcpfybvmcexx.supabase.co',
+        ANON_KEY: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5ocG9oaWxsd2NwZnlidm1jZXh4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTk0MTQ5MTUsImV4cCI6MjA3NDk5MDkxNX0.iwNdmyg7vQFY8VUhYUQoI-y6u5sFivxtKLURNCerZAM'
     },
     
     // Google Apps Script WebApp URL
