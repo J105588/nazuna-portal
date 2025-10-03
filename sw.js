@@ -74,7 +74,7 @@ self.addEventListener('push', event => {
   console.log('Push message received:', event);
   
   let notificationData = {
-    title: '生徒会ポータル',
+    title: 'なずなポータル',
     body: 'お知らせがあります',
     icon: './images/icon-192x192.png',
     badge: './images/badge-72x72.png',

@@ -1,4 +1,4 @@
-// 生徒会ポータルサイト設定ファイル
+// なずなポータルサイト設定ファイル
 
 // API設定
 const CONFIG = {
@@ -47,7 +47,7 @@ const CONFIG = {
     
     // アプリケーション設定
     APP: {
-        NAME: '生徒会ポータル',
+        NAME: 'なずなポータル',
         VERSION: '2.0.0',
         DESCRIPTION: 'みんなでつくる学校生活',
         
@@ -154,7 +154,7 @@ const CONFIG = {
 
 // 設定の検証
 if (CONFIG.APP.DEBUG) {
-    console.log('生徒会ポータル設定:', CONFIG);
+    console.log('なずなポータル設定:', CONFIG);
 }
 
 // 設定をグローバルに公開

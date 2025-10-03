@@ -165,7 +165,7 @@ function loadMemberDetail() {
     }
     
     // ページタイトルを更新
-    document.title = `${member.name} - 生徒会ポータルサイト`;
+    document.title = `${member.name} - なずなポータル`;
     
     // ヘッダー情報を表示
     displayMemberHero(member);

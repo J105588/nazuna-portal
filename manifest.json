@@ -1,7 +1,7 @@
 {
-  "name": "生徒会ポータルサイト",
+  "name": "なずなポータル",
   "short_name": "なずなポータル",
-  "description": "学校生活をより良くするための生徒会ポータルサイト",
+  "description": "学校生活をより良くするためのポータルサイト",
   "start_url": "./",
   "display": "standalone",
   "background_color": "#ffffff",
