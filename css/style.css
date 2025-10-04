@@ -3313,35 +3313,150 @@ textarea.form-control {
 
 .achievements-timeline {
     position: relative;
+    padding: 0;
 }
 
-.achievements-timeline::before {
+.achievements-year-group {
+    margin-bottom: 2rem;
+}
+
+.year-header {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+    font-size: 1.125rem;
+    font-weight: 600;
+    color: var(--primary-color);
+    border-bottom: 2px solid var(--accent-color);
+    padding-bottom: 0.5rem;
+}
+
+.year-header i {
+    color: var(--accent-color);
+}
+
+.achievements-year-content {
+    position: relative;
+    padding-left: 2rem;
+}
+
+.achievements-year-content::before {
     content: '';
     position: absolute;
-    left: 20px;
-    top: 0;
-    bottom: 0;
+    left: 0;
+    top: -10px;
+    bottom: -10px;
     width: 2px;
-    background: var(--border-color);
+    background: var(--accent-color);
+    opacity: 0.3;
 }
 
 .achievement-item {
     position: relative;
-    padding-left: 60px;
-    margin-bottom: 2rem;
+    background: var(--surface-color);
+    border: 1px solid var(--border-color);
+    border-radius: 0.75rem;
+    padding: 1rem;
+    margin-bottom: 0.75rem;
+    box-shadow: var(--shadow-sm);
+    transition: all 0.2s ease;
+    opacity: 0;
+    animation: fadeInUp 0.4s ease forwards;
+}
+
+.achievement-item:nth-child(odd) {
+    animation-delay: 0.1s;
+}
+
+.achievement-item:nth-child(even) {
+    animation-delay: 0.2s;
 }
 
 .achievement-item::before {
     content: '';
     position: absolute;
-    left: 14px;
-    top: 8px;
-    width: 12px;
-    height: 12px;
-    background: var(--secondary-color);
+    left: -2rem;
+    top: 1.5rem;
+    width: 10px;
+    height: 10px;
+    background: var(--accent-color);
     border-radius: 50%;
-    border: 3px solid var(--surface-color);
-    box-shadow: 0 0 0 2px var(--secondary-color);
+    border: 2px solid var(--surface-color);
+    box-shadow: 0 0 0 2px var(--accent-color);
+}
+
+.achievement-item:hover {
+    transform: translateX(5px);
+    box-shadow: var(--shadow-md);
+}
+
+.achievement-item.academic::before {
+    background: #3498db;
+    box-shadow: 0 0 0 2px #3498db;
+}
+
+.achievement-item.cultural::before {
+    background: #9b59b6;
+    box-shadow: 0 0 0 2px #9b59b6;
+}
+
+.achievement-item.sports::before {
+    background: #e74c3c;
+    box-shadow: 0 0 0 2px #e74c3c;
+}
+
+.achievement-item.leadership::before {
+    background: #f39c12;
+    box-shadow: 0 0 0 2px #f39c12;
+}
+
+.achievement-item.volunteer::before {
+    background: #27ae60;
+    box-shadow: 0 0 0 2px #27ae60;
+}
+
+.achievement-item.event::before {
+    background: #e67e22;
+    box-shadow: 0 0 0 2px #e67e22;
+}
+
+.achievement-category {
+    display: inline-block;
+    padding: 0.2rem 0.5rem;
+    border-radius: 0.25rem;
+    font-size: 0.75rem;
+    font-weight: 500;
+    color: white;
+    background: var(--accent-color);
+}
+
+.achievement-category.category-general {
+    background: var(--accent-color);
+}
+
+.achievement-category.category-academic {
+    background: #3498db;
+}
+
+.achievement-category.category-cultural {
+    background: #9b59b6;
+}
+
+.achievement-category.category-sports {
+    background: #e74c3c;
+}
+
+.achievement-category.category-leadership {
+    background: #f39c12;
+}
+
+.achievement-category.category-volunteer {
+    background: #27ae60;
+}
+
+.achievement-category.category-event {
+    background: #e67e22;
 }
 
 .achievement-date {

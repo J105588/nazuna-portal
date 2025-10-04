@@ -129,6 +129,12 @@
                         </a>
                     </li>
                     <li>
+                        <a href="#achievements" class="menu-item" data-section="achievements">
+                            <i class="fas fa-trophy"></i>
+                            <span>活動実績管理</span>
+                        </a>
+                    </li>
+                    <li>
                         <a href="#notifications" class="menu-item" data-section="notifications">
                             <i class="fas fa-bell"></i>
                             <span>通知配信</span>
@@ -290,6 +296,82 @@
                 </div>
                 <div class="members-grid" id="members-grid">
                     <!-- 生徒会メンバー一覧がここに表示されます -->
+                </div>
+            </section>
+
+            <!-- 活動実績管理 -->
+            <section class="admin-section" id="achievements-section">
+                <div class="section-header">
+                    <h2><i class="fas fa-trophy"></i> 活動実績管理</h2>
+                    <div class="section-controls">
+                        <select id="member-filter" class="form-control">
+                            <option value="">メンバーを選択</option>
+                        </select>
+                        <button class="btn btn-primary" id="add-achievement-btn">
+                            <i class="fas fa-plus"></i>
+                            実績追加
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- メンバー別フィルター -->
+                <div class="filter-section">
+                    <label>表示フィルター：</label>
+                    <div class="filter-controls">
+                        <select id="achievement-year-filter" class="form-control">
+                            <option value="">すべての年</option>
+                            <option value="2024">2024年</option>
+                            <option value="2025">2025年</option>
+                        </select>
+                        <select id="achievement-month-filter" class="form-control">
+                            <option value="">すべての月</option>
+                            <option value="1">1月</option>
+                            <option value="2">2月</option>
+                            <option value="3">3月</option>
+                            <option value="4">4月</option>
+                            <option value="5">5月</option>
+                            <option value="6">6月</option>
+                            <option value="7">7月</option>
+                            <option value="8">8月</option>
+                            <option value="9">9月</option>
+                            <option value="10">10月</option>
+                            <option value="11">11月</option>
+                            <option value="12">12月</option>
+                        </select>
+                        <select id="achievement-category-filter" class="form-control">
+                            <option value="">すべてのカテゴリ</option>
+                            <option value="general">一般</option>
+                            <option value="academic">学習</option>
+                            <option value="cultural">文化</option>
+                            <option value="sports">スポーツ</option>
+                            <option value="leadership">リーダーシップ</option>
+                            <option value="volunteer">ボランティア</option>
+                            <option value="event">イベント</option>
+                        </select>
+                        <button class="btn btn-outline" id="clear-filters-btn">
+                            <i class="fas fa-times"></i>
+                            フィルタークリア
+                        </button>
+                    </div>
+                </div>
+
+                <div class="admin-table-container">
+                    <table class="admin-table">
+                        <thead>
+                            <tr>
+                                <th>メンバー</th>
+                                <th>年月</th>
+                                <th>タイトル</th>
+                                <th>カテゴリ</th>
+                                <th>詳細</th>
+                                <th>公開設定</th>
+                                <th>操作</th>
+                            </tr>
+                        </thead>
+                        <tbody id="achievements-table-body">
+                            <!-- 活動実績一覧がここに表示されます -->
+                        </tbody>
+                    </table>
                 </div>
             </section>
 

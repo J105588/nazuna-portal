@@ -1,10 +1,9 @@
 // Firebase設定ファイル
 // 実際の運用時はFirebase Consoleから取得した設定値を使用
 
-// Import the functions you need from the SDKs you need
-import { initializeApp } from "firebase/app";
-// TODO: Add SDKs for Firebase products that you want to use
-// https://firebase.google.com/docs/web/setup#available-libraries
+// Firebase設定ファイル
+// 実際の運用時はFirebase Consoleから取得した設定値を使用
+// ES6 importは使用せず、CDNから読み込まれたFirebase SDKを使用
 
 // Your web app's Firebase configuration
 const firebaseConfig = {
@@ -16,8 +15,8 @@ const firebaseConfig = {
     appId: "1:181514532945:web:65043ee5d7d435a7af6070"
 };
 
-// Initialize Firebase
-const app = initializeApp(firebaseConfig);
+// Firebase初期化（CDN版を使用）
+// const app = initializeApp(firebaseConfig); // ES6 import版は使用しない
 
 // VAPIDキー（Firebase Console > Project Settings > Cloud Messaging から取得）
 // Web Push通知などで使用します

@@ -12,18 +12,28 @@ function initSupabase() {
         
         try {
             supabaseClient = supabase.createClient(CONFIG.SUPABASE.URL, CONFIG.SUPABASE.ANON_KEY);
+            window.supabaseClient = supabaseClient; // グローバルに公開
+            if (typeof SupabaseQueries === 'undefined') {
+                throw new Error('SupabaseQueries class not available');
+            }
             supabaseQueries = new SupabaseQueries(supabaseClient);
+            window.supabaseQueries = supabaseQueries; // グローバルに公開
             console.log('Supabase client and queries initialized successfully');
         } catch (error) {
             console.error('Failed to initialize Supabase client:', error);
+            console.log('Continuing with demo mode...');
             supabaseClient = null;
             supabaseQueries = null;
+            window.supabaseClient = null;
+            window.supabaseQueries = null;
         }
     } else {
         console.warn('Supabase not available or not configured properly');
         console.log('Using demo mode with fallback data');
         supabaseClient = null;
         supabaseQueries = null;
+        window.supabaseClient = null;
+        window.supabaseQueries = null;
     }
 }
 
@@ -494,32 +504,184 @@ function hideOpeningScreen() {
     }
 }
 
+// データキャッシュ
+const dataCache = {
+    councilMembers: null,
+    lastFetch: null,
+    cacheDuration: 5 * 60 * 1000 // 5分
+};
+
+// キャッシュからデータを取得
+function getCachedCouncilMembers() {
+    if (!dataCache.councilMembers || !dataCache.lastFetch) {
+        return null;
+    }
+    
+    const now = Date.now();
+    if (now - dataCache.lastFetch > dataCache.cacheDuration) {
+        // キャッシュ期限切れ
+        dataCache.councilMembers = null;
+        dataCache.lastFetch = null;
+        return null;
+    }
+    
+    return dataCache.councilMembers;
+}
+
+// データをキャッシュに保存
+function setCachedCouncilMembers(data) {
+    dataCache.councilMembers = data;
+    dataCache.lastFetch = Date.now();
+}
+
+// グローバルに公開（member-detail.jsからアクセス可能にする）
+window.getCachedCouncilMembers = getCachedCouncilMembers;
+window.setCachedCouncilMembers = setCachedCouncilMembers;
+
 // 生徒会メンバー読み込み
 async function loadCouncilMembers() {
-    const members = [
-        { id: 1, name: '会長 山田太郎', role: '全体統括', image: 'images/member1.jpg', message: '皆さんの声を大切にします！' },
-        { id: 2, name: '副会長 田中花子', role: '企画運営', image: 'images/member2.jpg', message: 'イベント企画頑張ります！' },
-        { id: 3, name: '書記 鈴木一郎', role: '議事録作成', image: 'images/member3.jpg', message: '透明性のある活動を目指します' },
-        { id: 4, name: '会計 佐藤美咲', role: '予算管理', image: 'images/member4.jpg', message: '予算を有効活用します' }
-    ];
-    
     const container = document.querySelector('.council-members');
-    if (container) {
-        container.innerHTML = members.map(member => `
-            <div class="member-card clickable" data-member-id="${member.id}" tabindex="0" role="button" aria-label="${member.name}の詳細を見る">
-                <div class="member-image" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); height: 150px; border-radius: 50%; width: 150px; margin: 0 auto 1rem;"></div>
-                <h3>${member.name}</h3>
-                <p class="member-role">${member.role}</p>
-                <p class="member-message">"${member.message}"</p>
-                <div class="member-card-overlay">
-                    <i class="fas fa-eye"></i>
-                    <span>詳細を見る</span>
-                </div>
+    if (!container) return;
+    
+    // ローディング表示
+    container.innerHTML = `
+        <div class="loading-container">
+            <div class="loading-spinner"></div>
+            <p>生徒会メンバー情報を読み込み中...</p>
+        </div>
+    `;
+    
+    const renderMember = (member) => `
+        <div class="member-card clickable" data-member-id="${member.id}" tabindex="0" role="button" aria-label="${member.name}の詳細を見る">
+            <div class="member-image" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); height: 150px; border-radius: 50%; width: 150px; margin: 0 auto 1rem;"></div>
+            <h3>${member.name}</h3>
+            <p class="member-role">${member.role}</p>
+            <p class="member-message">"${member.message || 'よろしくお願いします'}"</p>
+            <div class="member-card-overlay">
+                <i class="fas fa-eye"></i>
+                <span>詳細を見る</span>
             </div>
-        `).join('');
+        </div>
+    `;
+    
+    try {
+        // まずキャッシュをチェック
+        const cachedData = getCachedCouncilMembers();
+        if (cachedData) {
+            console.log('Using cached council members data');
+            container.innerHTML = cachedData.map(renderMember).join('');
+            makeCouncilMembersClickable();
+            showInfoMessage('キャッシュされたデータを表示しています。');
+            return;
+        }
         
-        // メンバーカードをクリック可能にする
-        makeCouncilMembersClickable();
+        if (supabaseQueries) {
+            console.log('Loading council members from Supabase...');
+            const { data, error } = await supabaseQueries.getCouncilMembers({ activeOnly: true });
+            
+            if (error) {
+                console.error('Supabase error loading council members:', error);
+                console.log('Error details:', JSON.stringify(error));
+                
+                // エラーの詳細をチェック
+                const errorMsg = error.message || error.details || error.hint || '不明なエラー';
+                const isRLSError = errorMsg.includes('policy') || errorMsg.includes('RLS') || errorMsg.includes('permission');
+                
+                if (isRLSError) {
+                    container.innerHTML = `
+                        <div class="no-data-message">
+                            <div class="no-data-icon">
+                                <i class="fas fa-lock"></i>
+                            </div>
+                            <h3>アクセス権限エラー</h3>
+                            <p>データベースのアクセス権限に問題があります。管理者にお問い合わせください。</p>
+                            <details>
+                                <summary>技術詳細</summary>
+                                <pre>Error: ${JSON.stringify(error, null, 2)}</pre>
+                            </details>
+                            <button class="btn btn-primary" onclick="loadCouncilMembers()">
+                                <i class="fas fa-refresh"></i>
+                                再試行
+                            </button>
+                        </div>
+                    `;
+                } else {
+                    container.innerHTML = `
+                        <div class="no-data-message">
+                            <div class="no-data-icon">
+                                <i class="fas fa-exclamation-triangle"></i>
+                            </div>
+                            <h3>データの読み込みに失敗しました</h3>
+                            <p>データベースに接続できませんでした。しばらく待ってから再試行してください。</p>
+                            <button class="btn btn-primary" onclick="loadCouncilMembers()">
+                                <i class="fas fa-refresh"></i>
+                                再試行
+                            </button>
+                        </div>
+                    `;
+                }
+                showErrorMessage(`データの読み込み中にエラーが発生しました: ${errorMsg}`);
+            } else if (data && data.length > 0) {
+                console.log('Loaded council members from Supabase:', data.length);
+                console.log('Sample data:', data[0]);
+                // データをキャッシュに保存
+                setCachedCouncilMembers(data);
+                container.innerHTML = data.map(renderMember).join('');
+                makeCouncilMembersClickable();
+                showSuccessMessage(`${data.length}名の生徒会メンバー情報を読み込みました。`);
+            } else {
+                console.log('No council members found in Supabase - empty result');
+                container.innerHTML = `
+                    <div class="no-data-message">
+                        <div class="no-data-icon">
+                            <i class="fas fa-users"></i>
+                        </div>
+                        <h3>メンバー情報がありません</h3>
+                        <p>現在、生徒会メンバーの情報が登録されていません。</p>
+                        <details>
+                            <summary>デバッグ情報</summary>
+                            <pre>Status: ${supabaseQueries?.isAvailable ? 'Supabase connected' : 'Supabase unavailable'}
+RLS Policy: Public read access on council_members WHERE is_active = true
+Query: SELECT * FROM council_members WHERE is_active = true ORDER BY display_order ASC</pre>
+                        </details>
+                    </div>
+                `;
+                showInfoMessage('データベースにメンバー情報が登録されていません。');
+            }
+        } else {
+            console.log('Supabase not available');
+            container.innerHTML = `
+                <div class="no-data-message">
+                    <div class="no-data-icon">
+                        <i class="fas fa-exclamation-triangle"></i>
+                    </div>
+                    <h3>データベースに接続できません</h3>
+                    <p>システムの初期化に失敗しました。ページを再読み込みしてください。</p>
+                    <button class="btn btn-primary" onclick="location.reload()">
+                        <i class="fas fa-refresh"></i>
+                        ページを再読み込み
+                    </button>
+                </div>
+            `;
+            showErrorMessage('データベースに接続できません。');
+        }
+        
+    } catch (error) {
+        console.error('Error loading council members:', error);
+        container.innerHTML = `
+            <div class="no-data-message">
+                <div class="no-data-icon">
+                    <i class="fas fa-exclamation-triangle"></i>
+                </div>
+                <h3>予期しないエラーが発生しました</h3>
+                <p>システムエラーが発生しました。ページを再読み込みしてください。</p>
+                <button class="btn btn-primary" onclick="location.reload()">
+                    <i class="fas fa-refresh"></i>
+                    ページを再読み込み
+                </button>
+            </div>
+        `;
+        showErrorMessage('予期しないエラーが発生しました。');
     }
 }
 
@@ -610,6 +772,50 @@ function showNoDataMessage(container, message = CONFIG.MESSAGES.INFO.NO_INFO) {
             </div>
         `;
     }
+}
+
+// 成功メッセージを表示
+function showSuccessMessage(message) {
+    showMessage(message, 'success');
+}
+
+// エラーメッセージを表示
+function showErrorMessage(message) {
+    showMessage(message, 'error');
+}
+
+// 情報メッセージを表示
+function showInfoMessage(message) {
+    showMessage(message, 'info');
+}
+
+// メッセージ表示の共通関数
+function showMessage(message, type) {
+    const messageEl = document.createElement('div');
+    messageEl.className = `message-toast message-${type}`;
+    messageEl.innerHTML = `
+        <div class="message-content">
+            <i class="fas fa-${type === 'success' ? 'check-circle' : type === 'error' ? 'exclamation-triangle' : 'info-circle'}"></i>
+            <span>${message}</span>
+        </div>
+    `;
+    
+    document.body.appendChild(messageEl);
+    
+    // アニメーション表示
+    setTimeout(() => {
+        messageEl.classList.add('show');
+    }, 100);
+    
+    // 5秒後に自動で消す
+    setTimeout(() => {
+        messageEl.classList.remove('show');
+        setTimeout(() => {
+            if (messageEl.parentNode) {
+                messageEl.remove();
+            }
+        }, 300);
+    }, 5000);
 }
 
 // 部活動データ読み込み

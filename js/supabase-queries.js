@@ -18,7 +18,9 @@ if (!window.sha256) {
  * 統一されたSupabaseクエリクラス
  * すべてのデータベース操作を統一された形式で提供
  */
-if (!window.SupabaseQueries) {
+
+// SupabaseQueries クラスをグローバルスコープに公開
+if (typeof window.SupabaseQueries === 'undefined') {
 class SupabaseQueries {
     constructor(supabaseClient) {
         this.client = supabaseClient;
@@ -119,7 +121,8 @@ class SupabaseQueries {
     async getCouncilMembers(options = {}) {
         const {
             activeOnly = true,
-            orderBy = 'display_order'
+            orderBy = 'display_order',
+            includeAchievements = true
         } = options;
 
         if (!this.isAvailable) {
@@ -132,14 +135,108 @@ class SupabaseQueries {
                 .select('*')
                 .order(orderBy, { ascending: true });
 
+            // RLSにより、is_active=trueのレコードのみ取得可能
             if (activeOnly) {
                 query = query.eq('is_active', true);
             }
 
             const { data, error } = await query;
-            return { data: data || [], error };
+            
+            if (error) {
+                console.error('Supabase query error:', error);
+                return { data: [], error };
+            }
+
+            // 活動実績も取得する場合
+            if (includeAchievements && data && data.length > 0) {
+                const memberIds = data.map(member => member.id);
+                const { data: achievementsData, error: achievementsError } = await this.client
+                    .from('member_achievements')
+                    .select('*')
+                    .in('member_id', memberIds)
+                    .eq('is_public', true)
+                    .order('achievement_year', { ascending: false })
+                    .order('achievement_month', { ascending: false })
+                    .order('priority', { ascending: true });
+
+                if (!achievementsError && achievementsData) {
+                    // 各メンバーに活動実績を追加
+                    data.forEach(member => {
+                        member.achievements = achievementsData.filter(achievement => achievement.member_id === member.id)
+                            .map(achievement => ({
+                                id: achievement.id,
+                                title: achievement.title,
+                                description: achievement.description,
+                                date: `${achievement.achievement_year}年${achievement.achievement_month}月`,
+                                year: achievement.achievement_year,
+                                month: achievement.achievement_month,
+                                category: achievement.category
+                            }));
+                    });
+                }
+            }
+            
+            return { data: data || [], error: null };
         } catch (error) {
             console.error('Error fetching council members:', error);
+            return { data: [], error };
+        }
+    }
+
+    /**
+     * 管理者用：投稿データを取得（管理画面用）
+     * @param {Object} options - クエリオプション
+     * @returns {Promise<Object>} クエリ結果
+     */
+    async getPostsForAdmin(options = {}) {
+        const {
+            limit = 200,
+            offset = 0,
+            status = null
+        } = options;
+
+        if (!this.isAvailable) {
+            return { data: [], error: null };
+        }
+
+        try {
+            let query = this.client
+                .from('posts')
+                .select('*')
+                .order('created_at', { ascending: false })
+                .range(offset, offset + limit - 1);
+
+            if (status) {
+                query = query.eq('status', status);
+            }
+
+            const { data, error } = await query;
+            return { data: data || [], error };
+        } catch (error) {
+            console.error('Error fetching posts for admin:', error);
+            return { data: [], error };
+        }
+    }
+
+    /**
+     * 生徒番号で生徒を取得（名前マッピング用）
+     * @param {Array} studentNumbers - 生徒番号の配列
+     * @returns {Promise<Object>} クエリ結果
+     */
+    async getStudentsByNumbers(studentNumbers) {
+        if (!this.isAvailable || !studentNumbers || studentNumbers.length === 0) {
+            return { data: [], error: null };
+        }
+
+        try {
+            const { data, error } = await this.client
+                .from('students')
+                .select('student_number, name')
+                .in('student_number', studentNumbers);
+
+            return { data: data || [], error };
+        } catch (error) {
+            console.error('Error fetching students by numbers:', error);
             return { data: [], error };
         }
     }
@@ -488,6 +585,166 @@ class SupabaseQueries {
         } catch (error) {
             console.error('Error fetching notification templates:', error);
             return { data: [], error };
+        }
+    }
+
+    // ========================================
+    // 活動実績管理
+    // ========================================
+
+    /**
+     * メンバーの活動実績を取得
+     * @param {number} memberId - メンバーID
+     * @param {Object} options - クエリオプション
+     * @returns {Promise<Object>} クエリ結果
+     */
+    async getMemberAchievements(memberId, options = {}) {
+        const {
+            limit = 100,
+            offset = 0,
+            includePublicOnly = true,
+            category = null
+        } = options;
+
+        if (!this.isAvailable) {
+            return { data: [], error: null };
+        }
+
+        try {
+            let query = this.client
+                .from('member_achievements')
+                .select('*')
+                .eq('member_id', memberId)
+                .order('achievement_year', { ascending: false })
+                .order('achievement_month', { ascending: false })
+                .order('priority', { ascending: true })
+                .range(offset, offset + limit - 1);
+
+            if (includePublicOnly) {
+                query = query.eq('is_public', true);
+            }
+
+            if (category) {
+                query = query.eq('category', category);
+            }
+
+            const { data, error } = await query;
+            
+            if (error) {
+                console.error('Error fetching member achievements:', error);
+                return { data: [], error };
+            }
+
+            // フロントエンド用にフォーマット
+            const formattedData = (data || []).map(achievement => ({
+                id: achievement.id,
+                memberId: achievement.member_id,
+                title: achievement.title,
+                description: achievement.description,
+                year: achievement.achievement_year,
+                month: achievement.achievement_month,
+                date: `${achievement.achievement_year}年${achievement.achievement_month}月`,
+                category: achievement.category,
+                priority: achievement.priority,
+                isPublic: achievement.is_public,
+                createdAt: achievement.created_at,
+                updatedAt: achievement.updated_at
+            }));
+
+            return { data: formattedData, error: null };
+        } catch (error) {
+            console.error('Error fetching member achievements:', error);
+            return { data: [], error };
+        }
+    }
+
+    /**
+     * 活動実績を追加
+     * @param {Object} achievementData - 活動実績データ
+     * @returns {Promise<Object>} クエリ結果
+     */
+    async createMemberAchievement(achievementData) {
+        if (!this.isAvailable) {
+            return { data: null, error: null };
+        }
+
+        try {
+            const { data, error } = await this.client
+                .from('member_achievements')
+                .insert([{
+                    member_id: achievementData.memberId,
+                    achievement_year: achievementData.year,
+                    achievement_month: achievementData.month,
+                    title: achievementData.title,
+                    description: achievementData.description,
+                    category: achievementData.category || 'general',
+                    priority: achievementData.priority || 0,
+                    is_public: achievementData.isPublic !== false
+                }])
+                .select();
+
+            return { data: data?.[0] || null, error };
+        } catch (error) {
+            console.error('Error creating member achievement:', error);
+            return { data: null, error };
+        }
+    }
+
+    /**
+     * 活動実績を更新
+     * @param {number} achievementId - 活動実績ID
+     * @param {Object} achievementData - 更新データ
+     * @returns {Promise<Object>} クエリ結果
+     */
+    async updateMemberAchievement(achievementId, achievementData) {
+        if (!this.isAvailable) {
+            return { data: null, error: null };
+        }
+
+        try {
+            const updateData = {};
+            if (achievementData.year !== undefined) updateData.achievement_year = achievementData.year;
+            if (achievementData.month !== undefined) updateData.achievement_month = achievementData.month;
+            if (achievementData.title !== undefined) updateData.title = achievementData.title;
+            if (achievementData.description !== undefined) updateData.description = achievementData.description;
+            if (achievementData.category !== undefined) updateData.category = achievementData.category;
+            if (achievementData.priority !== undefined) updateData.priority = achievementData.priority;
+            if (achievementData.isPublic !== undefined) updateData.is_public = achievementData.isPublic;
+
+            const { data, error } = await this.client
+                .from('member_achievements')
+                .update(updateData)
+                .eq('id', achievementId)
+                .select();
+
+            return { data: data?.[0] || null, error };
+        } catch (error) {
+            console.error('Error updating member achievement:', error);
+            return { data: null, error };
+        }
+    }
+
+    /**
+     * 活動実績を削除
+     * @param {number} achievementId - 活動実績ID
+     * @returns {Promise<Object>} クエリ結果
+     */
+    async deleteMemberAchievement(achievementId) {
+        if (!this.isAvailable) {
+            return { data: null, error: null };
+        }
+
+        try {
+            const { data, error } = await this.client
+                .from('member_achievements')
+                .delete()
+                .eq('id', achievementId)
+                .select();
+
+            return { data: data?.[0] || null, error };
+        } catch (error) {
+            console.error('Error deleting member achievement:', error);
+            return { data: null, error };
         }
     }
 

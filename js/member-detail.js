@@ -1,5 +1,17 @@
 // メンバー詳細ページ用JavaScript
 
+// シンプルなハッシュ（クライアント側）
+if (!window.sha256) {
+    async function sha256(text) {
+        const enc = new TextEncoder();
+        const data = enc.encode(text);
+        const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+        const hashArray = Array.from(new Uint8Array(hashBuffer));
+        return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+    }
+    window.sha256 = sha256;
+}
+
 // メンバーデータ（実際はSupabaseから取得）
 const membersData = {
     '1': {
@@ -49,7 +61,7 @@ const membersData = {
         responsibilities: [
             '学校行事の企画・運営',
             '委員会間の連絡調整',
-            'イベント予算の管理',
+            'イベント予算の管理等',
             '外部団体との連携',
             '広報活動の企画'
         ],
@@ -75,7 +87,7 @@ const membersData = {
         role: '議事録作成・情報管理',
         grade: '2年C組',
         message: '透明性のある活動を目指し、正確な情報管理に努めています。皆さんに分かりやすい情報発信を心がけています。',
-        longMessage: '書記として、生徒会の活動記録や情報管理を担当しています。会議の議事録作成、資料整理、情報の整理・発信など、生徒会活動の「記録係」として重要な役割を果たしています。透明性のある組織運営を支え、皆さんに正確で分かりやすい情報をお届けします。',
+        longMessage: '書記として、生徒会の活動記録や情報管理を担当しています。会議の議事録作成、資料整理、情報の整理・発信など、生徒会活動の記録係として重要な役割を果たしています。透明性のある組織運営を支え、皆さんに正確で分かりやすい情報をお届けします。',
         image: null,
         responsibilities: [
             '会議の議事録作成',
@@ -141,40 +153,199 @@ function getMemberIdFromURL() {
 
 // ページ初期化
 document.addEventListener('DOMContentLoaded', function() {
+    const memberId = getMemberIdFromURL();
     console.log('Member detail page initializing...');
+    console.log('Member ID from URL:', memberId);
     
     // 基本機能を初期化
     initNavigation();
     initSidebar();
     
-    // メンバー詳細を読み込み
-    loadMemberDetail();
+    // Supabaseの初期化を待ってからメンバー詳細を読み込み
+    waitForSupabaseInitialization();
     
-    // 他のメンバーリストを読み込み
-    loadOtherMembers();
+    async function waitForSupabaseInitialization() {
+        let attempts = 0;
+        const maxAttempts = 50; // 5秒間待機 (100ms × 50)
+        
+        while (attempts < maxAttempts) {
+            if (typeof window.supabaseQueries !== 'undefined' && window.supabaseQueries !== null) {
+                console.log('SupabaseQueries initialized successfully');
+                console.log('SupabaseQueries available:', typeof window.supabaseQueries !== 'undefined');
+                
+                // メンバー詳細を読み込み
+                loadMemberDetail();
+                
+                // 他のメンバーリストを読み込み
+                loadOtherMembers();
+                return;
+            }
+            
+            await new Promise(resolve => setTimeout(resolve, 100));
+            attempts++;
+        }
+        
+        console.log('SupabaseQueries initialization timeout - using demo mode');
+        console.log('SupabaseQueries available:', typeof window.supabaseQueries !== 'undefined');
+        
+        // タイムアウトしてもメンバー詳細を読み込み
+        loadMemberDetail();
+        loadOtherMembers();
+    }
 });
 
-// メンバー詳細読み込み
-function loadMemberDetail() {
-    const memberId = getMemberIdFromURL();
-    const member = membersData[memberId];
-    
-    if (!member) {
-        showMemberNotFound();
-        return;
+// メンバー詳細データキャッシュ
+const memberDetailCache = {
+    data: new Map(),
+    lastFetch: new Map(),
+    cacheDuration: 5 * 60 * 1000 // 5分
+};
+
+// キャッシュからメンバー詳細を取得
+function getCachedMemberDetail(memberId) {
+    if (!memberDetailCache.data.has(memberId) || !memberDetailCache.lastFetch.has(memberId)) {
+        return null;
     }
     
-    // ページタイトルを更新
-    document.title = `${member.name} - なずなポータル`;
+    const now = Date.now();
+    const lastFetch = memberDetailCache.lastFetch.get(memberId);
+    if (now - lastFetch > memberDetailCache.cacheDuration) {
+        // キャッシュ期限切れ
+        memberDetailCache.data.delete(memberId);
+        memberDetailCache.lastFetch.delete(memberId);
+        return null;
+    }
     
-    // ヘッダー情報を表示
-    displayMemberHero(member);
+    return memberDetailCache.data.get(memberId);
+}
+
+// メンバー詳細をキャッシュに保存
+function setCachedMemberDetail(memberId, data) {
+    memberDetailCache.data.set(memberId, data);
+    memberDetailCache.lastFetch.set(memberId, Date.now());
+}
+
+// メンバー詳細読み込み
+async function loadMemberDetail() {
+    const memberId = getMemberIdFromURL();
     
-    // 詳細情報を表示
-    displayMemberProfile(member);
-    displayMemberMessage(member);
-    displayMemberResponsibilities(member);
-    displayMemberAchievements(member);
+    // ローディング表示
+    const heroContainer = document.getElementById('member-hero');
+    if (heroContainer) {
+        heroContainer.innerHTML = `
+            <div class="loading-container">
+                <div class="loading-spinner"></div>
+                <p>メンバー情報を読み込み中...</p>
+            </div>
+        `;
+    }
+    
+    try {
+        let member = null;
+        
+        // まずキャッシュをチェック
+        const cachedMember = getCachedMemberDetail(memberId);
+        if (cachedMember) {
+            console.log('Using cached member detail for ID:', memberId);
+            member = cachedMember;
+            showInfoMessage('キャッシュされたデータを表示しています。');
+        } else {
+            // Supabaseからデータを取得
+            if (window.supabaseQueries) {
+                console.log('Loading member detail from Supabase for ID:', memberId);
+                console.log('SupabaseQueries instance:', window.supabaseQueries);
+                console.log('SupabaseQueries.isAvailable:', window.supabaseQueries.isAvailable);
+                
+                const { data, error } = await window.supabaseQueries.getTableData('council_members', {
+                    filters: { id: memberId },
+                    limit: 1
+                });
+                
+                if (error) {
+                    console.error('Supabase error loading');
+                    const errorMsg = error.message || error.details || error.hint || '不明なエラー';
+                    showErrorMessage(`データベースから情報を取得できませんでした: ${errorMsg}`);
+                    showMemberNotFound();
+                    return;
+                } else if (data && data.length > 0) {
+                    console.log('Loaded member detail from Supabase:', data[0]);
+                    member = data[0];
+                    
+                    // 必要なフィールドが存在するかチェック
+                    console.log('Raw Supabase data:', member);
+                    
+                    // Supabaseデータ構造をフロントエンド用に変換
+                    member = {
+                        ...member,
+                        name: member.name || 'データなし',
+                        grade: member.grade || 'データなし',
+                        message: member.message || 'よろしくお願いします',
+                        longMessage: member.bio || member.message || '詳細メッセージは準備中です。',
+                        
+                        // responsibilities は TEXT[] -> array変換
+                        responsibilities: Array.isArray(member.responsibilities) ? member.responsibilities : 
+                                       (member.responsibilities ? [member.responsibilities] : ['準備中']),
+                        
+                        // achievements は新しい構造で処理
+                        achievements: member.achievements || [],
+                        
+                        // hobbies のデフォルト設定
+                        hobbies: ['準備中'],
+                        motto: member.message || '準備中',
+                        joinDate: member.created_at || new Date().toISOString()
+                    };
+                    
+                    console.log('Processed member data:', member);
+                    
+                    // データをキャッシュに保存
+                    setCachedMemberDetail(memberId, member);
+                    showSuccessMessage('メンバー情報を正常に読み込みました。');
+                } else {
+                    console.log('No member found in Supabase - empty result');
+                    console.log('Query details: ID filter =', memberId, ', RLS policy: is_active = true');
+                    showErrorMessage('指定されたメンバーが見つかりませんでした。');
+                    showMemberNotFound();
+                    return;
+                }
+            } else {
+                console.log('Supabase not available - using demo data');
+                // Supabaseが利用できない場合はデモデータを使用
+                const demoMember = membersData[memberId];
+                if (demoMember) {
+                    console.log('Using demo member data for ID:', memberId);
+                    member = demoMember;
+                    showInfoMessage('デモデータを表示しています。');
+                } else {
+                    showErrorMessage('指定されたメンバーIDのデータが見つかりません。');
+                    showInfoMessage(`利用可能なID: ${Object.keys(membersData).join(', ')}`);
+                    showMemberNotFound();
+                    return;
+                }
+            }
+        }
+        
+        if (!member) {
+            showMemberNotFound();
+            return;
+        }
+        
+        // ページタイトルを更新
+        document.title = `${member.name} - なずなポータル`;
+        
+        // ヘッダー情報を表示
+        displayMemberHero(member);
+        
+        // 詳細情報を表示
+        displayMemberProfile(member);
+        displayMemberMessage(member);
+        displayMemberResponsibilities(member);
+        displayMemberAchievements(member);
+        
+    } catch (error) {
+        console.error('Error loading member detail:', error);
+        showErrorMessage('予期しないエラーが発生しました。');
+        showMemberNotFound();
+    }
 }
 
 // メンバーヒーロー表示
@@ -236,20 +407,20 @@ function displayMemberProfile(member) {
                 <div class="profile-label">
                     <i class="fas fa-heart"></i>
                     趣味
-                </div>
-                <div class="profile-value">
-                    ${member.hobbies.map(hobby => `<span class="hobby-tag">${hobby}</span>`).join('')}
-                </div>
-            </div>
-            <div class="profile-item">
-                <div class="profile-label">
-                    <i class="fas fa-star"></i>
-                    座右の銘
-                </div>
-                <div class="profile-value">"${member.motto}"</div>
-            </div>
-        </div>
-    `;
+              </div>
+              <div class="profile-value">
+                  ${member.hobbies.map(hobby => `<span class="hobby-tag">${hobby}</span>`).join('')}
+              </div>
+          </div>
+          <div class="profile-item">
+              <div class="profile-label">
+                  <i class="fas fa-star"></i>
+                  座右の銘
+              </div>
+              <div class="profile-value">"${member.motto}"</div>
+          </div>
+      </div>
+  `;
 }
 
 // メッセージ表示
@@ -301,17 +472,48 @@ function displayMemberAchievements(member) {
         return;
     }
     
+    // 年別にソートしてグループ化
+    const achievementsByYear = {};
+    member.achievements.forEach(achievement => {
+        const year = achievement.year || 2024;
+        if (!achievementsByYear[year]) {
+            achievementsByYear[year] = [];
+        }
+        achievementsByYear[year].push(achievement);
+    });
+    
+    // 年順（降順）でソート
+    const sortedYears = Object.keys(achievementsByYear).sort((a, b) => b - a);
+    
     achievementsContainer.innerHTML = `
         <div class="achievements-timeline">
-            ${member.achievements.map(achievement => `
-                <div class="achievement-item">
-                    <div class="achievement-date">
-                        <i class="fas fa-calendar"></i>
-                        ${achievement.date}
-                    </div>
-                    <div class="achievement-content">
-                        <h4>${achievement.title}</h4>
-                        <p>${achievement.description}</p>
+            ${sortedYears.map(year => `
+                <div class="achievements-year-group">
+                    <h3 class="year-header">
+                        <i class="fas fa-calendar-alt"></i>
+                        ${year}年
+                    </h3>
+                    <div class="achievements-year-content">
+                        ${achievementsByYear[year]
+                            .sort((a, b) => (b.month || 1) - (a.month || 1))
+                            .map(achievement => `
+                                <div class="achievement-item ${achievement.category || 'general'}">
+                                    <div class="achievement-date">
+                                        <i class="fas fa-calendar"></i>
+                                        ${achievement.month || 1}月
+                                    </div>
+                                    <div class="achievement-content">
+                                        <h4>${achievement.title}</h4>
+                                        <p>${achievement.description || ''}</p>
+                                        ${achievement.category ? `
+                                            <span class="achievement-category category-${achievement.category}">
+                                                ${getAchievementCategoryLabel(achievement.category)}
+                                            </span>
+                                        ` : ''}
+                                    </div>
+                                </div>
+                            `).join('')
+                        }
                     </div>
                 </div>
             `).join('')}
@@ -319,31 +521,98 @@ function displayMemberAchievements(member) {
     `;
 }
 
+// 活動実績カテゴリのラベル取得
+function getAchievementCategoryLabel(category) {
+    const categoryLabels = {
+        'general': '一般',
+        'academic': '学習',
+        'cultural': '文化',
+        'sports': 'スポーツ',
+        'leadership': 'リーダーシップ',
+        'volunteer': 'ボランティア',
+        'event': 'イベント'
+    };
+    return categoryLabels[category] || category;
+}
+
 // 他のメンバー表示
-function loadOtherMembers() {
+async function loadOtherMembers() {
     const otherMembersContainer = document.getElementById('other-members');
     if (!otherMembersContainer) return;
     
     const currentMemberId = getMemberIdFromURL();
-    const otherMembers = Object.values(membersData).filter(member => member.id.toString() !== currentMemberId);
     
-    otherMembersContainer.innerHTML = otherMembers.map(member => `
-        <div class="other-member-item">
-            <div class="other-member-avatar">
-                ${member.image ? 
-                    `<img src="${member.image}" alt="${member.name}">` :
-                    `<i class="fas fa-user"></i>`
+    try {
+        let otherMembers = [];
+        
+        // まずキャッシュをチェック（council.htmlのキャッシュを使用）
+        if (window.getCachedCouncilMembers) {
+            const cachedData = window.getCachedCouncilMembers();
+            if (cachedData) {
+                console.log('Using cached data for other members');
+                otherMembers = cachedData.filter(member => member.id.toString() !== currentMemberId);
+            }
+        }
+        
+        // キャッシュにデータがない場合はSupabaseから取得
+        if (otherMembers.length === 0) {
+            if (window.supabaseQueries) {
+                console.log('Loading other members from Supabase...');
+                const { data, error } = await window.supabaseQueries.getCouncilMembers({ activeOnly: true });
+                
+                if (error) {
+                    console.error('Supabase error loading other members:', error);
+                    showErrorMessage('他のメンバー情報の読み込みに失敗しました。');
+                } else if (data && data.length > 0) {
+                    console.log('Loaded other members from Supabase:', data.length);
+                    otherMembers = data.filter(member => member.id.toString() !== currentMemberId);
+                } else {
+                    console.log('No other members found in Supabase');
                 }
+            } else {
+                console.log('Supabase not available');
+                showErrorMessage('データベースに接続できません。');
+            }
+        }
+        
+        if (otherMembers.length === 0) {
+            otherMembersContainer.innerHTML = `
+                <div class="no-other-members">
+                    <i class="fas fa-users"></i>
+                    <p>他のメンバー情報がありません</p>
+                </div>
+            `;
+            return;
+        }
+        
+        otherMembersContainer.innerHTML = otherMembers.map(member => `
+            <div class="other-member-item">
+                <div class="other-member-avatar">
+                    ${member.image ? 
+                        `<img src="${member.image}" alt="${member.name}">` :
+                        `<i class="fas fa-user"></i>`
+                    }
+                </div>
+                <div class="other-member-info">
+                    <h5>${member.name}</h5>
+                    <p>${member.role}</p>
+                    <a href="member-detail.html?id=${member.id}" class="other-member-link">
+                        詳細を見る <i class="fas fa-arrow-right"></i>
+                    </a>
+                </div>
             </div>
-            <div class="other-member-info">
-                <h5>${member.name}</h5>
-                <p>${member.role}</p>
-                <a href="member-detail.html?id=${member.id}" class="other-member-link">
-                    詳細を見る <i class="fas fa-arrow-right"></i>
-                </a>
+        `).join('');
+        
+    } catch (error) {
+        console.error('Error loading other members:', error);
+        showErrorMessage('他のメンバー情報の読み込み中にエラーが発生しました。');
+        otherMembersContainer.innerHTML = `
+            <div class="no-other-members">
+                <i class="fas fa-exclamation-triangle"></i>
+                <p>メンバー情報の読み込みに失敗しました</p>
             </div>
-        </div>
-    `).join('');
+        `;
+    }
 }
 
 // メンバーが見つからない場合
@@ -378,47 +647,49 @@ function formatJoinDate(dateString) {
     return `${date.getFullYear()}年${date.getMonth() + 1}月`;
 }
 
-// 生徒会ページのメンバーカードにクリックイベントを追加する関数
-function makeCouncilMembersClickable() {
-    const memberCards = document.querySelectorAll('.member-card');
-    
-    memberCards.forEach((card, index) => {
-        card.style.cursor = 'pointer';
-        card.style.transition = 'all 0.3s ease';
-        
-        // ホバー効果を強化
-        card.addEventListener('mouseenter', function() {
-            this.style.transform = 'translateY(-8px) scale(1.02)';
-            this.style.boxShadow = '0 8px 25px rgba(0,0,0,0.15)';
-        });
-        
-        card.addEventListener('mouseleave', function() {
-            this.style.transform = 'translateY(0) scale(1)';
-            this.style.boxShadow = '';
-        });
-        
-        // クリックイベント
-        card.addEventListener('click', function() {
-            const memberId = index + 1; // インデックスベースでIDを決定
-            window.location.href = `member-detail.html?id=${memberId}`;
-        });
-        
-        // アクセシビリティのためのキーボード操作
-        card.setAttribute('tabindex', '0');
-        card.setAttribute('role', 'button');
-        card.setAttribute('aria-label', `${card.querySelector('h3').textContent}の詳細を見る`);
-        
-        card.addEventListener('keydown', function(e) {
-            if (e.key === 'Enter' || e.key === ' ') {
-                e.preventDefault();
-                this.click();
-            }
-        });
-    });
-}
-
 // 生徒会ページでこの関数を呼び出すために、グローバルに公開
 window.makeCouncilMembersClickable = makeCouncilMembersClickable;
+
+// メッセージ表示関数（app.jsから移植）
+function showSuccessMessage(message) {
+    showMessage(message, 'success');
+}
+
+function showErrorMessage(message) {
+    showMessage(message, 'error');
+}
+
+function showInfoMessage(message) {
+    showMessage(message, 'info');
+}
+
+function showMessage(message, type) {
+    const messageEl = document.createElement('div');
+    messageEl.className = `message-toast message-${type}`;
+    messageEl.innerHTML = `
+        <div class="message-content">
+            <i class="fas fa-${type === 'success' ? 'check-circle' : type === 'error' ? 'exclamation-triangle' : 'info-circle'}"></i>
+            <span>${message}</span>
+        </div>
+    `;
+    
+    document.body.appendChild(messageEl);
+    
+    // アニメーション表示
+    setTimeout(() => {
+        messageEl.classList.add('show');
+    }, 100);
+    
+    // 5秒後に自動で消す
+    setTimeout(() => {
+        messageEl.classList.remove('show');
+        setTimeout(() => {
+            if (messageEl.parentNode) {
+                messageEl.remove();
+            }
+        }, 300);
+    }, 5000);
+}
 
 // デバッグ用関数
 if (CONFIG && CONFIG.APP && CONFIG.APP.DEBUG) {

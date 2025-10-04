@@ -48,8 +48,42 @@ document.addEventListener('DOMContentLoaded', function() {
 
 // 認証状態チェック（セキュリティ強化版）
 function checkAuthStatus() {
-    // 強制的にログイン画面を表示（認証情報の永続化を無効化）
-    clearAuthData();
+    // セッションから認証情報を復元
+    const sessionData = sessionStorage.getItem('admin-session');
+    
+    if (sessionData) {
+        try {
+            const userData = JSON.parse(sessionData);
+            
+            // セッションの有効性をチェック（24時間以内）
+            const loginTime = new Date(userData.loginTime);
+            const now = new Date();
+            const hoursDiff = (now - loginTime) / (1000 * 60 * 60);
+            
+            if (hoursDiff < 24) {
+                // 有効なセッション
+                currentUser = userData;
+                isAuthenticated = true;
+                
+                // セキュリティ監視を開始
+                startSecurityMonitoring();
+                
+                // 管理画面を表示
+                showAdminPanel();
+                console.log('Session restored:', userData);
+                return;
+            } else {
+                // セッション期限切れ
+                console.log('Session expired, clearing data');
+                clearAuthData();
+            }
+        } catch (error) {
+            console.error('Error parsing session data:', error);
+            clearAuthData();
+        }
+    }
+    
+    // 認証されていない場合はログイン画面を表示
     showLoginScreen();
     
     // セキュリティ強化：開発者ツールでの認証バイパスを防ぐ
@@ -64,6 +98,21 @@ function checkAuthStatus() {
         writable: false,
         configurable: false
     });
+}
+
+// ログイン画面表示
+function showLoginScreen() {
+    if (loginScreen) {
+        loginScreen.style.display = 'flex';
+    }
+    if (adminMain) {
+        adminMain.style.display = 'none';
+    }
+    
+    // フォームをクリア
+    if (adminEmailInput) adminEmailInput.value = '';
+    if (adminPasswordInput) adminPasswordInput.value = '';
+    if (loginError) loginError.style.display = 'none';
 }
 
 // イベントリスナー設定
@@ -153,6 +202,38 @@ function setupSectionButtons() {
         addMemberBtn.addEventListener('click', () => showMemberModal());
     }
     
+    // 活動実績管理
+    const addAchievementBtn = document.getElementById('add-achievement-btn');
+    if (addAchievementBtn) {
+        addAchievementBtn.addEventListener('click', () => showAchievementModal());
+    }
+    
+    const clearFiltersBtn = document.getElementById('clear-filters-btn');
+    if (clearFiltersBtn) {
+        clearFiltersBtn.addEventListener('click', () => clearAchievementFilters());
+    }
+    
+    // 年度フィルター
+    const yearFilter = document.getElementById('achievement-year-filter');
+    if (yearFilter) {
+        yearFilter.addEventListener('change', () => loadAchievementsData());
+    }
+    
+    const monthFilter = document.getElementById('achievement-month-filter');
+    if (monthFilter) {
+        monthFilter.addEventListener('change', () => loadAchievementsData());
+    }
+    
+    const categoryFilter = document.getElementById('achievement-category-filter');
+    if (categoryFilter) {
+        categoryFilter.addEventListener('change', () => loadAchievementsData());
+    }
+    
+    const memberFilter = document.getElementById('member-filter');
+    if (memberFilter) {
+        memberFilter.addEventListener('change', () => loadAchievementsData());
+    }
+    
     // 通知送信
     const sendNotificationBtn = document.getElementById('send-notification-btn');
     if (sendNotificationBtn) {
@@ -208,7 +289,43 @@ async function performLogin(email, password) {
             return false;
         }
         
-        // GASでの認証（デバッグモードでも本物の認証を要求）
+        // デバッグモードでの簡易認証
+        if (CONFIG.APP.DEBUG) {
+            console.log('Debug mode: Performing simplified authentication');
+            
+            // デバッグ用の認証情報（実際の運用では削除）
+            const debugAdmins = [
+                { email: 'admin@school.ac.jp', password: 'admin123', name: '管理者', role: 'admin' },
+                { email: 'council@school.ac.jp', password: 'council123', name: '生徒会', role: 'council' }
+            ];
+            
+            const admin = debugAdmins.find(a => a.email === email && a.password === password);
+            if (admin) {
+                const userData = {
+                    email: admin.email,
+                    name: admin.name,
+                    role: admin.role,
+                    permissions: ['read', 'write', 'admin'],
+                    loginTime: new Date().toISOString()
+                };
+                
+                // セッションのみに保存（ページ更新で消える）
+                sessionStorage.setItem('admin-session', JSON.stringify(userData));
+                
+                currentUser = userData;
+                isAuthenticated = true;
+                
+                // 追加のセキュリティチェック
+                startSecurityMonitoring();
+                
+                console.log('Debug authentication successful:', userData);
+                return true;
+            }
+            
+            return false;
+        }
+        
+        // 本番環境でのGAS認証
         const response = await fetch(CONFIG.GAS_URL, {
             method: 'POST',
             headers: {
@@ -356,6 +473,9 @@ async function initializeSection(sectionName) {
             break;
         case 'forum':
             await loadForumData();
+            break;
+        case 'achievements':
+            await loadAchievementsData();
             break;
     }
 }
@@ -1347,6 +1467,297 @@ if (CONFIG.APP.DEBUG) {
         openSidebar: openSidebar,
         closeSidebar: closeSidebar
         // login機能は削除（セキュリティのため）
+        // 活動実績管理機能
+        loadAchievementsData,
+        showAchievementModal,
+        clearAchievementFilters
     };
     console.log('Admin debug functions available (login disabled for security)');
+}
+
+// ========================================
+// 活動実績管理機能
+// ========================================
+
+// 活動実績データ読み込み
+async function loadAchievementsData() {
+    const tableBody = document.getElementById('achievements-table-body');
+    if (!tableBody) return;
+    
+    try {
+        // 活動実績を取得
+        const membersResult = await supabaseQueries.getCouncilMembers();
+        const members = membersResult.data || [];
+        
+        // 全てのメンバーの活動実績を取得
+        let achievements = [];
+
+        for (const member of members) {
+            const achievementsResult = await supabaseQueries.getMemberAchievements(member.id, {
+                includePublicOnly: false // 管理者は全ての実績を表示
+            });
+            
+            if (achievementsResult.data && achievementsResult.data.length > 0) {
+                achievements = achievements.concat(achievementsResult.data.map(achievement => ({
+                    ...achievement,
+                    memberName: member.name,
+                    memberRole: member.role
+                })));
+            }
+        }
+
+        // フィルター適用
+        const filteredAchievements = applyAchievementFilters(achievements);
+        
+        // UI更新
+        updateAchievementsTable(filteredAchievements);
+        updateMemberFilter(members);
+        
+    } catch (error) {
+        console.error('活動実績データの読み込みエラー:', error);
+        tableBody.innerHTML = '<tr><td colspan="7">データの読み込みに失敗しました</td></tr>';
+    }
+}
+
+// 活動実績テーブル更新
+function updateAchievementsTable(achievements) {
+    const tableBody = document.getElementById('achievements-table-body');
+    if (!tableBody) return;
+    
+    if (!achievements || achievements.length === 0) {
+        tableBody.innerHTML = '<tr><td colspan="7">活動実績がありません</td></tr>';
+        return;
+    }
+    
+    tableBody.innerHTML = achievements.map(achievement => `
+        <tr>
+            <td>
+                <div class="member-name">${achievement.memberName}</div>
+                <div class="member-role">${achievement.memberRole}</div>
+            </td>
+            <td>
+                <span class="date-badge">${achievement.year}年${achievement.month}月</span>
+            </td>
+            <td>
+                <div class="achievement-title">${achievement.title}</div>
+            </td>
+            <td>
+                <span class="achievement-category category-${achievement.category}">
+                    ${getAchievementCategoryLabel(achievement.category)}
+                </span>
+            </td>
+            <td>
+                <div class="achievement-description">${achievement.description || ''}</div>
+            </td>
+            <td>
+                <span class="public-status ${achievement.isPublic ? 'public' : 'private'}">
+                    <i class="fas fa-${achievement.isPublic ? 'eye' : 'eye-slash'}"></i>
+                    ${achievement.isPublic ? '公開' : '非公開'}
+                </span>
+            </td>
+            <td>
+                <div class="action-buttons">
+                    <button class="btn btn-sm btn-outline" onclick="editAchievement(${achievement.id})">
+                        <i class="fas fa-edit"></i>
+                    </button>
+                    <button class="btn btn-sm btn-danger" onclick="deleteAchievement(${achievement.id})">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </div>
+            </td>
+        </tr>
+    `).join('');
+}
+
+// メンバーフィルター更新
+function updateMemberFilter(members) {
+    const memberFilter = document.getElementById('member-filter');
+    if (!memberFilter) return;
+    
+    memberFilter.innerHTML = `
+        <option value="">すべてのメンバー</option>
+        ${members.map(member => `
+            <option value="${member.id}">${member.name} (${member.role})</option>
+        `).join('')}
+    `;
+}
+
+// フィルター適用
+function applyAchievementFilters(achievements) {
+    const yearFilter = document.getElementById('achievement-year-filter')?.value;
+    const monthFilter = document.getElementById('achievement-month-filter')?.value;
+    const categoryFilter = document.getElementById('achievement-category-filter')?.value;
+    const memberFilter = document.getElementById('member-filter')?.value;
+    
+    return achievements.filter(achievement => {
+        if (yearFilter && achievement.year != yearFilter) return false;
+        if (monthFilter && achievement.month != monthFilter) return false;
+        if (categoryFilter && achievement.category !== categoryFilter) return false;
+        if (memberFilter && achievement.memberId != memberFilter) return false;
+        return true;
+    });
+}
+
+// 活動実績編集モーダル表示
+function showAchievementModal(achievementId = null) {
+    const modalTitle = document.getElementById('modal-title');
+    const modalBody = document.getElementById('modal-body');
+    
+    modalTitle.textContent = achievementId ? '活動実績編集' : '活動実績追加';
+    
+    modalBody.innerHTML = `
+        <form id="achievement-form">
+            <div class="form-group">
+                <label for="achievement-member">メンバー <span class="required">*</span></label>
+                <select id="achievement-member" class="form-control" required>
+                    <option value="">メンバーを選択</option>
+                </select>
+            </div>
+            
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="achievement-year">年 <span class="required">*</span></label>
+                    <select id="achievement-year" class="form-control" required>
+                        <option value="">年を選択</option>
+                        <option value="2024">2024年</option>
+                        <option value="2025">2025年</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="achievement-month">月 <span class="required">*</span></label>
+                    <select id="achievement-month" class="form-control" required>
+                        <option value="">月を選択</option>
+                        <option value="1">1月</option>
+                        <option value="2">2月</option>
+                        <option value="3">3月</option>
+                        <option value="4">4月</option>
+                        <option value="5">5月</option>
+                        <option value="6">6月</option>
+                        <option value="7">7月</option>
+                        <option value="8">8月</option>
+                        <option value="9">9月</option>
+                        <option value="10">10月</option>
+                        <option value="11">11月</option>
+                        <option value="12">12月</option>
+                    </select>
+                </div>
+            </div>
+            
+            <div class="form-group">
+                <label for="achievement-title">タイトル <span class="required">*</span></label>
+                <input type="text" id="achievement-title" class="form-control" required maxlength="200">
+            </div>
+            
+            <div class="form-group">
+                <label for="achievement-description">詳細</label>
+                <textarea id="achievement-description" class="form-control" rows="3" maxlength="1000"></textarea>
+            </div>
+            
+            <div class="form-group">
+                <label for="achievement-category">カテゴリ</label>
+                <select id="achievement-category" class="form-control">
+                    <option value="general">一般</option>
+                    <option value="academic">学習</option>
+                    <option value="cultural">文化</option>
+                    <option value="sports">スポーツ</option>
+                    <option value="leadership">リーダーシップ</option>
+                    <option value="volunteer">ボランティア</option>
+                    <option value="event">イベント</option>
+                </select>
+            </div>
+            
+            <div class="form-group">
+                <label for="achievement-priority">表示優先度</label>
+                <input type="number" id="achievement-priority" class="form-control" min="0" max="100" value="0">
+            </div>
+            
+            <div class="form-group">
+                <label class="checkbox-label">
+                    <input type="checkbox" id="achievement-public">
+                    <span class="checkmark"></span>
+                    公開する
+                </label>
+            </div>
+        </form>
+    `;
+    
+    // メンバー選択肢を設定
+    populateMemberSelect();
+    
+    // 編集の場合、データを設定
+    if (achievementId) {
+        setAchievementFormData(achievementId);
+    } else {
+        // 公開をデフォルトでON
+        document.getElementById('achievement-public').checked = true;
+    }
+    
+    showModal();
+}
+
+// メンバー選択肢設定
+async function populateMemberSelect() {
+    const memberSelect = document.getElementById('achievement-member');
+    if (!memberSelect) return;
+    
+    try {
+        const result = await supabaseQueries.getCouncilMembers();
+        const members = result.data || [];
+        
+        memberSelect.innerHTML = '<option value="">メンバーを選択</option>' +
+            members.map(member => `
+                <option value="${member.id}">${member.name} (${member.role})</option>
+            `).join('');
+    } catch (error) {
+        console.error('メンバー一覧の取得エラー:', error);
+    }
+}
+
+// 実績フォームデータ設定（編集時）
+async function setAchievementFormData(achievementId) {
+    try {
+        // 実績データを取得してフォームに設定
+        // 注意: SupabaseQueriesには単一実績取得メソッドがないため、全データから検索
+        // 実際の実装では、getMemberAchievement(id) メソッドを追加することが推奨
+        
+        document.getElementById('form-mode').value = 'edit';
+        document.getElementById('form-id').value = achievementId;
+    } catch (error) {
+        console.error('実績データの取得エラー:', error);
+    }
+}
+
+// フィルタークリア
+function clearAchievementFilters() {
+    document.getElementById('achievement-year-filter').value = '';
+    document.getElementById('achievement-month-filter').value = '';
+    document.getElementById('achievement-category-filter').value = '';
+    document.getElementById('member-filter').value = '';
+    
+    // データ再読み込み
+    loadAchievementsData();
+}
+
+// 活動実績編集
+function editAchievement(achievementId) {
+    showAchievementModal(achievementId);
+}
+
+// 活動実績削除
+async function deleteAchievement(achievementId) {
+    if (!confirm('この活動実績を削除してもよろしいですか？')) return;
+    
+    try {
+        const result = await supabaseQueries.deleteMemberAchievement(achievementId);
+        
+        if (result.error) {
+            showErrorMessage('削除に失敗しました: ' + result.error.message);
+        } else {
+            showInfoMessage('活動実績を削除しました');
+            loadAchievementsData();
+        }
+    } catch (error) {
+        console.error('実績削除エラー:', error);
+        showErrorMessage('削除中にエラーが発生しました');
+    }
 }

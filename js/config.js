@@ -14,9 +14,9 @@ const CONFIG = {
     
     // Firebase設定（通知システム用）
     FIREBASE: {
-        PROJECT_ID: 'your-project-id',
+        PROJECT_ID: 'nazuna-portal',
         VAPID_KEY: 'BCEnp7nRdNubcooPI86iEEFqavkUxRal0t3AKkjsC1nB-PYLOUiE-EnGITJKfdANSRCG7zjyRzR6ERX3ZT0tZMQ',
-        MESSAGING_SENDER_ID: 'your-sender-id'
+        MESSAGING_SENDER_ID: '181514532945'
     },
     
     // APIエンドポイント
@@ -58,7 +58,7 @@ const CONFIG = {
         CACHE_DURATION: 5 * 60 * 1000, // 5分
         
         // 通知設定
-        NOTIFICATION_ICON: './images/icon-192x192.png',
+        NOTIFICATION_ICON: 'images/icon-192x192.png',
         
         // デバッグモード
         DEBUG: true,
