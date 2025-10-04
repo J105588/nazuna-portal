@@ -5,25 +5,34 @@
     box-sizing: border-box;
 }
 
+html {
+    margin: 0;
+    padding: 0;
+    height: 100%;
+}
+
 /* 基本スタイル */
 :root {
-    --primary-color: #2c3e50;
-    --secondary-color: #3498db;
-    --accent-color: #e74c3c;
-    --success-color: #27ae60;
-    --warning-color: #f39c12;
-    --background-color: #f8fafc;
+    /* 新しいカラーパレット - 淡い緑、オレンジ、赤を主調 */
+    --primary-color: #4a7c59;        /* ソフトグリーン */
+    --secondary-color: #d4a574;       /* ソフトオレンジ */
+    --accent-color: #d67b7b;          /* ソフトレッド */
+    --success-color: #6b9b7a;         /* より明るいグリーン */
+    --warning-color: #e6a85c;         /* より明るいオレンジ */
+    --background-color: #f8faf9;      /* 非常に淡いグリーンティント */
     --surface-color: #ffffff;
-    --text-color: #2d3748;
-    --text-light: #718096;
-    --border-color: #e2e8f0;
-    --shadow-sm: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
-    --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-    --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
-    --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
-    --gradient-primary: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    --gradient-secondary: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+    --text-color: #2d3a2d;            /* ダークグリーン */
+    --text-light: #6b7c6b;            /* ミディアムグリーン */
+    --border-color: #e8f0e8;          /* 淡いグリーンボーダー */
+    --shadow-sm: 0 1px 3px 0 rgba(74, 124, 89, 0.1), 0 1px 2px 0 rgba(74, 124, 89, 0.06);
+    --shadow-md: 0 4px 6px -1px rgba(74, 124, 89, 0.1), 0 2px 4px -1px rgba(74, 124, 89, 0.06);
+    --shadow-lg: 0 10px 15px -3px rgba(74, 124, 89, 0.1), 0 4px 6px -2px rgba(74, 124, 89, 0.05);
+    --shadow-xl: 0 20px 25px -5px rgba(74, 124, 89, 0.1), 0 10px 10px -5px rgba(74, 124, 89, 0.04);
+    --gradient-primary: linear-gradient(135deg, #a8d5ba 0%, #d4a574 100%);     /* グリーンからオレンジ */
+    --gradient-secondary: linear-gradient(135deg, #f4a5a5 0%, #d67b7b 100%);   /* ピンクからレッド */
     --gradient-hero: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
+    --gradient-warm: linear-gradient(135deg, #d4a574 0%, #d67b7b 100%);        /* オレンジからレッド */
+    --gradient-cool: linear-gradient(135deg, #a8d5ba 0%, #4a7c59 100%);        /* ライトグリーンからダークグリーン */
 }
 
 /* 汎用アニメーション/トランジション */
@@ -35,6 +44,244 @@
 @keyframes fadeIn {
     from { opacity: 0; }
     to { opacity: 1; }
+}
+
+@keyframes pageEnter {
+    0% { 
+        opacity: 0; 
+        transform: translateY(0) scale(1); 
+    }
+    100% { 
+        opacity: 1; 
+        transform: translateY(0) scale(1); 
+    }
+}
+
+@keyframes pageExit {
+    0% { 
+        opacity: 1; 
+        transform: translateY(0) scale(1); 
+    }
+    100% { 
+        opacity: 0; 
+        transform: translateY(-20px) scale(0.95); 
+    }
+}
+
+@keyframes float {
+    0%, 100% { transform: translateY(0px); }
+    50% { transform: translateY(-10px); }
+}
+
+@keyframes glow {
+    0% { box-shadow: 0 0 30px rgba(255, 255, 255, 0.2), inset 0 0 30px rgba(255, 255, 255, 0.1); }
+    100% { box-shadow: 0 0 40px rgba(255, 255, 255, 0.4), inset 0 0 40px rgba(255, 255, 255, 0.2); }
+}
+
+@keyframes rotate {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+@keyframes iconPulse {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.1); }
+}
+
+@keyframes textShimmer {
+    0% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
+}
+
+@keyframes slideUp {
+    from { 
+        opacity: 0; 
+        transform: translateY(30px); 
+    }
+    to { 
+        opacity: 1; 
+        transform: translateY(0); 
+    }
+}
+
+@keyframes heroShimmer {
+    0%, 100% { 
+        opacity: 0.6; 
+        transform: scale(1); 
+    }
+    50% { 
+        opacity: 0.8; 
+        transform: scale(1.05); 
+    }
+}
+
+@keyframes heroFloat {
+    0%, 100% { transform: translateY(0px) rotate(0deg); }
+    50% { transform: translateY(-15px) rotate(2deg); }
+}
+
+@keyframes heroGlow {
+    0% { 
+        box-shadow: 
+            0 0 40px rgba(255, 255, 255, 0.2),
+            inset 0 0 40px rgba(255, 255, 255, 0.1); 
+    }
+    100% { 
+        box-shadow: 
+            0 0 60px rgba(255, 255, 255, 0.4),
+            inset 0 0 60px rgba(255, 255, 255, 0.2); 
+    }
+}
+
+@keyframes heroRotate {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+@keyframes heroIconPulse {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.15); }
+}
+
+/* 豪華なオープニングアニメーション */
+@keyframes openingBackgroundShift {
+    0%, 100% { 
+        background-position: 0% 0%, 100% 100%, 50% 50%, 20% 80%, 80% 20%;
+    }
+    25% { 
+        background-position: 25% 25%, 75% 75%, 75% 25%, 40% 60%, 60% 40%;
+    }
+    50% { 
+        background-position: 50% 50%, 50% 50%, 100% 0%, 60% 40%, 40% 60%;
+    }
+    75% { 
+        background-position: 75% 75%, 25% 25%, 25% 75%, 80% 20%, 20% 80%;
+    }
+}
+
+@keyframes openingShimmer {
+    0%, 100% { 
+        opacity: 0.6; 
+        transform: scale(1) rotate(0deg); 
+    }
+    50% { 
+        opacity: 0.9; 
+        transform: scale(1.1) rotate(180deg); 
+    }
+}
+
+@keyframes openingGrain {
+    0% { transform: translateX(0) translateY(0); }
+    25% { transform: translateX(-10px) translateY(-5px); }
+    50% { transform: translateX(10px) translateY(-10px); }
+    75% { transform: translateX(-5px) translateY(5px); }
+    100% { transform: translateX(0) translateY(0); }
+}
+
+@keyframes openingLogoFloat {
+    0%, 100% { transform: translateY(0px) rotate(0deg); }
+    25% { transform: translateY(-8px) rotate(1deg); }
+    50% { transform: translateY(-15px) rotate(0deg); }
+    75% { transform: translateY(-8px) rotate(-1deg); }
+}
+
+@keyframes openingLogoGlow {
+    0% { 
+        box-shadow: 
+            0 0 50px rgba(255, 255, 255, 0.3),
+            inset 0 0 50px rgba(255, 255, 255, 0.15),
+            0 0 100px rgba(168, 213, 186, 0.2); 
+    }
+    100% { 
+        box-shadow: 
+            0 0 80px rgba(255, 255, 255, 0.5),
+            inset 0 0 80px rgba(255, 255, 255, 0.25),
+            0 0 150px rgba(168, 213, 186, 0.4); 
+    }
+}
+
+
+@keyframes openingTitleSlide {
+    from { 
+        opacity: 0; 
+        transform: translateY(50px) scale(0.8); 
+    }
+    to { 
+        opacity: 1; 
+        transform: translateY(0) scale(1); 
+    }
+}
+
+@keyframes openingTitleShimmer {
+    0% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
+}
+
+@keyframes openingTitleGlow {
+    0% { 
+        background-position: 0% 50%; 
+        opacity: 0.8; 
+    }
+    50% { 
+        background-position: 100% 50%; 
+        opacity: 1; 
+    }
+    100% { 
+        background-position: 0% 50%; 
+        opacity: 0.8; 
+    }
+}
+
+@keyframes openingSubtitleSlide {
+    from { 
+        opacity: 0; 
+        transform: translateY(30px); 
+    }
+    to { 
+        opacity: 1; 
+        transform: translateY(0); 
+    }
+}
+
+@keyframes openingSubtitleFloat {
+    0%, 100% { transform: translateY(0px); }
+    50% { transform: translateY(-5px); }
+}
+
+@keyframes openingLoaderSpin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+@keyframes openingProgressFill {
+    0% { width: 0%; }
+    100% { width: 100%; }
+}
+
+@keyframes openingLoadingTextFade {
+    0%, 100% { opacity: 0.8; }
+    50% { opacity: 1; }
+}
+
+@keyframes openingParticleFloat {
+    0% { 
+        transform: translateY(100vh) translateX(0) scale(0); 
+        opacity: 0; 
+    }
+    10% { 
+        opacity: 1; 
+        transform: translateY(90vh) translateX(10px) scale(1); 
+    }
+    90% { 
+        opacity: 1; 
+        transform: translateY(10vh) translateX(-10px) scale(1); 
+    }
+    100% { 
+        transform: translateY(-10vh) translateX(0) scale(0); 
+        opacity: 0; 
+    }
 }
 
 /* モーダル（共通） */
@@ -174,9 +421,16 @@
 }
 
 /* ページトランジション */
-body.page-enter { opacity: 0; }
-body.page-enter-active { animation: fadeIn 0.25s ease forwards; }
-body.page-exit { animation: fadeIn 0.2s ease reverse forwards; }
+body.page-enter { 
+    opacity: 0; 
+    transform: translateY(20px);
+}
+body.page-enter-active { 
+    animation: pageEnter 1.2s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards; 
+}
+body.page-exit { 
+    animation: pageExit 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards; 
+}
 
 body {
     font-family: 'Noto Sans JP', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
@@ -184,6 +438,9 @@ body {
     line-height: 1.7;
     background-color: var(--background-color);
     font-size: 16px;
+    margin: 0;
+    padding: 0;
+    min-height: 100vh;
 }
 
 /* ナビゲーション */
@@ -661,7 +918,13 @@ body {
     left: 0;
     width: 100vw;
     height: 100vh;
-    background: var(--gradient-primary);
+    background: 
+        radial-gradient(circle at 20% 20%, rgba(168, 213, 186, 0.4) 0%, transparent 50%),
+        radial-gradient(circle at 80% 80%, rgba(212, 165, 116, 0.4) 0%, transparent 50%),
+        radial-gradient(circle at 40% 60%, rgba(214, 123, 123, 0.3) 0%, transparent 50%),
+        radial-gradient(circle at 60% 20%, rgba(168, 213, 186, 0.2) 0%, transparent 40%),
+        radial-gradient(circle at 10% 70%, rgba(212, 165, 116, 0.2) 0%, transparent 40%),
+        linear-gradient(135deg, #a8d5ba 0%, #d4a574 30%, #d67b7b 70%, #a8d5ba 100%);
     z-index: 997;
     display: flex;
     flex-direction: column;
@@ -670,57 +933,271 @@ body {
     color: white;
     opacity: 1;
     transition: opacity 0.5s ease;
+    overflow: hidden;
+    animation: openingBackgroundShift 20s ease-in-out infinite;
+}
+
+.opening-screen::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: 
+        radial-gradient(circle at 30% 30%, rgba(255, 255, 255, 0.1) 0%, transparent 70%),
+        radial-gradient(circle at 70% 70%, rgba(255, 255, 255, 0.05) 0%, transparent 70%);
+    animation: openingShimmer 8s ease-in-out infinite;
+}
+
+.opening-screen::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><defs><pattern id="grain" width="100" height="100" patternUnits="userSpaceOnUse"><circle cx="25" cy="25" r="1" fill="rgba(255,255,255,0.1)"/><circle cx="75" cy="75" r="1" fill="rgba(255,255,255,0.1)"/><circle cx="50" cy="10" r="0.5" fill="rgba(255,255,255,0.05)"/><circle cx="10" cy="50" r="0.5" fill="rgba(255,255,255,0.05)"/><circle cx="90" cy="30" r="0.5" fill="rgba(255,255,255,0.05)"/></pattern></defs><rect width="100" height="100" fill="url(%23grain)"/></svg>');
+    opacity: 0.4;
+    animation: openingGrain 15s linear infinite;
 }
 
 .opening-screen.fade-out {
     opacity: 0;
     pointer-events: none;
+    transform: scale(1.1);
+    transition: all 0.8s cubic-bezier(0.25, 0.46, 0.45, 0.94);
 }
 
 .opening-logo {
-    width: 120px;
-    height: 120px;
-    background: rgba(255, 255, 255, 0.1);
+    width: 180px;
+    height: 180px;
+    background: 
+        radial-gradient(circle at 30% 30%, rgba(255, 255, 255, 0.25) 0%, transparent 70%),
+        linear-gradient(135deg, rgba(255, 255, 255, 0.2) 0%, rgba(255, 255, 255, 0.05) 100%);
     border-radius: 50%;
     display: flex;
     align-items: center;
     justify-content: center;
     margin-bottom: 2rem;
-    backdrop-filter: blur(10px);
-    border: 2px solid rgba(255, 255, 255, 0.2);
-    animation: pulse 2s infinite;
+    backdrop-filter: blur(20px);
+    border: 4px solid rgba(255, 255, 255, 0.4);
+    animation: openingLogoFloat 4s ease-in-out infinite, openingLogoGlow 3s ease-in-out infinite alternate;
+    box-shadow: 
+        0 0 50px rgba(255, 255, 255, 0.3),
+        inset 0 0 50px rgba(255, 255, 255, 0.15),
+        0 0 100px rgba(168, 213, 186, 0.2);
+    position: relative;
+    z-index: 10;
 }
 
-.opening-logo i {
-    font-size: 3rem;
-    color: rgba(255, 255, 255, 0.9);
+.opening-logo::before {
+    content: '';
+    position: absolute;
+    top: -8px;
+    left: -8px;
+    right: -8px;
+    bottom: -8px;
+    border-radius: 50%;
+    background: linear-gradient(45deg, #a8d5ba, #d4a574, #d67b7b, #a8d5ba, #a8d5ba);
+    background-size: 400% 400%;
+    z-index: -1;
+    opacity: 0.8;
+    filter: blur(2px);
+}
+
+.opening-logo::after {
+    content: '';
+    position: absolute;
+    top: -15px;
+    left: -15px;
+    right: -15px;
+    bottom: -15px;
+    border-radius: 50%;
+    background: linear-gradient(45deg, #d67b7b, #d4a574, #a8d5ba, #d67b7b);
+    background-size: 500% 500%;
+    z-index: -2;
+    opacity: 0.4;
+    filter: blur(4px);
+}
+
+.opening-logo-img {
+    width: 100px;
+    height: 100px;
+    object-fit: contain;
+    border-radius: 20px;
+    filter: drop-shadow(0 0 30px rgba(255, 255, 255, 0.8)) 
+            drop-shadow(0 0 60px rgba(168, 213, 186, 0.4)) 
+            drop-shadow(0 0 90px rgba(212, 165, 116, 0.3));
+    position: relative;
+    z-index: 1;
 }
 
 .opening-title {
-    font-size: 2.5rem;
-    font-weight: 700;
-    margin-bottom: 1rem;
+    font-size: 3.5rem;
+    font-weight: 800;
+    margin-bottom: 1.5rem;
     text-align: center;
-    animation: slideUp 1s ease 0.5s both;
+    animation: openingTitleSlide 1.5s ease 0.5s both, openingTitleShimmer 4s ease-in-out infinite 2s;
+    text-shadow: 
+        0 4px 20px rgba(0, 0, 0, 0.8),
+        0 0 40px rgba(255, 255, 255, 0.9),
+        0 0 80px rgba(255, 255, 255, 0.6),
+        0 0 120px rgba(168, 213, 186, 0.4);
+    color: #ffffff;
+    position: relative;
+    z-index: 10;
+}
+
+.opening-title::before {
+    content: attr(data-text);
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(45deg, #a8d5ba, #d4a574, #d67b7b, #a8d5ba);
+    background-size: 300% 300%;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    animation: openingTitleGlow 3s ease-in-out infinite;
+    z-index: -1;
+    filter: blur(1px);
 }
 
 .opening-subtitle {
-    font-size: 1.2rem;
-    opacity: 0.9;
+    font-size: 1.5rem;
+    opacity: 1;
+    text-shadow: 
+        0 2px 15px rgba(0, 0, 0, 0.6),
+        0 0 30px rgba(255, 255, 255, 0.8),
+        0 0 60px rgba(255, 255, 255, 0.4);
+    animation: openingSubtitleSlide 1.5s ease 0.8s both, openingSubtitleFloat 6s ease-in-out infinite 2.5s;
     text-align: center;
-    margin-bottom: 2rem;
-    animation: slideUp 1s ease 0.7s both;
+    margin-bottom: 2.5rem;
+    position: relative;
+    z-index: 10;
+    font-weight: 400;
+    letter-spacing: 0.5px;
+    color: #ffffff;
 }
 
+/* 豪華なローディングアニメーション */
 .opening-loader {
-    width: 50px;
-    height: 50px;
-    border: 3px solid rgba(255, 255, 255, 0.3);
-    border-top: 3px solid white;
+    width: 80px;
+    height: 80px;
+    border: 4px solid rgba(255, 255, 255, 0.2);
+    border-top: 4px solid rgba(255, 255, 255, 0.8);
     border-radius: 50%;
-    animation: spin 1s linear infinite;
-    margin-top: 2rem;
+    animation: openingLoaderSpin 2s linear infinite;
+    margin: 2rem auto;
+    position: relative;
+    z-index: 10;
 }
+
+.opening-loader::before {
+    content: '';
+    position: absolute;
+    top: -8px;
+    left: -8px;
+    right: -8px;
+    bottom: -8px;
+    border: 2px solid transparent;
+    border-top: 2px solid rgba(168, 213, 186, 0.6);
+    border-radius: 50%;
+    animation: openingLoaderSpin 1.5s linear infinite reverse;
+}
+
+.opening-loader::after {
+    content: '';
+    position: absolute;
+    top: -16px;
+    left: -16px;
+    right: -16px;
+    bottom: -16px;
+    border: 1px solid transparent;
+    border-top: 1px solid rgba(212, 165, 116, 0.4);
+    border-radius: 50%;
+    animation: openingLoaderSpin 3s linear infinite;
+}
+
+.opening-progress {
+    width: 200px;
+    height: 4px;
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 2px;
+    margin: 1rem auto;
+    overflow: hidden;
+    position: relative;
+    z-index: 10;
+}
+
+.opening-progress-bar {
+    height: 100%;
+    background: linear-gradient(90deg, #a8d5ba, #d4a574, #d67b7b);
+    border-radius: 2px;
+    width: 0%;
+    animation: openingProgressFill 8s ease-out forwards;
+    box-shadow: 0 0 10px rgba(255, 255, 255, 0.5);
+}
+
+.opening-loading-text {
+    font-size: 1rem;
+    opacity: 1;
+    text-align: center;
+    margin-top: 1rem;
+    animation: openingLoadingTextFade 2s ease-in-out infinite;
+    position: relative;
+    z-index: 10;
+    color: #ffffff;
+    text-shadow: 
+        0 2px 10px rgba(0, 0, 0, 0.5),
+        0 0 20px rgba(255, 255, 255, 0.6);
+    font-weight: 500;
+}
+
+/* パーティクルエフェクト */
+.opening-particles {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 1;
+}
+
+.opening-particle {
+    position: absolute;
+    width: 4px;
+    height: 4px;
+    background: rgba(255, 255, 255, 0.6);
+    border-radius: 50%;
+    animation: openingParticleFloat 8s linear infinite;
+}
+
+.opening-particle:nth-child(1) { left: 10%; animation-delay: 0s; animation-duration: 6s; }
+.opening-particle:nth-child(2) { left: 20%; animation-delay: 1s; animation-duration: 8s; }
+.opening-particle:nth-child(3) { left: 30%; animation-delay: 2s; animation-duration: 7s; }
+.opening-particle:nth-child(4) { left: 40%; animation-delay: 0.5s; animation-duration: 9s; }
+.opening-particle:nth-child(5) { left: 50%; animation-delay: 1.5s; animation-duration: 6.5s; }
+.opening-particle:nth-child(6) { left: 60%; animation-delay: 2.5s; animation-duration: 8.5s; }
+.opening-particle:nth-child(7) { left: 70%; animation-delay: 3s; animation-duration: 7.5s; }
+.opening-particle:nth-child(8) { left: 80%; animation-delay: 0.8s; animation-duration: 9.5s; }
+.opening-particle:nth-child(9) { left: 90%; animation-delay: 1.8s; animation-duration: 6.8s; }
+.opening-particle:nth-child(10) { left: 15%; animation-delay: 3.5s; animation-duration: 8.2s; }
+.opening-particle:nth-child(11) { left: 25%; animation-delay: 4s; animation-duration: 7.2s; }
+.opening-particle:nth-child(12) { left: 35%; animation-delay: 1.2s; animation-duration: 9.2s; }
+.opening-particle:nth-child(13) { left: 45%; animation-delay: 2.8s; animation-duration: 6.2s; }
+.opening-particle:nth-child(14) { left: 55%; animation-delay: 3.8s; animation-duration: 8.8s; }
+.opening-particle:nth-child(15) { left: 65%; animation-delay: 0.3s; animation-duration: 7.8s; }
+.opening-particle:nth-child(16) { left: 75%; animation-delay: 4.5s; animation-duration: 9.8s; }
+.opening-particle:nth-child(17) { left: 85%; animation-delay: 1.3s; animation-duration: 6.3s; }
+.opening-particle:nth-child(18) { left: 95%; animation-delay: 2.3s; animation-duration: 8.3s; }
+.opening-particle:nth-child(19) { left: 5%; animation-delay: 3.3s; animation-duration: 7.3s; }
+.opening-particle:nth-child(20) { left: 12%; animation-delay: 4.3s; animation-duration: 9.3s; }
+
 
 @keyframes pulse {
     0%, 100% { transform: scale(1); }
@@ -1054,7 +1531,20 @@ body {
 
 /* メインコンテンツ */
 main {
-    margin-top: 88px;
+    margin-top: 0;
+    padding-top: 88px;
+}
+
+/* オープニング画面表示時のみメインコンテンツを隠す */
+body.opening-active main {
+    opacity: 0;
+    transform: translateY(0);
+    transition: all 1.2s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+
+main.page-ready {
+    opacity: 1;
+    transform: translateY(0);
 }
 
 .section {
@@ -1076,15 +1566,33 @@ main {
 
 /* ヒーローセクション */
 .hero {
-    background: var(--gradient-hero);
+    background: 
+        radial-gradient(circle at 20% 20%, rgba(168, 213, 186, 0.4) 0%, transparent 50%),
+        radial-gradient(circle at 80% 80%, rgba(212, 165, 116, 0.4) 0%, transparent 50%),
+        radial-gradient(circle at 40% 60%, rgba(214, 123, 123, 0.3) 0%, transparent 50%),
+        linear-gradient(135deg, #4a7c59 0%, #d4a574 50%, #d67b7b 100%);
     color: white;
     padding: 120px 0 80px;
-    margin-top: 108px;
+    margin-top: 0;
     position: relative;
     overflow: hidden;
 }
 
 .hero::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: 
+        radial-gradient(circle at 30% 30%, rgba(255, 255, 255, 0.1) 0%, transparent 70%),
+        radial-gradient(circle at 70% 70%, rgba(255, 255, 255, 0.05) 0%, transparent 70%);
+    opacity: 0.6;
+    animation: heroShimmer 8s ease-in-out infinite;
+}
+
+.hero::after {
     content: '';
     position: absolute;
     top: 0;
@@ -1140,20 +1648,44 @@ main {
 }
 
 .hero-graphic {
-    width: 200px;
-    height: 200px;
-    background: rgba(255, 255, 255, 0.1);
+    width: 220px;
+    height: 220px;
+    background: 
+        radial-gradient(circle at 30% 30%, rgba(255, 255, 255, 0.2) 0%, transparent 70%),
+        linear-gradient(135deg, rgba(255, 255, 255, 0.15) 0%, rgba(255, 255, 255, 0.05) 100%);
     border-radius: 50%;
     display: flex;
     align-items: center;
     justify-content: center;
-    backdrop-filter: blur(10px);
-    border: 2px solid rgba(255, 255, 255, 0.2);
+    backdrop-filter: blur(15px);
+    border: 3px solid rgba(255, 255, 255, 0.3);
+    box-shadow: 
+        0 0 40px rgba(255, 255, 255, 0.2),
+        inset 0 0 40px rgba(255, 255, 255, 0.1);
+    animation: heroFloat 4s ease-in-out infinite, heroGlow 3s ease-in-out infinite alternate;
+    position: relative;
+}
+
+.hero-graphic::before {
+    content: '';
+    position: absolute;
+    top: -8px;
+    left: -8px;
+    right: -8px;
+    bottom: -8px;
+    border-radius: 50%;
+    background: linear-gradient(45deg, #a8d5ba, #d4a574, #d67b7b, #a8d5ba);
+    background-size: 300% 300%;
+    animation: heroRotate 6s linear infinite;
+    z-index: -1;
+    opacity: 0.7;
 }
 
 .hero-graphic i {
-    font-size: 4rem;
-    color: rgba(255, 255, 255, 0.9);
+    font-size: 4.5rem;
+    color: rgba(255, 255, 255, 0.95);
+    text-shadow: 0 0 30px rgba(255, 255, 255, 0.6);
+    animation: heroIconPulse 2.5s ease-in-out infinite;
 }
 
 /* 部活動グリッド */
@@ -1165,17 +1697,36 @@ main {
 
 .club-card {
     background: white;
-    border-radius: 8px;
+    border-radius: 12px;
     padding: 1.5rem;
-    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-    transition: transform 0.3s, box-shadow 0.3s;
+    box-shadow: 0 4px 15px rgba(74, 124, 89, 0.1);
+    transition: all 0.3s ease;
+    border: 1px solid var(--border-color);
+    position: relative;
+    overflow: hidden;
     opacity: 0;
     animation: fadeInUp 0.45s ease forwards;
 }
 
+.club-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: var(--gradient-warm);
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
 .club-card:hover {
-    transform: translateY(-5px);
-    box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+    transform: translateY(-8px);
+    box-shadow: 0 8px 25px rgba(74, 124, 89, 0.2);
+}
+
+.club-card:hover::before {
+    opacity: 1;
 }
 
 .club-card h3 {
@@ -1233,40 +1784,46 @@ main {
 }
 
 .btn-primary {
-    background: var(--secondary-color);
+    background: var(--gradient-warm);
     color: white;
+    border: none;
+    box-shadow: 0 4px 15px rgba(212, 165, 116, 0.3);
 }
 
 .btn-primary:hover {
-    background: #2980b9;
+    background: var(--gradient-secondary);
     transform: translateY(-2px);
-    box-shadow: var(--shadow-md);
+    box-shadow: 0 6px 20px rgba(214, 123, 123, 0.4);
 }
 
 .btn-secondary {
     background: var(--surface-color);
     color: var(--primary-color);
     border: 2px solid var(--primary-color);
+    box-shadow: 0 2px 8px rgba(74, 124, 89, 0.1);
 }
 
 .btn-secondary:hover {
-    background: var(--primary-color);
+    background: var(--gradient-cool);
     color: white;
+    border-color: transparent;
     transform: translateY(-2px);
-    box-shadow: var(--shadow-md);
+    box-shadow: 0 6px 20px rgba(74, 124, 89, 0.3);
 }
 
 .btn-outline {
     background: transparent;
     color: var(--secondary-color);
     border: 2px solid var(--secondary-color);
+    box-shadow: 0 2px 8px rgba(212, 165, 116, 0.1);
 }
 
 .btn-outline:hover {
-    background: var(--secondary-color);
+    background: var(--gradient-warm);
     color: white;
+    border-color: transparent;
     transform: translateY(-2px);
-    box-shadow: var(--shadow-md);
+    box-shadow: 0 6px 20px rgba(212, 165, 116, 0.3);
 }
 
 /* 投稿リスト */
@@ -1613,17 +2170,35 @@ footer {
     background: var(--surface-color);
     padding: 2rem;
     border-radius: 1rem;
-    box-shadow: var(--shadow-md);
+    box-shadow: 0 4px 15px rgba(74, 124, 89, 0.1);
     text-align: center;
     transition: all 0.3s ease;
     border: 1px solid var(--border-color);
+    position: relative;
+    overflow: hidden;
     opacity: 0;
     animation: fadeInUp 0.45s ease forwards;
 }
 
+.feature-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: var(--gradient-cool);
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
 .feature-card:hover {
-    transform: translateY(-5px);
-    box-shadow: var(--shadow-lg);
+    transform: translateY(-8px);
+    box-shadow: 0 8px 25px rgba(74, 124, 89, 0.2);
+}
+
+.feature-card:hover::before {
+    opacity: 1;
 }
 
 .feature-icon {

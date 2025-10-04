@@ -175,6 +175,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const shouldShowOpening = checkAndMarkSessionVisit();
     if (shouldShowOpening) {
         console.log('New session detected, showing opening screen');
+        document.body.classList.add('opening-active');
         showOpeningScreen();
     }
     
@@ -197,9 +198,9 @@ document.addEventListener('DOMContentLoaded', function() {
         return;
     }
     
-    // 最小2秒間はオープニング画面を表示
+    // 最小5秒間はオープニング画面を表示
     const startTime = Date.now();
-    const minDisplayTime = 2000; // 2秒
+    const minDisplayTime = 5000; // 5秒
     
     const initializeContent = async () => {
         try {
@@ -245,23 +246,28 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     };
     
-    // ページ入場アニメーション
-    document.body.classList.add('page-enter');
-    requestAnimationFrame(() => {
-        document.body.classList.add('page-enter-active');
-        // コンテンツの初期化を開始
+    // オープニング画面を表示しない場合は直接ページエントリーアニメーションを実行
+    if (!shouldShowOpening) {
+        document.body.classList.add('page-enter');
+        requestAnimationFrame(() => {
+            document.body.classList.add('page-enter-active');
+            // コンテンツの初期化を開始
+            initializeContent();
+        });
+    } else {
+        // オープニング画面を表示する場合は、コンテンツの初期化のみ実行
         initializeContent();
-    });
+    }
     
-    // フォールバック：オープニング画面を表示した場合のみ5秒後に強制的に閉じる
+    // フォールバック：オープニング画面を表示した場合のみ10秒後に強制的に閉じる
     if (shouldShowOpening) {
         setTimeout(() => {
             const openingScreen = document.getElementById('opening-screen');
             if (openingScreen) {
-                console.log('Force hiding opening screen after 5 seconds');
+                console.log('Force hiding opening screen after 10 seconds');
                 hideOpeningScreen();
             }
-        }, 5000);
+        }, 10000);
     }
 });
 
@@ -461,12 +467,38 @@ function showOpeningScreen() {
     
     const openingHTML = `
         <div class="opening-screen" id="opening-screen">
-            <div class="opening-logo">
-                <i class="fas fa-users"></i>
+            <div class="opening-particles">
+                <div class="opening-particle"></div>
+                <div class="opening-particle"></div>
+                <div class="opening-particle"></div>
+                <div class="opening-particle"></div>
+                <div class="opening-particle"></div>
+                <div class="opening-particle"></div>
+                <div class="opening-particle"></div>
+                <div class="opening-particle"></div>
+                <div class="opening-particle"></div>
+                <div class="opening-particle"></div>
+                <div class="opening-particle"></div>
+                <div class="opening-particle"></div>
+                <div class="opening-particle"></div>
+                <div class="opening-particle"></div>
+                <div class="opening-particle"></div>
+                <div class="opening-particle"></div>
+                <div class="opening-particle"></div>
+                <div class="opening-particle"></div>
+                <div class="opening-particle"></div>
+                <div class="opening-particle"></div>
             </div>
-            <h1 class="opening-title">なずなポータル</h1>
+            <div class="opening-logo">
+                <img src="https://raw.githubusercontent.com/J105588/nazuna-portal/main/images/icon.png" alt="なずなポータル" class="opening-logo-img">
+            </div>
+            <h1 class="opening-title" data-text="なずなポータル">なずなポータル</h1>
             <p class="opening-subtitle">みんなでつくる学校生活</p>
             <div class="opening-loader"></div>
+            <div class="opening-progress">
+                <div class="opening-progress-bar"></div>
+            </div>
+            <div class="opening-loading-text">読み込み中...</div>
         </div>
     `;
     
@@ -493,12 +525,27 @@ function hideOpeningScreen() {
         console.log('Opening screen found, adding fade-out class');
         openingScreen.classList.add('fade-out');
         
+        // ページエントリーアニメーションを開始
+        document.body.classList.add('page-enter');
+        requestAnimationFrame(() => {
+            document.body.classList.add('page-enter-active');
+            
+            // メインコンテンツの表示を少し遅らせる
+            setTimeout(() => {
+                const main = document.querySelector('main');
+                if (main) {
+                    main.classList.add('page-ready');
+                }
+            }, 200);
+        });
+        
         setTimeout(() => {
             if (openingScreen.parentNode) {
                 openingScreen.remove();
+                document.body.classList.remove('opening-active');
                 console.log('Opening screen removed from DOM');
             }
-        }, 500);
+        }, 800); // フェードアウト時間に合わせて調整
     } else {
         console.log('Opening screen not found in DOM');
     }
