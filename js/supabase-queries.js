@@ -1,13 +1,14 @@
 // シンプルなハッシュ（クライアント側）
-async function sha256(text) {
-    const enc = new TextEncoder();
-    const data = enc.encode(text);
-    const hashBuffer = await crypto.subtle.digest('SHA-256', data);
-    const hashArray = Array.from(new Uint8Array(hashBuffer));
-    return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+if (!window.sha256) {
+    async function sha256(text) {
+        const enc = new TextEncoder();
+        const data = enc.encode(text);
+        const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+        const hashArray = Array.from(new Uint8Array(hashBuffer));
+        return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+    }
+    window.sha256 = sha256;
 }
-
-window.sha256 = sha256;
 
 // ========================================
 // なずなポータルサイト 統一Supabaseクエリ
@@ -17,6 +18,7 @@ window.sha256 = sha256;
  * 統一されたSupabaseクエリクラス
  * すべてのデータベース操作を統一された形式で提供
  */
+if (!window.SupabaseQueries) {
 class SupabaseQueries {
     constructor(supabaseClient) {
         this.client = supabaseClient;
@@ -619,3 +621,4 @@ class SupabaseQueries {
 
 // グローバルに公開（クラスのみ）
 window.SupabaseQueries = SupabaseQueries;
+}

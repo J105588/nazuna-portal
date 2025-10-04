@@ -103,7 +103,7 @@ const CONFIG = {
     FIREBASE: {
         PROJECT_ID: 'nazuna-portal', // ← ここを更新
         VAPID_KEY: 'BEl62iUYgUivxIkv69yViEuiBIa40HI0...', // ← ここを更新
-        MESSAGING_SENDER_ID: '123456789' // ← ここを更新
+        MESSAGING_SENDER_ID: '181514532945' // ← ここを更新
     }
 };
 ```

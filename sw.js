@@ -24,32 +24,36 @@ self.addEventListener('install', event => {
 
 // リクエスト時のキャッシュ戦略
 self.addEventListener('fetch', event => {
-  event.respondWith(
-    caches.match(event.request)
-      .then(response => {
-        // キャッシュがあればそれを返す、なければネットワークから取得
-        if (response) {
-          return response;
-        }
-        
-        return fetch(event.request).then(response => {
-          // レスポンスが正常でない場合はそのまま返す
-          if (!response || response.status !== 200 || response.type !== 'basic') {
-            return response;
-          }
-          
-          // レスポンスをクローンしてキャッシュに保存
-          const responseToCache = response.clone();
-          
-          caches.open(CACHE_NAME)
-            .then(cache => {
-              cache.put(event.request, responseToCache);
-            });
-          
-          return response;
-        });
-      })
-  );
+  event.respondWith((async () => {
+    const cached = await caches.match(event.request);
+    if (cached) {
+      return cached;
+    }
+
+    // navigation preload 対応
+    const preload = event.preloadResponse ? await event.preloadResponse : null;
+    if (preload) {
+      const preloadClone = preload.clone();
+      event.waitUntil(
+        caches.open(CACHE_NAME).then(cache => cache.put(event.request, preloadClone))
+      );
+      return preload;
+    }
+
+    try {
+      const networkResponse = await fetch(event.request);
+      if (!networkResponse || networkResponse.status !== 200 || networkResponse.type !== 'basic') {
+        return networkResponse;
+      }
+      const responseToCache = networkResponse.clone();
+      event.waitUntil(
+        caches.open(CACHE_NAME).then(cache => cache.put(event.request, responseToCache))
+      );
+      return networkResponse;
+    } catch (e) {
+      return caches.match('./');
+    }
+  })());
 });
 
 // 古いキャッシュの削除

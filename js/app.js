@@ -907,10 +907,11 @@ async function loadPosts() {
                 showNoDataMessage(container, supabaseQueries.getErrorMessage(error, '投稿の読み込み'));
                 return;
             }
-            // 件数取得（簡易: 同条件でcount用クエリ）
-            let countQuery = supabaseClient.from('posts').select('id', { count: 'exact', head: true });
+            // 件数取得（HEADだと環境により失敗するため非HEADでcount取得）
+            let countQuery = supabaseClient.from('posts').select('id', { count: 'exact' });
             if (state.status && state.status !== 'all') countQuery = countQuery.eq('status', state.status);
             if (state.search) countQuery = countQuery.ilike('content', `%${state.search}%`);
+            countQuery = countQuery.limit(0);
             const { count } = await countQuery;
             const total = count || 0;
             window.forumState.totalPages = Math.max(1, Math.ceil(total / state.pageSize));

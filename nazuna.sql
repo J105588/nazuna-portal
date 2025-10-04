@@ -328,42 +328,70 @@ ALTER TABLE notification_deliveries ENABLE ROW LEVEL SECURITY;
 ALTER TABLE user_notification_preferences ENABLE ROW LEVEL SECURITY;
 
 -- 公開データ用ポリシー
-CREATE POLICY IF NOT EXISTS "Public read access on clubs" ON clubs FOR SELECT USING (is_active = true);
-CREATE POLICY IF NOT EXISTS "Public read access on news" ON news FOR SELECT USING (is_published = true);
-CREATE POLICY IF NOT EXISTS "Public read access on council_members" ON council_members FOR SELECT USING (is_active = true);
+DROP POLICY IF EXISTS "Public read access on clubs" ON clubs;
+CREATE POLICY "Public read access on clubs" ON clubs FOR SELECT USING (is_active = true);
+DROP POLICY IF EXISTS "Public read access on news" ON news;
+CREATE POLICY "Public read access on news" ON news FOR SELECT USING (is_published = true);
+DROP POLICY IF EXISTS "Public read access on council_members" ON council_members;
+CREATE POLICY "Public read access on council_members" ON council_members FOR SELECT USING (is_active = true);
 -- chats は公開しない
 
 -- 一般ユーザー用ポリシー
-CREATE POLICY IF NOT EXISTS "Users can submit posts" ON posts FOR INSERT WITH CHECK (true);
-CREATE POLICY IF NOT EXISTS "Users can view approved posts" ON posts FOR SELECT USING (status = 'approved' OR status = 'replied');
-CREATE POLICY IF NOT EXISTS "Users can view published surveys" ON surveys FOR SELECT USING (is_active = true AND is_published = true);
-CREATE POLICY IF NOT EXISTS "Users can submit survey responses" ON survey_responses FOR INSERT WITH CHECK (true);
+DROP POLICY IF EXISTS "Users can submit posts" ON posts;
+CREATE POLICY "Users can submit posts" ON posts FOR INSERT WITH CHECK (true);
+DROP POLICY IF EXISTS "Users can view approved posts" ON posts;
+CREATE POLICY "Users can view approved posts" ON posts FOR SELECT USING (status = 'approved' OR status = 'replied');
+DROP POLICY IF EXISTS "Users can view published surveys" ON surveys;
+CREATE POLICY "Users can view published surveys" ON surveys FOR SELECT USING (is_active = true AND is_published = true);
+DROP POLICY IF EXISTS "Users can submit survey responses" ON survey_responses;
+CREATE POLICY "Users can submit survey responses" ON survey_responses FOR INSERT WITH CHECK (true);
 -- チャットは最小実装として読み書きを許可（将来JWT/サーバー側で制限）
-CREATE POLICY IF NOT EXISTS "Users can read chats" ON chats FOR SELECT USING (true);
-CREATE POLICY IF NOT EXISTS "Users can send chats" ON chats FOR INSERT WITH CHECK (true);
-CREATE POLICY IF NOT EXISTS "Users can manage own devices" ON device_registrations FOR ALL USING (true);
-CREATE POLICY IF NOT EXISTS "Users can view active templates" ON notification_templates FOR SELECT USING (is_active = true);
-CREATE POLICY IF NOT EXISTS "Users can view notification history" ON notification_history FOR SELECT USING (true);
-CREATE POLICY IF NOT EXISTS "Users can manage own notification preferences" ON user_notification_preferences FOR ALL USING (true);
+DROP POLICY IF EXISTS "Users can read chats" ON chats;
+CREATE POLICY "Users can read chats" ON chats FOR SELECT USING (true);
+DROP POLICY IF EXISTS "Users can send chats" ON chats;
+CREATE POLICY "Users can send chats" ON chats FOR INSERT WITH CHECK (true);
+DROP POLICY IF EXISTS "Users can manage own devices" ON device_registrations;
+CREATE POLICY "Users can manage own devices" ON device_registrations FOR ALL USING (true);
+DROP POLICY IF EXISTS "Users can view active templates" ON notification_templates;
+CREATE POLICY "Users can view active templates" ON notification_templates FOR SELECT USING (is_active = true);
+DROP POLICY IF EXISTS "Users can view notification history" ON notification_history;
+CREATE POLICY "Users can view notification history" ON notification_history FOR SELECT USING (true);
+DROP POLICY IF EXISTS "Users can manage own notification preferences" ON user_notification_preferences;
+CREATE POLICY "Users can manage own notification preferences" ON user_notification_preferences FOR ALL USING (true);
 
 -- 学生アカウント（初回登録・ログイン用）
-CREATE POLICY IF NOT EXISTS "Users can read students for login" ON students FOR SELECT USING (true);
-CREATE POLICY IF NOT EXISTS "Users can register student" ON students FOR INSERT WITH CHECK (true);
+DROP POLICY IF EXISTS "Users can read students for login" ON students;
+CREATE POLICY "Users can read students for login" ON students FOR SELECT USING (true);
+DROP POLICY IF EXISTS "Users can register student" ON students;
+CREATE POLICY "Users can register student" ON students FOR INSERT WITH CHECK (true);
 
 -- 管理者用ポリシー
-CREATE POLICY IF NOT EXISTS "Admin full access on clubs" ON clubs FOR ALL USING (auth.role() = 'admin');
-CREATE POLICY IF NOT EXISTS "Admin full access on news" ON news FOR ALL USING (auth.role() = 'admin');
-CREATE POLICY IF NOT EXISTS "Admin full access on council_members" ON council_members FOR ALL USING (auth.role() = 'admin');
-CREATE POLICY IF NOT EXISTS "Admin full access on posts" ON posts FOR ALL USING (auth.role() = 'admin');
-CREATE POLICY IF NOT EXISTS "Admin full access on chats" ON chats FOR ALL USING (auth.role() = 'admin');
-CREATE POLICY IF NOT EXISTS "Admin full access on surveys" ON surveys FOR ALL USING (auth.role() = 'admin');
-CREATE POLICY IF NOT EXISTS "Admin full access on survey_responses" ON survey_responses FOR ALL USING (auth.role() = 'admin');
-CREATE POLICY IF NOT EXISTS "Admin full access on device_registrations" ON device_registrations FOR ALL USING (auth.role() = 'admin');
-CREATE POLICY IF NOT EXISTS "Admin full access on notification_templates" ON notification_templates FOR ALL USING (auth.role() = 'admin');
-CREATE POLICY IF NOT EXISTS "Admin full access on notification_history" ON notification_history FOR ALL USING (auth.role() = 'admin');
-CREATE POLICY IF NOT EXISTS "Admin full access on notification_deliveries" ON notification_deliveries FOR ALL USING (auth.role() = 'admin');
-CREATE POLICY IF NOT EXISTS "Admin full access on user_notification_preferences" ON user_notification_preferences FOR ALL USING (auth.role() = 'admin');
-CREATE POLICY IF NOT EXISTS "Admin full access on students" ON students FOR ALL USING (auth.role() = 'admin');
+DROP POLICY IF EXISTS "Admin full access on clubs" ON clubs;
+CREATE POLICY "Admin full access on clubs" ON clubs FOR ALL USING (auth.role() = 'admin');
+DROP POLICY IF EXISTS "Admin full access on news" ON news;
+CREATE POLICY "Admin full access on news" ON news FOR ALL USING (auth.role() = 'admin');
+DROP POLICY IF EXISTS "Admin full access on council_members" ON council_members;
+CREATE POLICY "Admin full access on council_members" ON council_members FOR ALL USING (auth.role() = 'admin');
+DROP POLICY IF EXISTS "Admin full access on posts" ON posts;
+CREATE POLICY "Admin full access on posts" ON posts FOR ALL USING (auth.role() = 'admin');
+DROP POLICY IF EXISTS "Admin full access on chats" ON chats;
+CREATE POLICY "Admin full access on chats" ON chats FOR ALL USING (auth.role() = 'admin');
+DROP POLICY IF EXISTS "Admin full access on surveys" ON surveys;
+CREATE POLICY "Admin full access on surveys" ON surveys FOR ALL USING (auth.role() = 'admin');
+DROP POLICY IF EXISTS "Admin full access on survey_responses" ON survey_responses;
+CREATE POLICY "Admin full access on survey_responses" ON survey_responses FOR ALL USING (auth.role() = 'admin');
+DROP POLICY IF EXISTS "Admin full access on device_registrations" ON device_registrations;
+CREATE POLICY "Admin full access on device_registrations" ON device_registrations FOR ALL USING (auth.role() = 'admin');
+DROP POLICY IF EXISTS "Admin full access on notification_templates" ON notification_templates;
+CREATE POLICY "Admin full access on notification_templates" ON notification_templates FOR ALL USING (auth.role() = 'admin');
+DROP POLICY IF EXISTS "Admin full access on notification_history" ON notification_history;
+CREATE POLICY "Admin full access on notification_history" ON notification_history FOR ALL USING (auth.role() = 'admin');
+DROP POLICY IF EXISTS "Admin full access on notification_deliveries" ON notification_deliveries;
+CREATE POLICY "Admin full access on notification_deliveries" ON notification_deliveries FOR ALL USING (auth.role() = 'admin');
+DROP POLICY IF EXISTS "Admin full access on user_notification_preferences" ON user_notification_preferences;
+CREATE POLICY "Admin full access on user_notification_preferences" ON user_notification_preferences FOR ALL USING (auth.role() = 'admin');
+DROP POLICY IF EXISTS "Admin full access on students" ON students;
+CREATE POLICY "Admin full access on students" ON students FOR ALL USING (auth.role() = 'admin');
 
 -- ========================================
 -- 8. 初期データ（任意）

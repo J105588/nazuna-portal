@@ -4,18 +4,18 @@
 const CONFIG = {
     // Supabase設定
     SUPABASE: {
-        URL: 'https://nhpohillwcpfybvmcexx.supabase.co',
-        ANON_KEY: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5ocG9oaWxsd2NwZnlidm1jZXh4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTk0MTQ5MTUsImV4cCI6MjA3NDk5MDkxNX0.iwNdmyg7vQFY8VUhYUQoI-y6u5sFivxtKLURNCerZAM'
+        URL: 'https://dfwcxwktpicqobkraycm.supabase.co',
+        ANON_KEY: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRmd2N4d2t0cGljcW9ia3JheWNtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTk0OTMzMzEsImV4cCI6MjA3NTA2OTMzMX0.7uX1DJMs1rX3l0sbeP8v2wtGjDm7saqu_I-FYaJY1jI'
     },
     
     // Google Apps Script WebApp URL
     // デプロイ後にこのURLを更新してください
-    GAS_URL: 'YOUR_GAS_WEBAPP_URL_HERE',
+    GAS_URL: 'https://script.google.com/macros/s/AKfycbzuHQZsFm4trOR2ie96_XqyDFm0zgZ4EZyd4SNiPfgdwN8bLeQpxCcqNWXh4WVp28Ke/exec',
     
     // Firebase設定（通知システム用）
     FIREBASE: {
         PROJECT_ID: 'your-project-id',
-        VAPID_KEY: 'your-vapid-key-here',
+        VAPID_KEY: 'BCEnp7nRdNubcooPI86iEEFqavkUxRal0t3AKkjsC1nB-PYLOUiE-EnGITJKfdANSRCG7zjyRzR6ERX3ZT0tZMQ',
         MESSAGING_SENDER_ID: 'your-sender-id'
     },
     

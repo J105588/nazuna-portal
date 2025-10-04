@@ -1,19 +1,27 @@
 // Firebase設定ファイル
 // 実際の運用時はFirebase Consoleから取得した設定値を使用
 
-// Firebase設定オブジェクト
+// Import the functions you need from the SDKs you need
+import { initializeApp } from "firebase/app";
+// TODO: Add SDKs for Firebase products that you want to use
+// https://firebase.google.com/docs/web/setup#available-libraries
+
+// Your web app's Firebase configuration
 const firebaseConfig = {
-    apiKey: "your-api-key-here",
-    authDomain: "your-project-id.firebaseapp.com",
-    projectId: "your-project-id",
-    storageBucket: "your-project-id.appspot.com",
-    messagingSenderId: "your-sender-id",
-    appId: "your-app-id",
-    measurementId: "your-measurement-id"
+    apiKey: "AIzaSyDQ8g88Z4rW-nX6TzCGjxFvfDptju4fOIc",
+    authDomain: "nazuna-portal.firebaseapp.com",
+    projectId: "nazuna-portal",
+    storageBucket: "nazuna-portal.appspot.com", // こちらの.appspot.comドメインのものを採用しました
+    messagingSenderId: "181514532945",
+    appId: "1:181514532945:web:65043ee5d7d435a7af6070"
 };
 
+// Initialize Firebase
+const app = initializeApp(firebaseConfig);
+
 // VAPIDキー（Firebase Console > Project Settings > Cloud Messaging から取得）
-const vapidKey = "your-vapid-key-here";
+// Web Push通知などで使用します
+const vapidKey = "BCEnp7nRdNubcooPI86iEEFqavkUxRal0t3AKkjsC1nB-PYLOUiE-EnGITJKfdANSRCG7zjyRzR6ERX3ZT0tZMQ";
 
 // Firebase初期化
 function initializeFirebase() {
@@ -177,9 +185,6 @@ document.addEventListener('DOMContentLoaded', function() {
     const firebaseInitialized = initializeFirebase();
     
     if (firebaseInitialized) {
-        // Service Worker設定
-        setupFirebaseServiceWorker();
-        
         // 通知マネージャーにVAPIDキーを設定
         if (window.notificationManager && vapidKey !== 'your-vapid-key-here') {
             window.notificationManager.vapidPublicKey = vapidKey;
