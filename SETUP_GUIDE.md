@@ -82,7 +82,6 @@
 | `SUPABASE_URL` | `https://your-project.supabase.co` | SupabaseのProject URL |
 | `SUPABASE_SERVICE_KEY` | `eyJ0eXAiOiJKV1QiLCJhbGci...` | Supabaseのservice_roleキー |
 | `FIREBASE_PROJECT_ID` | `nazuna-portal` | FirebaseのProject ID |
-| `FIREBASE_SERVER_KEY` | `AAAA...` | FirebaseのServer Key（レガシーAPI用） |
 | `FIREBASE_ACCESS_TOKEN` | `ya29.c.b0Aa...` | FirebaseのAccess Token（HTTP v1 API用） |
 | `DEBUG_MODE` | `false` | 本番環境では`false` |
 | `SPREADSHEET_ID` | `1ABC...` | （オプション）スプレッドシート連携用 |

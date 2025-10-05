@@ -4,8 +4,8 @@
 const CONFIG = {
     // Supabase設定
     SUPABASE: {
-        URL: 'https://dfwcxwktpicqobkraycm.supabase.co',
-        ANON_KEY: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRmd2N4d2t0cGljcW9ia3JheWNtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTk0OTMzMzEsImV4cCI6MjA3NTA2OTMzMX0.7uX1DJMs1rX3l0sbeP8v2wtGjDm7saqu_I-FYaJY1jI'
+        URL: 'https://jirppalacwwinwnsyauo.supabase.co',
+        ANON_KEY: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImppcnBwYWxhY3d3aW53bnN5YXVvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTk2NTYwNDUsImV4cCI6MjA3NTIzMjA0NX0.wbCEhrTTPETy1iOB3MmbNVtN4JQk5Be2Dxfs61x7fr4'
     },
     
     // Google Apps Script WebApp URL

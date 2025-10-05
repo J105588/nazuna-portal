@@ -15,7 +15,6 @@ function getConfig() {
     
     // Firebase設定
     FIREBASE_PROJECT_ID: properties.getProperty('FIREBASE_PROJECT_ID') || 'your-project-id',
-    FIREBASE_SERVER_KEY: properties.getProperty('FIREBASE_SERVER_KEY') || 'your-server-key',
     FCM_ENDPOINT: 'https://fcm.googleapis.com/v1/projects/{PROJECT_ID}/messages:send',
     FIREBASE_ACCESS_TOKEN: properties.getProperty('FIREBASE_ACCESS_TOKEN') || 'your-access-token',
     
@@ -1549,7 +1548,6 @@ function initializeGASProperties() {
     'SUPABASE_URL': 'YOUR_SUPABASE_URL_HERE',
     'SUPABASE_SERVICE_KEY': 'YOUR_SUPABASE_SERVICE_KEY_HERE',
     'FIREBASE_PROJECT_ID': 'your-project-id',
-    'FIREBASE_SERVER_KEY': 'your-server-key',
     'FIREBASE_ACCESS_TOKEN': 'your-firebase-access-token',
     'SPREADSHEET_ID': 'YOUR_SPREADSHEET_ID_HERE'
   };

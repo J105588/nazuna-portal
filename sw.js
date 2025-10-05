@@ -1,4 +1,4 @@
-const CACHE_NAME = 'nazuna-portal-v5';
+const CACHE_NAME = 'nazuna-portal-v6';
 const urlsToCache = [
   './',
   './css/style.css',

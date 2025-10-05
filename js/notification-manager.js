@@ -40,23 +40,223 @@ class NotificationManager {
         }
     }
     
-    // 通知許可の要求
+    // 通知許可の要求（iOS PWA対応強化版）
     async requestPermission() {
         if (!this.isSupported) {
             throw new Error('Push messaging is not supported');
         }
         
-        const permission = await Notification.requestPermission();
-        console.log('Notification permission:', permission);
-        
-        if (permission === 'granted') {
-            await this.subscribeToPush();
-            return true;
-        } else if (permission === 'denied') {
-            throw new Error('Notification permission denied');
-        } else {
-            throw new Error('Notification permission dismissed');
+        try {
+            // iOS PWA環境の検出
+            const iOSVersion = this.getIOSVersion();
+            const isIOS16_4OrLater = this.isIOSPWA && iOSVersion && iOSVersion >= 16.4;
+            
+            // iOS 16.4以降のPWAの場合は特別な処理
+            if (isIOS16_4OrLater) {
+                console.log('iOS 16.4以降のPWA環境で通知許可を要求します');
+                
+                // 通知許可状態を確認
+                if (Notification.permission === 'granted') {
+                    console.log('通知許可は既に付与されています');
+                    await this.subscribeToPush();
+                    return true;
+                }
+                
+                // ユーザーに通知の重要性を説明
+                const confirmMessage = 'このアプリからの通知を受け取るには許可が必要です。\n\n重要なお知らせや緊急情報をお届けするために通知を使用します。\n\n「許可」を選択してください。';
+                const userConfirmed = confirm(confirmMessage);
+                
+                if (!userConfirmed) {
+                    console.log('ユーザーが通知の説明を拒否しました');
+                    throw new Error('User declined notification explanation');
+                }
+            }
+            
+            // 通知許可を要求
+            const permission = await Notification.requestPermission();
+            console.log('Notification permission:', permission);
+            
+            if (permission === 'granted') {
+                await this.subscribeToPush();
+                
+                // iOS PWAの場合は確認メッセージを表示
+                if (this.isIOSPWA) {
+                    setTimeout(() => {
+                        this.showNotificationSuccessMessage();
+                    }, 1000);
+                }
+                
+                return true;
+            } else if (permission === 'denied') {
+                // iOS PWAの場合は設定方法を案内
+                if (this.isIOSPWA) {
+                    this.showIOSNotificationSettings();
+                }
+                throw new Error('Notification permission denied');
+            } else {
+                throw new Error('Notification permission dismissed');
+            }
+        } catch (error) {
+            console.error('Error requesting notification permission:', error);
+            throw error;
         }
+    }
+    
+    // 通知許可成功メッセージの表示
+    showNotificationSuccessMessage() {
+        const messageElement = document.createElement('div');
+        messageElement.className = 'notification-success-message';
+        messageElement.innerHTML = `
+            <div class="success-content">
+                <div class="success-icon">✓</div>
+                <div class="success-text">通知の設定が完了しました</div>
+                <button class="success-close">閉じる</button>
+            </div>
+        `;
+        
+        // スタイルを適用
+        const styleId = 'notification-success-style';
+        if (!document.getElementById(styleId)) {
+            const style = document.createElement('style');
+            style.id = styleId;
+            style.textContent = `
+                .notification-success-message {
+                    position: fixed;
+                    bottom: 20px;
+                    left: 50%;
+                    transform: translateX(-50%);
+                    background: #4a7c59;
+                    color: white;
+                    padding: 12px 20px;
+                    border-radius: 8px;
+                    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+                    z-index: 10000;
+                    animation: success-fade-in 0.3s ease-out;
+                    font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+                }
+                .success-content {
+                    display: flex;
+                    align-items: center;
+                }
+                .success-icon {
+                    font-size: 18px;
+                    margin-right: 10px;
+                }
+                .success-text {
+                    font-size: 14px;
+                    font-weight: 500;
+                }
+                .success-close {
+                    background: none;
+                    border: none;
+                    color: white;
+                    margin-left: 15px;
+                    font-size: 14px;
+                    cursor: pointer;
+                    opacity: 0.8;
+                }
+                @keyframes success-fade-in {
+                    from { opacity: 0; transform: translateX(-50%) translateY(20px); }
+                    to { opacity: 1; transform: translateX(-50%) translateY(0); }
+                }
+            `;
+            document.head.appendChild(style);
+        }
+        
+        document.body.appendChild(messageElement);
+        
+        // 閉じるボタンのイベント
+        const closeButton = messageElement.querySelector('.success-close');
+        closeButton.addEventListener('click', () => {
+            messageElement.remove();
+        });
+        
+        // 5秒後に自動的に消える
+        setTimeout(() => {
+            if (messageElement.parentNode) {
+                messageElement.remove();
+            }
+        }, 5000);
+    }
+    
+    // iOS通知設定案内の表示
+    showIOSNotificationSettings() {
+        const messageElement = document.createElement('div');
+        messageElement.className = 'ios-settings-guide';
+        messageElement.innerHTML = `
+            <div class="settings-content">
+                <div class="settings-header">
+                    <div class="settings-title">通知を有効にするには</div>
+                    <button class="settings-close">&times;</button>
+                </div>
+                <div class="settings-body">
+                    <p>1. iOSの「設定」アプリを開く</p>
+                    <p>2. 「Safari」を選択</p>
+                    <p>3. 「詳細」をタップ</p>
+                    <p>4. このWebサイトの設定で「通知」をオンにする</p>
+                </div>
+            </div>
+        `;
+        
+        // スタイルを適用
+        const styleId = 'ios-settings-guide-style';
+        if (!document.getElementById(styleId)) {
+            const style = document.createElement('style');
+            style.id = styleId;
+            style.textContent = `
+                .ios-settings-guide {
+                    position: fixed;
+                    top: 50%;
+                    left: 50%;
+                    transform: translate(-50%, -50%);
+                    background: white;
+                    width: 90%;
+                    max-width: 350px;
+                    border-radius: 12px;
+                    box-shadow: 0 5px 20px rgba(0, 0, 0, 0.3);
+                    z-index: 10001;
+                    font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+                }
+                .settings-content {
+                    padding: 20px;
+                }
+                .settings-header {
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: center;
+                    margin-bottom: 15px;
+                }
+                .settings-title {
+                    font-size: 18px;
+                    font-weight: 600;
+                    color: #333;
+                }
+                .settings-close {
+                    background: none;
+                    border: none;
+                    font-size: 24px;
+                    cursor: pointer;
+                    color: #999;
+                }
+                .settings-body {
+                    color: #555;
+                    font-size: 14px;
+                    line-height: 1.5;
+                }
+                .settings-body p {
+                    margin: 8px 0;
+                }
+            `;
+            document.head.appendChild(style);
+        }
+        
+        document.body.appendChild(messageElement);
+        
+        // 閉じるボタンのイベント
+        const closeButton = messageElement.querySelector('.settings-close');
+        closeButton.addEventListener('click', () => {
+            messageElement.remove();
+        });
     }
     
     // FCMトークンの取得と登録
@@ -300,7 +500,7 @@ class NotificationManager {
     // iOS PWA向けの特別な通知処理
     handleIOSPWANotification(payload) {
         try {
-            // iOS PWAではService Workerの通知が機能しないため、
+            // iOS PWAではService Workerの通知が機能しない場合があるため、
             // 代わりにネイティブのアラートやカスタムUIを使用
             
             // 通知データの取得
@@ -308,7 +508,41 @@ class NotificationManager {
             const data = payload.data || {};
             const notificationTitle = notification.title || 'お知らせ';
             const notificationBody = notification.body || '';
-            const notificationUrl = data.url || '/';
+            const notificationUrl = data.url || './';
+            const notificationIcon = notification.icon || './images/icon-192x192.png';
+            const notificationCategory = data.category || 'general';
+            
+            // iOS 16.4以降かどうかを確認
+            const iOSVersion = this.getIOSVersion();
+            const isIOS16_4OrLater = iOSVersion && iOSVersion >= 16.4;
+            
+            // iOS 16.4以降でPWAの場合は標準のNotification APIを試す
+            if (isIOS16_4OrLater && this.isIOSPWA && 'Notification' in window && Notification.permission === 'granted') {
+                try {
+                    console.log('iOS 16.4以降のPWAで標準通知APIを使用します');
+                    
+                    // 標準のNotification APIを使用
+                    const notification = new Notification(notificationTitle, {
+                        body: notificationBody,
+                        icon: notificationIcon,
+                        badge: './images/badge-72x72.png',
+                        tag: notificationCategory,
+                        data: { url: notificationUrl },
+                        requireInteraction: data.priority === '2'
+                    });
+                    
+                    notification.onclick = function() {
+                        window.focus();
+                        window.location.href = notificationUrl;
+                        this.close();
+                    };
+                    
+                    return;
+                } catch (error) {
+                    console.warn('標準APIでの通知に失敗しました。カスタムUIにフォールバックします:', error);
+                    // 標準APIが失敗した場合はカスタムUIにフォールバック
+                }
+            }
             
             // カスタム通知UIを作成
             const notificationElement = document.createElement('div');
@@ -316,11 +550,14 @@ class NotificationManager {
             notificationElement.innerHTML = `
                 <div class="notification-content">
                     <div class="notification-header">
-                        <img src="/images/icon-48x48.png" alt="Icon" class="notification-icon">
+                        <img src="./images/icon-48x48.png" alt="Icon" class="notification-icon">
                         <div class="notification-title">${notificationTitle}</div>
                         <button class="notification-close">&times;</button>
                     </div>
                     <div class="notification-body">${notificationBody}</div>
+                    <div class="notification-actions">
+                        <button class="notification-action-view">詳細を見る</button>
+                    </div>
                 </div>
             `;
             
@@ -337,46 +574,69 @@ class NotificationManager {
                         transform: translateX(-50%);
                         width: 90%;
                         max-width: 400px;
-                        background: rgba(250, 250, 250, 0.95);
+                        background: rgba(250, 250, 250, 0.98);
                         border-radius: 12px;
-                        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+                        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
                         z-index: 10000;
                         animation: notification-slide-in 0.3s ease-out;
+                        font-family: -apple-system, BlinkMacSystemFont, sans-serif;
                     }
                     .notification-content {
-                        padding: 12px;
+                        padding: 16px;
                     }
                     .notification-header {
                         display: flex;
                         align-items: center;
-                        margin-bottom: 8px;
+                        margin-bottom: 10px;
                     }
                     .notification-icon {
-                        width: 20px;
-                        height: 20px;
-                        margin-right: 8px;
+                        width: 24px;
+                        height: 24px;
+                        margin-right: 10px;
+                        border-radius: 6px;
                     }
                     .notification-title {
                         flex-grow: 1;
-                        font-weight: bold;
+                        font-weight: 600;
+                        font-size: 16px;
+                        color: #333;
                     }
                     .notification-close {
                         background: none;
                         border: none;
-                        font-size: 20px;
+                        font-size: 22px;
                         cursor: pointer;
                         padding: 0 5px;
+                        color: #999;
                     }
                     .notification-body {
-                        padding-left: 28px;
+                        padding-left: 34px;
+                        margin-bottom: 12px;
+                        font-size: 14px;
+                        color: #555;
+                        line-height: 1.4;
+                    }
+                    .notification-actions {
+                        display: flex;
+                        justify-content: flex-end;
+                    }
+                    .notification-action-view {
+                        background: #4a7c59;
+                        color: white;
+                        border: none;
+                        border-radius: 16px;
+                        padding: 6px 16px;
+                        font-size: 13px;
+                        font-weight: 500;
+                        cursor: pointer;
                     }
                     @keyframes notification-slide-in {
-                        from { transform: translateX(-50%) translateY(-100%); }
-                        to { transform: translateX(-50%) translateY(0); }
+                        from { transform: translateX(-50%) translateY(-100%); opacity: 0; }
+                        to { transform: translateX(-50%) translateY(0); opacity: 1; }
                     }
                     @keyframes notification-slide-out {
-                        from { transform: translateX(-50%) translateY(0); }
-                        to { transform: translateX(-50%) translateY(-100%); }
+                        from { transform: translateX(-50%) translateY(0); opacity: 1; }
+                        to { transform: translateX(-50%) translateY(-100%); opacity: 0; }
                     }
                 `;
                 document.head.appendChild(style);
@@ -386,6 +646,14 @@ class NotificationManager {
             
             // クリックイベントを設定
             notificationElement.addEventListener('click', () => {
+                window.location.href = notificationUrl;
+                notificationElement.remove();
+            });
+            
+            // 詳細ボタンのイベント
+            const viewButton = notificationElement.querySelector('.notification-action-view');
+            viewButton.addEventListener('click', (e) => {
+                e.stopPropagation();
                 window.location.href = notificationUrl;
                 notificationElement.remove();
             });

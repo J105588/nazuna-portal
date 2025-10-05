@@ -5,6 +5,9 @@
 // 実際の運用時はFirebase Consoleから取得した設定値を使用
 // ES6 importは使用せず、CDNから読み込まれたFirebase SDKを使用
 
+// APIクライアントのインスタンスを参照
+let apiClient = null;
+
 // Your web app's Firebase configuration
 const firebaseConfig = {
     apiKey: "AIzaSyDQ8g88Z4rW-nX6TzCGjxFvfDptju4fOIc",
@@ -25,6 +28,14 @@ const vapidKey = "BCEnp7nRdNubcooPI86iEEFqavkUxRal0t3AKkjsC1nB-PYLOUiE-EnGITJKfd
 // Firebase初期化（クロスプラットフォーム対応）
 function initializeFirebase() {
     try {
+        // APIクライアントの初期化
+        if (typeof APIClient !== 'undefined') {
+            apiClient = new APIClient();
+            console.log('API client initialized successfully');
+        } else {
+            console.warn('APIClient class not available');
+        }
+        
         // Firebase SDKが読み込まれているかチェック
         if (typeof firebase === 'undefined') {
             console.warn('Firebase SDK not loaded. Using fallback push notification system.');
@@ -210,32 +221,58 @@ function setupFirebaseServiceWorker() {
         const useNativePush = !isIOSPWA || (isIOSPWA && iosVersion >= 16.4);
         
         // 静的なService Workerファイルを使用（動的生成よりも信頼性が高い）
-        const swUrl = '/firebase-messaging-sw.js';
+        const swUrl = './firebase-messaging-sw.js';
         
-        navigator.serviceWorker.register(swUrl, { scope: './' })
-            .then((registration) => {
-                console.log('Firebase Messaging Service Worker registered:', registration);
-                
-                // Firebase Messagingに登録を伝える
-                if (typeof firebase !== 'undefined' && firebase.messaging && firebase.messaging.isSupported()) {
-                    const messaging = firebase.messaging();
-                    // 新しいFirebase SDKでは自動的にService Workerが検出される
-                    console.log('Firebase Messaging ready with Service Worker');
-                }
-            })
-            .catch((error) => {
-                console.error('Firebase Messaging Service Worker registration failed:', error);
-                
-                // iOS PWAの場合は特別な処理
-                if (isIOSPWA) {
-                    console.log('iOS PWA環境でService Worker登録に失敗しました。カスタム通知UIを使用します。');
-                    // iOS PWAではService Workerの制限があるため、カスタム通知UIを使用
-                    if (window.notificationManager) {
-                        const supportInfo = window.notificationManager.checkIOSPWASupport();
-                        console.log('iOS PWA診断情報:', supportInfo);
+        // Service Workerの登録を最大3回試行する
+        let retryCount = 0;
+        const maxRetries = 3;
+        
+        const registerServiceWorker = () => {
+            navigator.serviceWorker.register(swUrl, { scope: './' })
+                .then((registration) => {
+                    console.log('Firebase Messaging Service Worker registered:', registration);
+                    
+                    // Firebase Messagingに登録を伝える
+                    if (typeof firebase !== 'undefined' && firebase.messaging && firebase.messaging.isSupported()) {
+                        const messaging = firebase.messaging();
+                        // 新しいFirebase SDKでは自動的にService Workerが検出される
+                        console.log('Firebase Messaging ready with Service Worker');
                     }
-                }
-            });
+                    
+                    // iOS 16.4以降のPWAの場合、通知許可を確認
+                    if (isIOSPWA && iosVersion >= 16.4) {
+                        console.log('iOS 16.4以降のPWA環境を検出しました。プッシュ通知がサポートされています。');
+                        // 通知許可状態を確認
+                        if (window.notificationManager) {
+                            const supportInfo = window.notificationManager.checkIOSPWASupport();
+                            console.log('iOS PWA通知サポート状況:', supportInfo);
+                        }
+                    }
+                })
+                .catch((error) => {
+                    console.error(`Firebase Messaging Service Worker registration failed (attempt ${retryCount + 1}/${maxRetries}):`, error);
+                    
+                    // 再試行
+                    if (retryCount < maxRetries - 1) {
+                        retryCount++;
+                        console.log(`Retrying Service Worker registration in 1 second... (attempt ${retryCount + 1}/${maxRetries})`);
+                        setTimeout(registerServiceWorker, 1000);
+                    } else {
+                        // iOS PWAの場合は特別な処理
+                        if (isIOSPWA) {
+                            console.log('iOS PWA環境でService Worker登録に失敗しました。カスタム通知UIを使用します。');
+                            // iOS PWAではService Workerの制限があるため、カスタム通知UIを使用
+                            if (window.notificationManager) {
+                                const supportInfo = window.notificationManager.checkIOSPWASupport();
+                                console.log('iOS PWA診断情報:', supportInfo);
+                            }
+                        }
+                    }
+                });
+        };
+        
+        // 最初の試行を開始
+        registerServiceWorker();
     }
 }
 
