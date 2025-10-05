@@ -30,6 +30,68 @@ const adminSections = document.querySelectorAll('.admin-section');
 let supabaseClient = null;
 let supabaseQueries = null;
 
+// GAS用 API クライアントのフォールバック（adminページ単体読み込み対策）
+if (typeof APIClient === 'undefined') {
+    class APIClient {
+        constructor() {
+            this.baseURL = CONFIG.GAS_URL;
+            this.cache = new Map();
+            this.requestQueue = [];
+            this.isOnline = navigator.onLine;
+            window.addEventListener('online', () => { this.isOnline = true; this.processQueue(); });
+            window.addEventListener('offline', () => { this.isOnline = false; });
+        }
+        sendRequest(action, params = {}, options = {}) {
+            return new Promise((resolve, reject) => {
+                if (!this.isOnline && !options.allowOffline) {
+                    this.requestQueue.push({ action, params, resolve, reject });
+                    return reject(new Error(CONFIG.MESSAGES.INFO.OFFLINE));
+                }
+                const cacheKey = `${action}_${JSON.stringify(params)}`;
+                if (options.useCache && this.cache.has(cacheKey)) {
+                    const cached = this.cache.get(cacheKey);
+                    if (Date.now() - cached.timestamp < CONFIG.APP.CACHE_DURATION) {
+                        return resolve(cached.data);
+                    }
+                }
+                const callbackName = 'callback_' + Date.now() + '_' + Math.random().toString(36).substr(2);
+                const timeout = setTimeout(() => { this.cleanup(callbackName); reject(new Error(CONFIG.MESSAGES.ERROR.NETWORK)); }, options.timeout || 10000);
+                window.gasCallbacks = window.gasCallbacks || {};
+                window.gasCallbacks[callbackName] = (data) => {
+                    clearTimeout(timeout);
+                    if (data && data.success && options.useCache) {
+                        this.cache.set(cacheKey, { data, timestamp: Date.now() });
+                    }
+                    if (data && data.success) resolve(data); else reject(new Error((data && data.error) || CONFIG.MESSAGES.ERROR.SERVER));
+                    this.cleanup(callbackName);
+                };
+                const queryParams = new URLSearchParams({ action, callback: 'gasCallbacks.' + callbackName, timestamp: Date.now(), ...params });
+                const script = document.createElement('script');
+                script.id = 'jsonp_' + callbackName;
+                script.src = `${this.baseURL}?${queryParams}`;
+                console.log('GAS request:', action, script.src);
+                script.onerror = () => { clearTimeout(timeout); this.cleanup(callbackName); reject(new Error(CONFIG.MESSAGES.ERROR.NETWORK)); };
+                document.head.appendChild(script);
+            });
+        }
+        cleanup(callbackName) {
+            if (window.gasCallbacks) delete window.gasCallbacks[callbackName];
+            const el = document.getElementById('jsonp_' + callbackName);
+            if (el) el.remove();
+        }
+        processQueue() {
+            while (this.requestQueue.length > 0) {
+                const req = this.requestQueue.shift();
+                this.sendRequest(req.action, req.params).then(req.resolve).catch(req.reject);
+            }
+        }
+    }
+    window.APIClient = APIClient;
+}
+if (!window.apiClient && typeof APIClient !== 'undefined') {
+    window.apiClient = new APIClient();
+}
+
 // 初期化
 document.addEventListener('DOMContentLoaded', function() {
     console.log('Admin panel initializing...');
@@ -271,6 +333,12 @@ function setupSectionButtons() {
     if (sendNotificationBtn) {
         sendNotificationBtn.addEventListener('click', sendNotification);
     }
+
+    // 通知テンプレート選択
+    const templateSelect = document.getElementById('notification-template');
+    if (templateSelect) {
+        templateSelect.addEventListener('change', onTemplateChange);
+    }
 }
 
 // ログイン処理
@@ -501,6 +569,7 @@ async function initializeSection(sectionName) {
             await loadCouncilData();
             break;
         case 'notifications':
+            await loadNotificationTemplates();
             await loadNotificationHistory();
             break;
         case 'forum':
@@ -809,8 +878,11 @@ async function loadCouncilData() {
     if (!membersGrid) return;
     
     try {
-        if (supabaseQueries) {
-            const { data: membersData, error } = await supabaseQueries.getCouncilMembers();
+        if (window.supabaseClient) {
+            const { data: membersData, error } = await window.supabaseClient
+                .from('council_members')
+                .select('*')
+                .order('display_order', { ascending: true });
             
             if (error) {
                 console.error('Error loading council members:', error);
@@ -855,21 +927,28 @@ async function loadNotificationHistory() {
     if (!historyContainer) return;
     
     try {
-        if (supabaseQueries) {
-            const { data: historyData, error } = await supabaseClient
+        let historyData = [];
+        // GAS経由（必須ルート）
+        if (window.apiClient) {
+            try {
+                const resp = await window.apiClient.sendRequest('getNotificationHistory', { limit: 10 }, { timeout: 10000, useCache: true });
+                if (resp && resp.success && Array.isArray(resp.data)) historyData = resp.data;
+            } catch (e) {
+                console.warn('GAS history fetch failed, falling back to Supabase (read-only).', e);
+            }
+        }
+        // フォールバック: 直接Supabase（閲覧のみ）
+        if (!historyData.length && window.supabaseClient) {
+            const { data, error } = await window.supabaseClient
                 .from('notification_history')
                 .select('*')
                 .order('sent_at', { ascending: false })
                 .limit(10);
-            
-            if (error) {
-                console.error('Error loading notification history:', error);
-                historyContainer.innerHTML = '<div class="no-data-message">データの読み込みに失敗しました</div>';
-                return;
-            }
-            
-            if (historyData && historyData.length > 0) {
-                historyContainer.innerHTML = historyData.map(item => `
+            if (!error && data) historyData = data;
+        }
+        
+        if (historyData && historyData.length > 0) {
+            historyContainer.innerHTML = historyData.map(item => `
                     <div class="history-item">
                         <h4>${item.title}</h4>
                         <p>${item.message}</p>
@@ -879,15 +958,67 @@ async function loadNotificationHistory() {
                         </div>
                     </div>
                 `).join('');
-            } else {
-                historyContainer.innerHTML = '<div class="no-data-message">通知履歴がありません</div>';
-            }
         } else {
-            historyContainer.innerHTML = '<div class="no-data-message">データベースに接続できません</div>';
+            historyContainer.innerHTML = '<div class="no-data-message">通知履歴がありません</div>';
         }
     } catch (error) {
         console.error('Error loading notification history:', error);
         historyContainer.innerHTML = '<div class="no-data-message">データの読み込み中にエラーが発生しました</div>';
+    }
+}
+
+// 通知テンプレートをロードしてセレクトに反映
+async function loadNotificationTemplates() {
+    try {
+        const select = document.getElementById('notification-template');
+        if (!select) return;
+        let templates = [];
+        // GAS 経由（必須ルート）
+        if (window.apiClient) {
+            try {
+                const resp = await window.apiClient.sendRequest('getNotificationTemplates', { active_only: true }, { timeout: 10000, useCache: true });
+                if (resp && resp.success && Array.isArray(resp.data)) templates = resp.data;
+            } catch (e) {
+                console.warn('GAS templates fetch failed, falling back to Supabase (read-only).', e);
+            }
+        }
+        // フォールバック: 直接Supabase（閲覧のみ）
+        if (!templates.length && window.supabaseClient) {
+            const { data, error } = await window.supabaseClient
+                .from('notification_templates')
+                .select('template_key,title_template,body_template,category,priority')
+                .eq('is_active', true)
+                .order('priority', { ascending: false });
+            if (!error && data) templates = data;
+        }
+        // セレクトに反映
+        select.innerHTML = '<option value="">（選択してください）</option>' +
+            templates.map(t => `<option value="${t.template_key}">${t.template_key}</option>`).join('');
+        // 既存の値があれば保持
+        const current = select.dataset.currentValue;
+        if (current) select.value = current;
+    } catch (e) {
+        console.warn('Failed to load notification templates', e);
+    }
+}
+
+// テンプレート選択変更時にタイトル/本文を下書き反映
+function onTemplateChange() {
+    const key = document.getElementById('notification-template')?.value || '';
+    if (!key) return;
+    // 簡易ルール: 既知キーで定型文を挿入（DBに本文があれば本来はそれを使う）
+    const titleEl = document.getElementById('notification-title');
+    const bodyEl = document.getElementById('notification-message');
+    if (!titleEl || !bodyEl) return;
+    if (key === 'survey_created') {
+        if (!titleEl.value) titleEl.value = '新しいアンケートのお知らせ';
+        if (!bodyEl.value) bodyEl.value = 'アンケートにご協力ください。';
+    } else if (key === 'event_reminder') {
+        if (!titleEl.value) titleEl.value = 'イベントのお知らせ';
+        if (!bodyEl.value) bodyEl.value = 'イベントの詳細をご確認ください。';
+    } else if (key === 'news_published') {
+        if (!titleEl.value) titleEl.value = 'お知らせ公開';
+        if (!bodyEl.value) bodyEl.value = '最新のお知らせを公開しました。';
     }
 }
 
@@ -999,14 +1130,10 @@ async function saveNews(newsId = null) {
     }
     
     try {
-        // 保存処理（実際はGASに送信）
-        const result = await saveNewsData({
-            id: newsId,
-            title,
-            category,
-            content,
-            sendNotification
-        });
+        // 保存処理（GAS経由）
+        const action = newsId ? 'updateNews' : 'createNews';
+        const payload = { id: newsId, title, category, content, is_published: true };
+        const result = await (window.apiClient ? window.apiClient.sendRequest(action, payload, { timeout: 15000 }) : Promise.resolve({ success: false, error: 'API client unavailable' }));
         
         if (result.success) {
             showSuccessMessage('お知らせを保存しました。');
@@ -1031,6 +1158,7 @@ async function sendNotification() {
     const title = document.getElementById('notification-title').value.trim();
     const message = document.getElementById('notification-message').value.trim();
     const target = document.getElementById('notification-target').value;
+    const templateKey = (document.getElementById('notification-template')?.value || '').trim();
     
     if (!title || !message) {
         alert('タイトルとメッセージを入力してください。');
@@ -1045,7 +1173,8 @@ async function sendNotification() {
         const result = await sendPushNotification({
             title,
             message,
-            target
+            target,
+            templateKey
         });
         
         if (result.success) {
@@ -1103,6 +1232,21 @@ async function sendPushNotification(data) {
                     break; // 成功したらループを抜ける
                 } else {
                     console.warn(`Notification sending failed (${retries} retries left):`, result.error);
+                    // テンプレート未登録エラー時はテンプレートなしで再試行
+                    const msg = String(result.error || '').toLowerCase();
+                    if (msg.includes('template not found')) {
+                        console.warn('Template not found. Retrying without templateKey...');
+                        const fallbackData = { ...notificationData, templateKey: '' };
+                        try {
+                            const fallback = await apiClient.sendRequest('sendNotification', fallbackData, { timeout: 15000 });
+                            if (fallback && fallback.success) {
+                                result = fallback;
+                                break;
+                            }
+                        } catch (e) {
+                            // 続行して通常のリトライへ
+                        }
+                    }
                     retries--;
                     if (retries > 0) {
                         await new Promise(resolve => setTimeout(resolve, 1000)); // 1秒待機
@@ -1110,6 +1254,21 @@ async function sendPushNotification(data) {
                 }
             } catch (err) {
                 console.warn(`Notification request error (${retries} retries left):`, err);
+                // テンプレート未登録が明確な場合もフォールバックを試す
+                const emsg = String(err && (err.message || err)).toLowerCase();
+                if (emsg.includes('template not found')) {
+                    console.warn('Template not found (exception). Retrying without templateKey...');
+                    const fallbackData = { ...notificationData, templateKey: '' };
+                    try {
+                        const fallback = await apiClient.sendRequest('sendNotification', fallbackData, { timeout: 15000 });
+                        if (fallback && fallback.success) {
+                            result = fallback;
+                            break;
+                        }
+                    } catch (e2) {
+                        // fall through to retry countdown
+                    }
+                }
                 retries--;
                 if (retries > 0) {
                     await new Promise(resolve => setTimeout(resolve, 1000)); // 1秒待機
@@ -1132,25 +1291,18 @@ async function sendPushNotification(data) {
 
 // 通知タイプからテンプレートキーを取得
 function getTemplateKeyFromData(data) {
-    // タイトルや内容から適切なテンプレートを判定
-    const title = data.title.toLowerCase();
-    
-    if (title.includes('アンケート')) {
-        return 'survey_created';
-    } else if (title.includes('イベント') || title.includes('行事')) {
-        return 'event_reminder';
-    } else if (title.includes('緊急') || title.includes('重要')) {
-        // 重要なお知らせセクションは削除されたが、緊急・重要カテゴリは維持
-        return 'news_published';
-    } else {
-        return 'news_published';
-    }
+    // 明示指定があればそれを優先
+    if (data && data.templateKey) return data.templateKey;
+    const title = (data.title || '').toLowerCase();
+    if (title.includes('アンケート')) return 'survey_created';
+    if (title.includes('イベント') || title.includes('行事')) return 'event_reminder';
+    if (title.includes('緊急') || title.includes('重要')) return 'news_published';
+    return 'news_published';
 }
 
 // 通知URLを生成
 function getNotificationUrl(data) {
     const type = getTemplateKeyFromData(data);
-    
     switch (type) {
         case 'survey_created':
             return './survey.html';
@@ -1285,6 +1437,20 @@ function getStatusLabel(status) {
         published: '公開中'
     };
     return labels[status] || status;
+}
+
+// 活動実績カテゴリ表示名
+function getAchievementCategoryLabel(category) {
+    const labels = {
+        general: '一般',
+        academic: '学習',
+        cultural: '文化',
+        sports: 'スポーツ',
+        leadership: 'リーダーシップ',
+        volunteer: 'ボランティア',
+        event: 'イベント'
+    };
+    return labels[category] || category;
 }
 
 // 成功・エラーメッセージ表示
@@ -1473,19 +1639,84 @@ function showMemberModal(id = null) {
 
 function editMember(id) {
     showMemberModal(id);
+    // 既存データを取得してフォームへ反映
+    setTimeout(async () => {
+        try {
+            if (!window.supabaseClient) return;
+            const { data, error } = await window.supabaseClient
+                .from('council_members')
+                .select('*')
+                .eq('id', id)
+                .maybeSingle();
+            if (error || !data) return;
+            const nameEl = document.getElementById('member-name');
+            const roleEl = document.getElementById('member-role');
+            const msgEl = document.getElementById('member-message');
+            if (nameEl) nameEl.value = data.name || '';
+            if (roleEl) roleEl.value = data.role || '';
+            if (msgEl) msgEl.value = data.message || '';
+        } catch (e) {
+            console.warn('Failed to prefill member form', e);
+        }
+    }, 0);
 }
 
 function deleteMember(id) {
-    if (confirm('このメンバーを削除しますか？')) {
-        console.log('Delete member:', id);
-        loadCouncilData();
-    }
+    if (!confirm('このメンバーを削除しますか？')) return;
+    (async () => {
+        try {
+            if (!window.supabaseClient) throw new Error('Supabase client not initialized');
+            const { error } = await window.supabaseClient
+                .from('council_members')
+                .delete()
+                .eq('id', id);
+            if (error) {
+                showErrorMessage('削除に失敗しました: ' + (error.message || '')); return;
+            }
+            showInfoMessage('メンバーを削除しました');
+            loadCouncilData();
+        } catch (e) {
+            console.error('Delete member error:', e);
+            showErrorMessage('削除中にエラーが発生しました');
+        }
+    })();
 }
 
 function saveMember(id = null) {
-    console.log('Save member:', id);
-    closeModal();
-    loadCouncilData();
+    const nameEl = document.getElementById('member-name');
+    const roleEl = document.getElementById('member-role');
+    const msgEl = document.getElementById('member-message');
+    const imgEl = document.getElementById('member-image');
+    const name = nameEl ? nameEl.value.trim() : '';
+    const role = roleEl ? roleEl.value.trim() : '';
+    const message = msgEl ? msgEl.value.trim() : '';
+    if (!name || !role) { alert('名前と役職は必須です。'); return; }
+    (async () => {
+        try {
+            if (!window.supabaseClient) throw new Error('Supabase client not initialized');
+            const payload = { name, role, message, is_active: true };
+            let result;
+            if (id) {
+                result = await window.supabaseClient
+                    .from('council_members')
+                    .update(payload)
+                    .eq('id', id)
+                    .select();
+            } else {
+                result = await window.supabaseClient
+                    .from('council_members')
+                    .insert([payload])
+                    .select();
+            }
+            if (result.error) { throw result.error; }
+            showSuccessMessage('メンバー情報を保存しました');
+            closeModal();
+            loadCouncilData();
+        } catch (e) {
+            console.error('Save member error:', e);
+            showErrorMessage('保存に失敗しました');
+        }
+    })();
 }
 
 function viewForumPost(id) {

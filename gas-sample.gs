@@ -119,6 +119,12 @@ function doGet(e) {
       case 'getNotificationStatistics':
         result = getNotificationStatistics(e.parameter);
         break;
+      case 'getNotificationTemplates':
+        result = getNotificationTemplates(e.parameter);
+        break;
+      case 'createNews':
+        result = createNews(e.parameter);
+        break;
       case 'updateNews':
         result = updateNews(e.parameter);
         break;
@@ -208,6 +214,12 @@ function doPost(e) {
         break;
       case 'getNotificationStatistics':
         result = getNotificationStatistics(data);
+        break;
+      case 'getNotificationTemplates':
+        result = getNotificationTemplates(data);
+        break;
+      case 'createNews':
+        result = createNews(data);
         break;
       
       // データ管理
@@ -678,9 +690,23 @@ function sendNotification(data) {
     const adminEmail = data.adminEmail || data.parameter?.adminEmail;
     
     // 通知テンプレートを取得
-    const template = getNotificationTemplate(templateKey);
+    var template = getNotificationTemplate(templateKey);
     if (!template) {
-      return { success: false, error: 'Template not found: ' + templateKey };
+      // フォールバック: テンプレート未登録でも送信可能にする
+      template = {
+        id: null,
+        title_template: '{{title}}',
+        body_template: '{{message}}',
+        icon_url: '',
+        image_url: '',
+        badge_url: '/images/badge-72x72.png',
+        action_url: '/news.html',
+        category: 'general',
+        priority: 1,
+        url_params: [],
+        append_params: false,
+        actions: []
+      };
     }
     
     // テンプレートからメッセージを生成
@@ -732,24 +758,18 @@ function sendBulkNotification(data) {
     for (let i = 0; i < notifications.length; i += batchSize) {
       const batch = notifications.slice(i, i + batchSize);
       const batchResults = [];
-      
-      // 並列処理の制限
-      const promises = batch.map(notification => {
-        return new Promise(resolve => {
-          const result = sendNotification(notification);
-          if (result.success) successCount++;
-          else failureCount++;
-          batchResults.push(result);
-          resolve();
-        });
-      });
-      
-      // バッチ内の全ての通知が処理されるのを待つ
-      for (const promise of promises) {
-        await promise;
+      // Apps Script は await/async 非対応のため同期実行で処理
+      for (var j = 0; j < batch.length; j++) {
+        var notification = batch[j];
+        var result = sendNotification(notification);
+        if (result && result.success) {
+          successCount++;
+        } else {
+          failureCount++;
+        }
+        batchResults.push(result);
       }
-      
-      results.push(...batchResults);
+      results.push.apply(results, batchResults);
       
       // レート制限対応（バッチ間の遅延）
       if (i + batchSize < notifications.length) {
@@ -928,7 +948,7 @@ function sendFCMMessage(message) {
     // プラットフォーム別の設定を準備
     const webpushConfig = {
       headers: {
-        TTL: (message.time_to_live || 86400).toString(),
+        TTL: String(message.time_to_live || 86400),
         Urgency: message.priority === 'high' ? 'high' : 'normal'
       },
       notification: {
@@ -954,7 +974,7 @@ function sendFCMMessage(message) {
     const apnsConfig = {
       headers: {
         'apns-priority': message.priority === 'high' ? '10' : '5',
-        'apns-expiration': Math.floor(Date.now() / 1000) + (message.time_to_live || 86400),
+        'apns-expiration': String(Math.floor(Date.now() / 1000) + (message.time_to_live || 86400)),
         'apns-push-type': 'alert',
         'apns-topic': message.apns_topic || 'jp.school.nazuna-portal'
       },
@@ -1122,6 +1142,54 @@ function getNotificationTemplate(templateKey, options = {}) {
     return response.data && response.data.length > 0 ? response.data[0] : null;
   } else {
     return response.data || [];
+  }
+}
+
+// 通知テンプレート一覧取得（JSONP想定の軽量版）
+function getNotificationTemplates(params) {
+  try {
+    var query = 'notification_templates?is_active=eq.true&order=priority.desc';
+    if (params && params.category) {
+      query += '&category=eq.' + params.category;
+    }
+    var response = supabaseRequest('GET', query);
+    if (response.error) {
+      return { success: false, error: response.error.message || 'Failed to fetch templates' };
+    }
+    // 必要最小限のフィールドのみ返す
+    var data = (response.data || []).map(function(t){
+      return {
+        template_key: t.template_key,
+        title_template: t.title_template,
+        body_template: t.body_template,
+        category: t.category,
+        priority: t.priority
+      };
+    });
+    return { success: true, data: data };
+  } catch (e) {
+    return { success: false, error: e.toString() };
+  }
+}
+
+// ニュース新規作成
+function createNews(data) {
+  try {
+    var payload = {
+      title: data.title,
+      category: data.category || data.type || 'general',
+      content: data.content,
+      is_published: data.is_published !== false,
+      date: new Date().toISOString(),
+      priority: data.priority || 0
+    };
+    var resp = supabaseRequest('POST', 'news', [payload]);
+    if (resp.error) {
+      return { success: false, error: resp.error.message || 'Failed to create news' };
+    }
+    return { success: true, data: resp.data && resp.data[0] };
+  } catch (e) {
+    return { success: false, error: e.toString() };
   }
 }
 
@@ -1471,15 +1539,19 @@ function supabaseRequest(method, endpoint, data = null) {
   try {
     const config = getConfig();
     
-    const options = {
-      method: method,
-      headers: {
-        'Authorization': 'Bearer ' + config.SUPABASE_SERVICE_KEY,
-        'apikey': config.SUPABASE_SERVICE_KEY,
-        'Content-Type': 'application/json',
-        'Prefer': method === 'POST' ? 'return=representation' : undefined
-      }
+    // ヘッダーは未定義値を含めないように組み立てる
+    const headers = {
+      'Authorization': 'Bearer ' + config.SUPABASE_SERVICE_KEY,
+      'apikey': config.SUPABASE_SERVICE_KEY
     };
+    // GETでは Content-Type ヘッダーを付けない（一部環境で Header:null 扱いになるのを回避）
+    if (method !== 'GET') {
+      headers['Content-Type'] = 'application/json';
+    }
+    if (method === 'POST' || method === 'PATCH') {
+      headers['Prefer'] = 'return=representation';
+    }
+    const options = { method: method, headers: headers };
     
     if (data && (method === 'POST' || method === 'PATCH')) {
       options.payload = JSON.stringify(data);

@@ -323,6 +323,13 @@ async function registerFCMToken(token) {
                 if (result.success) {
                     break; // 成功したらループを抜ける
                 } else {
+                    const msg = String(result.error || '').toLowerCase();
+                    // 重複（409/23505）は成功扱い
+                    if (msg.includes('duplicate key value') || msg.includes('23505') || msg.includes('409')) {
+                        console.log('FCM token already registered. Treating as success.');
+                        result = { success: true };
+                        break;
+                    }
                     console.warn(`FCM token registration failed (${retries} retries left):`, result.error);
                     retries--;
                     if (retries > 0) {
@@ -330,6 +337,12 @@ async function registerFCMToken(token) {
                     }
                 }
             } catch (err) {
+                const emsg = String(err && (err.message || err)).toLowerCase();
+                if (emsg.includes('duplicate key value') || emsg.includes('23505') || emsg.includes('409')) {
+                    console.log('FCM token already registered (caught). Treating as success.');
+                    result = { success: true };
+                    break;
+                }
                 console.warn(`FCM token registration error (${retries} retries left):`, err);
                 retries--;
                 if (retries > 0) {
