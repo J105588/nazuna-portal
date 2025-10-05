@@ -870,13 +870,8 @@ async function loadClubs() {
     const container = document.getElementById('clubs-container');
     if (!container) return;
     
-    // フォールバックデータ
-    const demoClubs = [
-        { name: 'サッカー部', description: '全国大会を目指して日々練習に励んでいます', members: 45, schedule: '月・水・金' },
-        { name: '吹奏楽部', description: '美しいハーモニーを奏でることを目標に活動中', members: 32, schedule: '火・木・土' },
-        { name: '美術部', description: '個性豊かな作品制作を通じて表現力を磨いています', members: 18, schedule: '月・木' },
-        { name: '科学部', description: '実験や研究を通じて科学の楽しさを追求', members: 24, schedule: '水・金' }
-    ];
+    // フォールバックデータ（DB接続失敗時のみ使用）
+    const fallbackClubs = [];
     
     const renderClub = (club) => `
         <div class="club-card">
@@ -889,7 +884,7 @@ async function loadClubs() {
         </div>
     `;
     
-    await loadFromSupabase('clubs', container, renderClub, demoClubs);
+    await loadFromSupabase('clubs', container, renderClub, fallbackClubs);
 }
 
 // お知らせ読み込み
@@ -897,12 +892,8 @@ async function loadNews() {
     const newsContainer = document.querySelector('.news-container');
     if (!newsContainer) return;
     
-    // フォールバックデータ
-    const demoNews = [
-        { date: '2024/01/15', title: '体育祭のお知らせ', content: '来月20日に体育祭を開催します。詳細は後日配布します。', type: 'event' },
-        { date: '2024/01/10', title: '生徒会だより1月号', content: '今月の活動報告と来月の予定をまとめました。', type: 'newsletter' },
-        { date: '2024/01/05', title: '文化祭実行委員募集', content: '文化祭の企画・運営に参加してくれる生徒を募集しています。', type: 'recruitment' }
-    ];
+    // フォールバックデータ（DB接続失敗時のみ使用）
+    const fallbackNews = [];
     
     const renderNews = (item) => `
         <div class="news-item">
@@ -920,7 +911,7 @@ async function loadNews() {
     wrapper.className = 'news-list';
     newsContainer.appendChild(wrapper);
     
-    await loadFromSupabase('news', wrapper, renderNews, demoNews);
+    await loadFromSupabase('news', wrapper, renderNews, fallbackNews);
 }
 
 function getNewsTypeLabel(type) {
@@ -1110,16 +1101,8 @@ async function loadPosts() {
     if (!container) return;
     const state = window.forumState || { search: '', status: 'all', orderBy: 'created_at', orderDirection: 'desc', page: 1, pageSize: 10 };
     
-    // フォールバックデータ
-    const demoPosts = [
-        {
-            id: 'DEMO001',
-            content: '図書室の開館時間を延長してほしいです。',
-            status: 'resolved',
-            created_at: '2024/01/15 14:30',
-            reply: 'ご意見ありがとうございます。来月より試験期間中は19時まで延長することが決定しました。'
-        }
-    ];
+    // フォールバックデータ（DB接続失敗時のみ使用）
+    const fallbackPosts = [];
     
     const renderPost = (post) => `
         <div class="post-item">
@@ -1180,7 +1163,7 @@ async function loadPosts() {
         }
     } else {
         // フォールバック
-        container.innerHTML = demoPosts.map(renderPost).join('');
+        container.innerHTML = fallbackPosts.map(renderPost).join('');
         window.forumState.totalPages = 1;
     }
 
@@ -1541,11 +1524,8 @@ async function loadLatestNews() {
     const container = document.getElementById('latest-news');
     if (!container) return Promise.resolve();
     
-    // デモデータ（実際はGASから取得）
-    const latestNews = [
-        { date: '2024/01/15', title: '体育祭のお知らせ', type: 'event' },
-        { date: '2024/01/10', title: '生徒会だより1月号', type: 'newsletter' }
-    ];
+    // デモデータ（実際はDBから取得）
+    const latestNews = [];
     
     container.innerHTML = latestNews.map(item => `
         <div class="news-preview">
@@ -1562,13 +1542,12 @@ async function loadLatestPosts() {
     if (!container) return Promise.resolve();
     
     container.innerHTML = `
-        <div class="post-preview">
-            <p>図書室の開館時間を延長してほしいです。</p>
-            <span class="post-status status-resolved">対応済み</span>
-        </div>
-        <div class="post-preview">
-            <p>体育祭の種目について提案があります。</p>
-            <span class="post-status status-pending">確認中</span>
+        <div class="no-data-message">
+            <div class="no-data-icon">
+                <i class="fas fa-comments"></i>
+            </div>
+            <h3>まだ投稿がありません</h3>
+            <p>フォーラムに投稿してみましょう。</p>
         </div>
     `;
 }
@@ -1707,12 +1686,13 @@ async function loadSurveys() {
     const container = document.getElementById('active-surveys');
     if (!container) return;
     
-    // デモデータ
     container.innerHTML = `
-        <div class="survey-preview">
-            <h3>文化祭の企画について</h3>
-            <p>締切: 2024年2月15日</p>
-            <a href="#sample-survey" class="btn btn-primary">回答する</a>
+        <div class="no-data-message">
+            <div class="no-data-icon">
+                <i class="fas fa-poll"></i>
+            </div>
+            <h3>現在実施中のアンケートはありません</h3>
+            <p>新しいアンケートが公開されるまでお待ちください。</p>
         </div>
     `;
 }

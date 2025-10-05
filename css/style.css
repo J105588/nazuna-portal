@@ -16,9 +16,11 @@ html {
     /* 新しいカラーパレット - 淡い緑、オレンジ、赤を主調 */
     --primary-color: #4a7c59;        /* ソフトグリーン */
     --secondary-color: #d4a574;       /* ソフトオレンジ */
-    --accent-color: #d67b7b;          /* ソフトレッド */
+    --accent-color: #e74c3c;          /* 鮮やかなレッド */
     --success-color: #6b9b7a;         /* より明るいグリーン */
     --warning-color: #e6a85c;         /* より明るいオレンジ */
+    --error-color: #e74c3c;           /* 鮮やかなレッド（エラー用） */
+    --danger-color: #c0392b;          /* より濃いレッド（危険・削除用） */
     --background-color: #f8faf9;      /* 非常に淡いグリーンティント */
     --surface-color: #ffffff;
     --text-color: #2d3a2d;            /* ダークグリーン */
@@ -29,9 +31,9 @@ html {
     --shadow-lg: 0 10px 15px -3px rgba(74, 124, 89, 0.1), 0 4px 6px -2px rgba(74, 124, 89, 0.05);
     --shadow-xl: 0 20px 25px -5px rgba(74, 124, 89, 0.1), 0 10px 10px -5px rgba(74, 124, 89, 0.04);
     --gradient-primary: linear-gradient(135deg, #a8d5ba 0%, #d4a574 100%);     /* グリーンからオレンジ */
-    --gradient-secondary: linear-gradient(135deg, #f4a5a5 0%, #d67b7b 100%);   /* ピンクからレッド */
+    --gradient-secondary: linear-gradient(135deg, #ff6b6b 0%, #e74c3c 100%);   /* 鮮やかなピンクからレッド */
     --gradient-hero: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
-    --gradient-warm: linear-gradient(135deg, #d4a574 0%, #d67b7b 100%);        /* オレンジからレッド */
+    --gradient-warm: linear-gradient(135deg, #d4a574 0%, #e74c3c 100%);        /* オレンジから鮮やかなレッド */
     --gradient-cool: linear-gradient(135deg, #a8d5ba 0%, #4a7c59 100%);        /* ライトグリーンからダークグリーン */
 }
 
@@ -448,10 +450,11 @@ body {
     background: var(--surface-color);
     backdrop-filter: blur(10px);
     border-bottom: 1px solid var(--border-color);
-    padding: 1.5rem 0;
+    padding: 1.25rem 0;
     position: fixed;
     width: 100%;
     top: 0;
+    left: 0;
     z-index: 100;
     box-shadow: var(--shadow-sm);
 }
@@ -924,7 +927,7 @@ body {
         radial-gradient(circle at 40% 60%, rgba(214, 123, 123, 0.3) 0%, transparent 50%),
         radial-gradient(circle at 60% 20%, rgba(168, 213, 186, 0.2) 0%, transparent 40%),
         radial-gradient(circle at 10% 70%, rgba(212, 165, 116, 0.2) 0%, transparent 40%),
-        linear-gradient(135deg, #a8d5ba 0%, #d4a574 30%, #d67b7b 70%, #a8d5ba 100%);
+        linear-gradient(135deg, #a8d5ba 0%, #d4a574 30%, #e74c3c 70%, #a8d5ba 100%);
     z-index: 997;
     display: flex;
     flex-direction: column;
@@ -999,7 +1002,7 @@ body {
     right: -8px;
     bottom: -8px;
     border-radius: 50%;
-    background: linear-gradient(45deg, #a8d5ba, #d4a574, #d67b7b, #a8d5ba, #a8d5ba);
+    background: linear-gradient(45deg, #a8d5ba, #d4a574, #e74c3c, #a8d5ba, #a8d5ba);
     background-size: 400% 400%;
     z-index: -1;
     opacity: 0.8;
@@ -1014,7 +1017,7 @@ body {
     right: -15px;
     bottom: -15px;
     border-radius: 50%;
-    background: linear-gradient(45deg, #d67b7b, #d4a574, #a8d5ba, #d67b7b);
+    background: linear-gradient(45deg, #e74c3c, #d4a574, #a8d5ba, #e74c3c);
     background-size: 500% 500%;
     z-index: -2;
     opacity: 0.4;
@@ -1056,7 +1059,7 @@ body {
     left: 0;
     right: 0;
     bottom: 0;
-    background: linear-gradient(45deg, #a8d5ba, #d4a574, #d67b7b, #a8d5ba);
+    background: linear-gradient(45deg, #a8d5ba, #d4a574, #e74c3c, #a8d5ba);
     background-size: 300% 300%;
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
@@ -1135,7 +1138,7 @@ body {
 
 .opening-progress-bar {
     height: 100%;
-    background: linear-gradient(90deg, #a8d5ba, #d4a574, #d67b7b);
+    background: linear-gradient(90deg, #a8d5ba, #d4a574, #e74c3c);
     border-radius: 2px;
     width: 0%;
     animation: openingProgressFill 8s ease-out forwards;
@@ -1532,7 +1535,7 @@ body {
 /* メインコンテンツ */
 main {
     margin-top: 0;
-    padding-top: 88px;
+    padding-top: 0;
 }
 
 /* オープニング画面表示時のみメインコンテンツを隠す */
@@ -1570,7 +1573,7 @@ main.page-ready {
         radial-gradient(circle at 20% 20%, rgba(168, 213, 186, 0.4) 0%, transparent 50%),
         radial-gradient(circle at 80% 80%, rgba(212, 165, 116, 0.4) 0%, transparent 50%),
         radial-gradient(circle at 40% 60%, rgba(214, 123, 123, 0.3) 0%, transparent 50%),
-        linear-gradient(135deg, #4a7c59 0%, #d4a574 50%, #d67b7b 100%);
+        linear-gradient(135deg, #4a7c59 0%, #d4a574 50%, #e74c3c 100%);
     color: white;
     padding: 120px 0 80px;
     margin-top: 0;
@@ -1674,7 +1677,7 @@ main.page-ready {
     right: -8px;
     bottom: -8px;
     border-radius: 50%;
-    background: linear-gradient(45deg, #a8d5ba, #d4a574, #d67b7b, #a8d5ba);
+    background: linear-gradient(45deg, #a8d5ba, #d4a574, #e74c3c, #a8d5ba);
     background-size: 300% 300%;
     animation: heroRotate 6s linear infinite;
     z-index: -1;
@@ -2136,7 +2139,7 @@ footer {
     background: var(--gradient-primary);
     color: white;
     padding: 120px 0 60px;
-    margin-top: 108px;
+    margin-top: 0;
     text-align: center;
 }
 
@@ -4897,4 +4900,49 @@ textarea.form-control {
         padding: 1.5rem;
         margin: 0 10px 2rem;
     }
+}
+
+/* エラーメッセージ用のユーティリティクラス */
+.text-error {
+    color: var(--error-color) !important;
+}
+
+.text-danger {
+    color: var(--danger-color) !important;
+}
+
+.bg-error {
+    background-color: var(--error-color) !important;
+    color: white !important;
+}
+
+.bg-danger {
+    background-color: var(--danger-color) !important;
+    color: white !important;
+}
+
+.border-error {
+    border-color: var(--error-color) !important;
+}
+
+.border-danger {
+    border-color: var(--danger-color) !important;
+}
+
+.alert-error {
+    background-color: rgba(231, 76, 60, 0.1);
+    border: 1px solid var(--error-color);
+    color: var(--error-color);
+    padding: 1rem;
+    border-radius: 0.5rem;
+    margin: 1rem 0;
+}
+
+.alert-danger {
+    background-color: rgba(192, 57, 43, 0.1);
+    border: 1px solid var(--danger-color);
+    color: var(--danger-color);
+    padding: 1rem;
+    border-radius: 0.5rem;
+    margin: 1rem 0;
 }

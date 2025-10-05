@@ -61,16 +61,15 @@ class NotificationManager {
                 // Firebase SDK使用時
                 const messaging = firebase.messaging();
                 
-                if (this.vapidPublicKey) {
-                    messaging.usePublicVapidKey(this.vapidPublicKey);
-                }
-                
-                this.fcmToken = await messaging.getToken();
+                // VAPIDキーをgetToken()のオプションで指定（usePublicVapidKeyは非推奨）
+                const tokenOptions = this.vapidPublicKey ? { vapidKey: this.vapidPublicKey } : {};
+                this.fcmToken = await messaging.getToken(tokenOptions);
                 console.log('FCM token obtained:', this.fcmToken);
                 
                 // トークン更新の監視
                 messaging.onTokenRefresh(async () => {
-                    this.fcmToken = await messaging.getToken();
+                    const tokenOptions = this.vapidPublicKey ? { vapidKey: this.vapidPublicKey } : {};
+                    this.fcmToken = await messaging.getToken(tokenOptions);
                     await this.registerDevice();
                 });
                 

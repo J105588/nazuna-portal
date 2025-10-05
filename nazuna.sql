@@ -55,7 +55,23 @@ CREATE TABLE IF NOT EXISTS council_members (
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
--- 1.4 学生アカウントテーブル（生徒番号ログイン用）
+-- 1.4 メンバー活動実績テーブル
+CREATE TABLE IF NOT EXISTS member_achievements (
+    id SERIAL PRIMARY KEY,
+    member_id INTEGER REFERENCES council_members(id) ON DELETE CASCADE,
+    title VARCHAR(200) NOT NULL,
+    description TEXT,
+    achievement_year INTEGER NOT NULL,
+    achievement_month INTEGER NOT NULL,
+    category VARCHAR(50) DEFAULT 'general',
+    priority INTEGER DEFAULT 0,
+    is_public BOOLEAN DEFAULT true,
+    image_url VARCHAR(500),
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- 1.5 学生アカウントテーブル（生徒番号ログイン用）
 CREATE TABLE IF NOT EXISTS students (
     id SERIAL PRIMARY KEY,
     student_number VARCHAR(50) UNIQUE NOT NULL,
@@ -253,6 +269,9 @@ CREATE INDEX IF NOT EXISTS idx_news_date ON news(date DESC);
 CREATE INDEX IF NOT EXISTS idx_news_type ON news(type);
 CREATE INDEX IF NOT EXISTS idx_surveys_active ON surveys(is_active, is_published) WHERE is_active = true AND is_published = true;
 CREATE INDEX IF NOT EXISTS idx_council_members_active ON council_members(is_active, display_order) WHERE is_active = true;
+CREATE INDEX IF NOT EXISTS idx_member_achievements_member_id ON member_achievements(member_id);
+CREATE INDEX IF NOT EXISTS idx_member_achievements_public ON member_achievements(is_public) WHERE is_public = true;
+CREATE INDEX IF NOT EXISTS idx_member_achievements_year_month ON member_achievements(achievement_year DESC, achievement_month DESC);
 CREATE INDEX IF NOT EXISTS idx_device_registrations_fcm_token ON device_registrations(fcm_token);
 CREATE INDEX IF NOT EXISTS idx_device_registrations_active ON device_registrations(is_active) WHERE is_active = true;
 CREATE INDEX IF NOT EXISTS idx_device_registrations_platform ON device_registrations(platform);
@@ -297,6 +316,10 @@ CREATE TRIGGER update_council_members_updated_at
     BEFORE UPDATE ON council_members 
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
+CREATE TRIGGER update_member_achievements_updated_at 
+    BEFORE UPDATE ON member_achievements 
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
 CREATE TRIGGER update_device_registrations_updated_at 
     BEFORE UPDATE ON device_registrations 
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
@@ -316,6 +339,7 @@ CREATE TRIGGER update_user_notification_preferences_updated_at
 ALTER TABLE clubs ENABLE ROW LEVEL SECURITY;
 ALTER TABLE news ENABLE ROW LEVEL SECURITY;
 ALTER TABLE council_members ENABLE ROW LEVEL SECURITY;
+ALTER TABLE member_achievements ENABLE ROW LEVEL SECURITY;
 ALTER TABLE posts ENABLE ROW LEVEL SECURITY;
 ALTER TABLE chats ENABLE ROW LEVEL SECURITY;
 ALTER TABLE students ENABLE ROW LEVEL SECURITY;
@@ -334,6 +358,8 @@ DROP POLICY IF EXISTS "Public read access on news" ON news;
 CREATE POLICY "Public read access on news" ON news FOR SELECT USING (is_published = true);
 DROP POLICY IF EXISTS "Public read access on council_members" ON council_members;
 CREATE POLICY "Public read access on council_members" ON council_members FOR SELECT USING (is_active = true);
+DROP POLICY IF EXISTS "Public read access on member_achievements" ON member_achievements;
+CREATE POLICY "Public read access on member_achievements" ON member_achievements FOR SELECT USING (is_public = true);
 -- chats は公開しない
 
 -- 一般ユーザー用ポリシー
@@ -372,6 +398,8 @@ DROP POLICY IF EXISTS "Admin full access on news" ON news;
 CREATE POLICY "Admin full access on news" ON news FOR ALL USING (auth.role() = 'admin');
 DROP POLICY IF EXISTS "Admin full access on council_members" ON council_members;
 CREATE POLICY "Admin full access on council_members" ON council_members FOR ALL USING (auth.role() = 'admin');
+DROP POLICY IF EXISTS "Admin full access on member_achievements" ON member_achievements;
+CREATE POLICY "Admin full access on member_achievements" ON member_achievements FOR ALL USING (auth.role() = 'admin');
 DROP POLICY IF EXISTS "Admin full access on posts" ON posts;
 CREATE POLICY "Admin full access on posts" ON posts FOR ALL USING (auth.role() = 'admin');
 DROP POLICY IF EXISTS "Admin full access on chats" ON chats;
@@ -410,6 +438,18 @@ INSERT INTO council_members (name, role, grade, message, bio, responsibilities, 
 ('副会長 田中花子', '副会長', '3年', 'イベント企画頑張ります！', '楽しいイベントを企画することが得意です。', ARRAY['イベント企画', '会長補佐', '委員会調整'], ARRAY['文化祭企画賞', '体育祭運営'], 2),
 ('書記 鈴木一郎', '書記', '2年', '透明性のある活動を目指します', '正確な記録と情報共有を心がけています。', ARRAY['議事録作成', '情報管理', '広報活動'], ARRAY['議事録デジタル化', '情報公開制度'], 3),
 ('会計 佐藤美咲', '会計', '2年', '予算を有効活用します', '数字に強く、効率的な予算運用を行います。', ARRAY['予算管理', '会計監査', '支出承認'], ARRAY['予算効率化', '透明な会計報告'], 4)
+ON CONFLICT DO NOTHING;
+
+-- メンバー活動実績のサンプルデータ
+INSERT INTO member_achievements (member_id, title, description, achievement_year, achievement_month, category, priority, is_public) VALUES
+(1, '生徒会改革プロジェクト', '生徒会の透明性向上と効率化を実現', 2024, 4, 'leadership', 1, true),
+(1, '学園祭成功', '過去最高の来場者数を記録した学園祭を成功に導く', 2024, 10, 'event', 1, true),
+(2, '文化祭企画賞受賞', '創意工夫に富んだ文化祭企画で表彰される', 2024, 9, 'award', 2, true),
+(2, '体育祭運営', 'スムーズな体育祭運営を実現', 2024, 6, 'event', 1, true),
+(3, '議事録デジタル化', '従来の紙ベースからデジタル化に移行', 2024, 3, 'innovation', 2, true),
+(3, '情報公開制度', '生徒会活動の透明性向上のための制度を構築', 2024, 5, 'governance', 1, true),
+(4, '予算効率化', '無駄な支出を削減し予算の有効活用を実現', 2024, 7, 'management', 1, true),
+(4, '透明な会計報告', '月次会計報告の公開により透明性を向上', 2024, 8, 'governance', 1, true)
 ON CONFLICT DO NOTHING;
 
 INSERT INTO clubs (name, description, members, schedule, category) VALUES

@@ -10,7 +10,7 @@ const firebaseConfig = {
     apiKey: "AIzaSyDQ8g88Z4rW-nX6TzCGjxFvfDptju4fOIc",
     authDomain: "nazuna-portal.firebaseapp.com",
     projectId: "nazuna-portal",
-    storageBucket: "nazuna-portal.appspot.com", // こちらの.appspot.comドメインのものを採用しました
+    storageBucket: "nazuna-portal.firebasestorage.app", // Firebase Storage用の新しいドメイン
     messagingSenderId: "181514532945",
     appId: "1:181514532945:web:65043ee5d7d435a7af6070"
 };
@@ -22,7 +22,7 @@ const firebaseConfig = {
 // Web Push通知などで使用します
 const vapidKey = "BCEnp7nRdNubcooPI86iEEFqavkUxRal0t3AKkjsC1nB-PYLOUiE-EnGITJKfdANSRCG7zjyRzR6ERX3ZT0tZMQ";
 
-// Firebase初期化
+// Firebase初期化（クロスプラットフォーム対応）
 function initializeFirebase() {
     try {
         // Firebase SDKが読み込まれているかチェック
@@ -37,26 +37,40 @@ function initializeFirebase() {
             console.log('Firebase initialized successfully');
         }
         
-        // Firebase Messaging初期化
+        // Firebase Messaging初期化（簡略版）
         if (firebase.messaging.isSupported()) {
             const messaging = firebase.messaging();
             
-            // VAPIDキー設定
+            // VAPIDキー設定（新しい方法）
             if (vapidKey && vapidKey !== 'your-vapid-key-here') {
-                messaging.usePublicVapidKey(vapidKey);
+                console.log('VAPID key available for token generation');
             }
             
-            // Service Worker登録（Firebase Messaging用）
-            if ('serviceWorker' in navigator) {
-                navigator.serviceWorker.register('./firebase-messaging-sw.js')
-                    .then((registration) => {
-                        console.log('Firebase Service Worker registered:', registration);
-                        messaging.useServiceWorker(registration);
-                    })
-                    .catch((error) => {
-                        console.error('Firebase Service Worker registration failed:', error);
-                    });
-            }
+            // 通知許可の要求（iOS対応）
+            requestNotificationPermission()
+                .then((permission) => {
+                    if (permission === 'granted') {
+                        console.log('Notification permission granted');
+                        // VAPIDキーをgetToken()のオプションで指定
+                        const tokenOptions = vapidKey && vapidKey !== 'your-vapid-key-here' 
+                            ? { vapidKey: vapidKey } 
+                            : {};
+                        return messaging.getToken(tokenOptions);
+                    } else {
+                        console.log('Notification permission denied');
+                        return null;
+                    }
+                })
+                .then((token) => {
+                    if (token) {
+                        console.log('FCM Token:', token);
+                        // トークンをGASに送信
+                        registerFCMToken(token);
+                    }
+                })
+                .catch((error) => {
+                    console.error('Firebase Messaging initialization failed:', error);
+                });
             
             console.log('Firebase Messaging initialized successfully');
             return true;
@@ -69,6 +83,25 @@ function initializeFirebase() {
         console.error('Error initializing Firebase:', error);
         return false;
     }
+}
+
+// 通知許可の要求（iOS対応）
+function requestNotificationPermission() {
+    return new Promise((resolve) => {
+        if ('Notification' in window) {
+            if (Notification.permission === 'granted') {
+                resolve('granted');
+            } else if (Notification.permission === 'denied') {
+                resolve('denied');
+            } else {
+                Notification.requestPermission().then((permission) => {
+                    resolve(permission);
+                });
+            }
+        } else {
+            resolve('denied');
+        }
+    });
 }
 
 // Firebase Messaging Service Worker用の設定
@@ -166,10 +199,12 @@ function setupFirebaseServiceWorker() {
             .then((registration) => {
                 console.log('Firebase Messaging Service Worker registered:', registration);
                 
-                // Firebase Messagingに登録を伝える
+                // Firebase Messagingに登録を伝える（useServiceWorkerは非推奨）
                 if (typeof firebase !== 'undefined' && firebase.messaging && firebase.messaging.isSupported()) {
                     const messaging = firebase.messaging();
-                    messaging.useServiceWorker(registration);
+                    // messaging.useServiceWorker()は非推奨のため削除
+                    // 新しいFirebase SDKでは自動的にService Workerが検出される
+                    console.log('Firebase Messaging ready with Service Worker');
                 }
             })
             .catch((error) => {
@@ -191,7 +226,152 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 });
 
+// FCMトークンをGASに登録（クロスプラットフォーム対応）
+async function registerFCMToken(token) {
+    try {
+        const deviceInfo = getDeviceInfo();
+        
+        const response = await fetch(CONFIG.GAS_URL, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                action: 'registerFCMToken',
+                fcmToken: token,
+                deviceInfo: deviceInfo,
+                timestamp: new Date().toISOString()
+            })
+        });
+        
+        if (response.ok) {
+            console.log('FCM token registered successfully');
+            // ローカルストレージに保存
+            localStorage.setItem('fcmToken', token);
+            localStorage.setItem('fcmTokenTimestamp', new Date().toISOString());
+        } else {
+            console.error('Failed to register FCM token');
+        }
+    } catch (error) {
+        console.error('Error registering FCM token:', error);
+        // オフライン時はローカルストレージに保存
+        localStorage.setItem('fcmToken', token);
+        localStorage.setItem('fcmTokenTimestamp', new Date().toISOString());
+    }
+}
+
+// プラットフォーム検出（詳細版）
+function getPlatform() {
+    const userAgent = navigator.userAgent.toLowerCase();
+    const platform = navigator.platform ? navigator.platform.toLowerCase() : '';
+    
+    // Android
+    if (/android/.test(userAgent)) {
+        return 'android';
+    }
+    
+    // iOS
+    if (/iphone|ipad|ipod/.test(userAgent) || 
+        (platform === 'macintel' && 'ontouchend' in document)) {
+        return 'ios';
+    }
+    
+    // Windows
+    if (/windows/.test(userAgent) || platform.includes('win')) {
+        return 'windows';
+    }
+    
+    // macOS
+    if (/macintosh|mac os x/.test(userAgent) || platform === 'macintel') {
+        return 'macos';
+    }
+    
+    // Linux
+    if (/linux/.test(userAgent) || platform.includes('linux')) {
+        return 'linux';
+    }
+    
+    // Chrome OS
+    if (/cros/.test(userAgent)) {
+        return 'chromeos';
+    }
+    
+    return 'web';
+}
+
+// デバイス情報の取得
+function getDeviceInfo() {
+    return {
+        platform: getPlatform(),
+        userAgent: navigator.userAgent,
+        language: navigator.language,
+        onLine: navigator.onLine,
+        cookieEnabled: navigator.cookieEnabled,
+        doNotTrack: navigator.doNotTrack,
+        screenWidth: screen.width,
+        screenHeight: screen.height,
+        windowWidth: window.innerWidth,
+        windowHeight: window.innerHeight,
+        pixelRatio: window.devicePixelRatio || 1,
+        timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+        timestamp: new Date().toISOString()
+    };
+}
+
+// PWA対応状況のテスト
+function testPWACompatibility() {
+    const results = {
+        platform: getPlatform(),
+        serviceWorker: 'serviceWorker' in navigator,
+        notifications: 'Notification' in window,
+        pushManager: 'PushManager' in window,
+        manifest: document.querySelector('link[rel="manifest"]') !== null,
+        offline: 'onLine' in navigator,
+        installPrompt: false,
+        standalone: window.matchMedia('(display-mode: standalone)').matches,
+        deviceInfo: getDeviceInfo()
+    };
+    
+    // インストールプロンプトの検出
+    window.addEventListener('beforeinstallprompt', (e) => {
+        results.installPrompt = true;
+        console.log('PWA install prompt available');
+    });
+    
+    console.log('PWA Compatibility Test Results:', results);
+    return results;
+}
+
+// 通知機能のテスト
+function testNotificationSupport() {
+    if ('Notification' in window) {
+        console.log('Notification permission:', Notification.permission);
+        
+        if (Notification.permission === 'granted') {
+            // テスト通知を送信
+            new Notification('なずなポータル', {
+                body: '通知機能が正常に動作しています',
+                icon: 'images/icon-192x192.png',
+                tag: 'test'
+            });
+            return true;
+        } else if (Notification.permission === 'default') {
+            Notification.requestPermission().then((permission) => {
+                if (permission === 'granted') {
+                    testNotificationSupport();
+                }
+            });
+        }
+    }
+    return false;
+}
+
 // 設定値をグローバルに公開
 window.firebaseConfig = firebaseConfig;
 window.vapidKey = vapidKey;
 window.initializeFirebase = initializeFirebase;
+window.registerFCMToken = registerFCMToken;
+window.getPlatform = getPlatform;
+window.getDeviceInfo = getDeviceInfo;
+window.testPWACompatibility = testPWACompatibility;
+window.testNotificationSupport = testNotificationSupport;

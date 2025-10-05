@@ -114,7 +114,7 @@ const firebaseConfig = {
     apiKey: "AIzaSyC...", // ← ここを更新
     authDomain: "nazuna-portal.firebaseapp.com", // ← ここを更新
     projectId: "nazuna-portal", // ← ここを更新
-    storageBucket: "nazuna-portal.appspot.com", // ← ここを更新
+    storageBucket: "nazuna-portal.firebasestorage.app", // ← Firebase Storage用の新しいドメイン
     messagingSenderId: "123456789", // ← ここを更新
     appId: "1:123456789:web:abc123", // ← ここを更新
     measurementId: "G-XXXXXXXXXX" // ← ここを更新（オプション）

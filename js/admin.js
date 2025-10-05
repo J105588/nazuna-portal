@@ -26,9 +26,16 @@ const modalSave = document.getElementById('modal-save');
 const menuItems = document.querySelectorAll('.menu-item');
 const adminSections = document.querySelectorAll('.admin-section');
 
+// Supabaseクライアントとクエリインスタンス
+let supabaseClient = null;
+let supabaseQueries = null;
+
 // 初期化
 document.addEventListener('DOMContentLoaded', function() {
     console.log('Admin panel initializing...');
+    
+    // Supabaseクライアントとクエリの初期化
+    initializeSupabase();
     
     // 認証状態をチェック
     checkAuthStatus();
@@ -45,6 +52,29 @@ document.addEventListener('DOMContentLoaded', function() {
         // セキュリティのため自動ログインは無効化
     }
 });
+
+// Supabase初期化
+function initializeSupabase() {
+    try {
+        // Supabaseクライアントの初期化
+        if (typeof supabase !== 'undefined') {
+            supabaseClient = supabase.createClient(CONFIG.SUPABASE.URL, CONFIG.SUPABASE.ANON_KEY);
+            console.log('Supabase client initialized');
+            
+            // SupabaseQueriesインスタンスの作成
+            if (typeof SupabaseQueries !== 'undefined') {
+                supabaseQueries = new SupabaseQueries(supabaseClient);
+                console.log('SupabaseQueries initialized');
+            } else {
+                console.warn('SupabaseQueries class not found');
+            }
+        } else {
+            console.warn('Supabase SDK not loaded');
+        }
+    } catch (error) {
+        console.error('Error initializing Supabase:', error);
+    }
+}
 
 // 認証状態チェック（セキュリティ強化版）
 function checkAuthStatus() {
@@ -251,6 +281,17 @@ async function handleLogin() {
         return;
     }
     
+    // 入力値の検証
+    if (email.length < 5 || !email.includes('@')) {
+        showLoginError('有効なメールアドレスを入力してください。');
+        return;
+    }
+    
+    if (password.length < 6) {
+        showLoginError('パスワードは6文字以上で入力してください。');
+        return;
+    }
+    
     loginBtn.disabled = true;
     loginBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> ログイン中...';
     
@@ -258,12 +299,13 @@ async function handleLogin() {
         const success = await performLogin(email, password);
         if (success) {
             showAdminPanel();
+            showSuccessMessage('ログインに成功しました。');
         } else {
             showLoginError('ログインに失敗しました。認証情報を確認してください。');
         }
     } catch (error) {
         console.error('Login error:', error);
-        showLoginError('ログイン中にエラーが発生しました。');
+        showLoginError('ログイン中にエラーが発生しました。しばらく待ってから再試行してください。');
     } finally {
         loginBtn.disabled = false;
         loginBtn.innerHTML = '<i class="fas fa-sign-in-alt"></i> ログイン';
@@ -322,6 +364,7 @@ async function performLogin(email, password) {
                 return true;
             }
             
+            console.log('Debug authentication failed: Invalid credentials');
             return false;
         }
         
@@ -502,13 +545,46 @@ async function loadDashboardData() {
 
 // 統計データ読み込み
 async function loadStatistics() {
-    // デモデータ
-    return {
-        news: 12,
-        surveys: 3,
-        clubs: 28,
-        forum: 45
-    };
+    try {
+        // 実際のデータベースから統計を取得
+        const stats = {
+            news: 0,
+            surveys: 0,
+            clubs: 0,
+            forum: 0
+        };
+        
+        if (supabaseQueries) {
+            // お知らせ数
+            const { count: newsCount } = await supabaseClient
+                .from('news')
+                .select('*', { count: 'exact', head: true });
+            stats.news = newsCount || 0;
+            
+            // アンケート数
+            const { count: surveyCount } = await supabaseClient
+                .from('surveys')
+                .select('*', { count: 'exact', head: true });
+            stats.surveys = surveyCount || 0;
+            
+            // 部活動数
+            const { count: clubCount } = await supabaseClient
+                .from('clubs')
+                .select('*', { count: 'exact', head: true });
+            stats.clubs = clubCount || 0;
+            
+            // フォーラム投稿数
+            const { count: forumCount } = await supabaseClient
+                .from('posts')
+                .select('*', { count: 'exact', head: true });
+            stats.forum = forumCount || 0;
+        }
+        
+        return stats;
+    } catch (error) {
+        console.error('Error loading statistics:', error);
+        return { news: 0, surveys: 0, clubs: 0, forum: 0 };
+    }
 }
 
 // ダッシュボード統計更新
@@ -521,30 +597,54 @@ function updateDashboardStats(stats) {
 
 // 最近の活動データ読み込み
 async function loadRecentActivities() {
-    // デモデータ
-    return [
-        {
-            type: 'news',
-            title: '新しいお知らせが投稿されました',
-            description: '体育祭のお知らせ',
-            time: '2時間前',
-            icon: 'fas fa-newspaper'
-        },
-        {
-            type: 'survey',
-            title: 'アンケートが作成されました',
-            description: '文化祭の企画について',
-            time: '5時間前',
-            icon: 'fas fa-poll'
-        },
-        {
-            type: 'forum',
-            title: 'フォーラムに新しい投稿',
-            description: '図書室の利用について',
-            time: '1日前',
-            icon: 'fas fa-comments'
+    try {
+        const activities = [];
+        
+        if (supabaseQueries) {
+            // 最新のお知らせ
+            const { data: recentNews } = await supabaseClient
+                .from('news')
+                .select('title, created_at')
+                .order('created_at', { ascending: false })
+                .limit(3);
+            
+            if (recentNews && recentNews.length > 0) {
+                recentNews.forEach(news => {
+                    activities.push({
+                        type: 'news',
+                        title: '新しいお知らせが投稿されました',
+                        description: news.title,
+                        time: formatRelativeTime(news.created_at),
+                        icon: 'fas fa-newspaper'
+                    });
+                });
+            }
+            
+            // 最新のフォーラム投稿
+            const { data: recentPosts } = await supabaseClient
+                .from('posts')
+                .select('content, created_at')
+                .order('created_at', { ascending: false })
+                .limit(3);
+            
+            if (recentPosts && recentPosts.length > 0) {
+                recentPosts.forEach(post => {
+                    activities.push({
+                        type: 'forum',
+                        title: 'フォーラムに新しい投稿',
+                        description: post.content.substring(0, 50) + '...',
+                        time: formatRelativeTime(post.created_at),
+                        icon: 'fas fa-comments'
+                    });
+                });
+            }
         }
-    ];
+        
+        return activities;
+    } catch (error) {
+        console.error('Error loading recent activities:', error);
+        return [];
+    }
 }
 
 // 最近の活動更新
@@ -570,41 +670,47 @@ async function loadNewsData() {
     const tableBody = document.getElementById('news-table-body');
     if (!tableBody) return;
     
-    // デモデータ
-    const newsData = [
-        {
-            id: 1,
-            title: '体育祭のお知らせ',
-            category: 'event',
-            created_at: '2025-01-15',
-            status: 'published'
-        },
-        {
-            id: 2,
-            title: '生徒会だより1月号',
-            category: 'newsletter',
-            created_at: '2025-01-10',
-            status: 'published'
+    try {
+        if (supabaseQueries) {
+            const { data: newsData, error } = await supabaseClient
+                .from('news')
+                .select('*')
+                .order('created_at', { ascending: false });
+            
+            if (error) {
+                console.error('Error loading news:', error);
+                tableBody.innerHTML = '<tr><td colspan="4">データの読み込みに失敗しました</td></tr>';
+                return;
+            }
+            
+            if (newsData && newsData.length > 0) {
+                tableBody.innerHTML = newsData.map(item => `
+                    <tr>
+                        <td>${item.title}</td>
+                        <td><span class="status-badge status-${item.category}">${getCategoryLabel(item.category)}</span></td>
+                        <td>${formatDate(item.created_at)}</td>
+                        <td>
+                            <div class="action-buttons">
+                                <button class="btn btn-sm btn-outline" onclick="editNews(${item.id})">
+                                    <i class="fas fa-edit"></i>
+                                </button>
+                                <button class="btn btn-sm btn-outline" onclick="deleteNews(${item.id})">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                `).join('');
+            } else {
+                tableBody.innerHTML = '<tr><td colspan="4">お知らせがありません</td></tr>';
+            }
+        } else {
+            tableBody.innerHTML = '<tr><td colspan="4">データベースに接続できません</td></tr>';
         }
-    ];
-    
-    tableBody.innerHTML = newsData.map(item => `
-        <tr>
-            <td>${item.title}</td>
-            <td><span class="status-badge status-${item.category}">${getCategoryLabel(item.category)}</span></td>
-            <td>${formatDate(item.created_at)}</td>
-            <td>
-                <div class="action-buttons">
-                    <button class="btn btn-sm btn-outline" onclick="editNews(${item.id})">
-                        <i class="fas fa-edit"></i>
-                    </button>
-                    <button class="btn btn-sm btn-outline" onclick="deleteNews(${item.id})">
-                        <i class="fas fa-trash"></i>
-                    </button>
-                </div>
-            </td>
-        </tr>
-    `).join('');
+    } catch (error) {
+        console.error('Error loading news data:', error);
+        tableBody.innerHTML = '<tr><td colspan="4">データの読み込み中にエラーが発生しました</td></tr>';
+    }
 }
 
 // アンケートデータ読み込み
@@ -612,45 +718,51 @@ async function loadSurveysData() {
     const tableBody = document.getElementById('surveys-table-body');
     if (!tableBody) return;
     
-    // デモデータ
-    const surveysData = [
-        {
-            id: 1,
-            title: '文化祭の企画について',
-            status: 'active',
-            responses: 127,
-            deadline: '2025-02-15'
-        },
-        {
-            id: 2,
-            title: '学食の満足度調査',
-            status: 'closed',
-            responses: 89,
-            deadline: '2025-01-31'
+    try {
+        if (supabaseQueries) {
+            const { data: surveysData, error } = await supabaseClient
+                .from('surveys')
+                .select('*')
+                .order('created_at', { ascending: false });
+            
+            if (error) {
+                console.error('Error loading surveys:', error);
+                tableBody.innerHTML = '<tr><td colspan="5">データの読み込みに失敗しました</td></tr>';
+                return;
+            }
+            
+            if (surveysData && surveysData.length > 0) {
+                tableBody.innerHTML = surveysData.map(item => `
+                    <tr>
+                        <td>${item.title}</td>
+                        <td><span class="status-badge status-${item.status}">${getStatusLabel(item.status)}</span></td>
+                        <td>${item.responses || 0}件</td>
+                        <td>${formatDate(item.deadline)}</td>
+                        <td>
+                            <div class="action-buttons">
+                                <button class="btn btn-sm btn-outline" onclick="viewSurveyResults(${item.id})">
+                                    <i class="fas fa-chart-bar"></i>
+                                </button>
+                                <button class="btn btn-sm btn-outline" onclick="editSurvey(${item.id})">
+                                    <i class="fas fa-edit"></i>
+                                </button>
+                                <button class="btn btn-sm btn-outline" onclick="deleteSurvey(${item.id})">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                `).join('');
+            } else {
+                tableBody.innerHTML = '<tr><td colspan="5">アンケートがありません</td></tr>';
+            }
+        } else {
+            tableBody.innerHTML = '<tr><td colspan="5">データベースに接続できません</td></tr>';
         }
-    ];
-    
-    tableBody.innerHTML = surveysData.map(item => `
-        <tr>
-            <td>${item.title}</td>
-            <td><span class="status-badge status-${item.status}">${getStatusLabel(item.status)}</span></td>
-            <td>${item.responses}件</td>
-            <td>${formatDate(item.deadline)}</td>
-            <td>
-                <div class="action-buttons">
-                    <button class="btn btn-sm btn-outline" onclick="viewSurveyResults(${item.id})">
-                        <i class="fas fa-chart-bar"></i>
-                    </button>
-                    <button class="btn btn-sm btn-outline" onclick="editSurvey(${item.id})">
-                        <i class="fas fa-edit"></i>
-                    </button>
-                    <button class="btn btn-sm btn-outline" onclick="deleteSurvey(${item.id})">
-                        <i class="fas fa-trash"></i>
-                    </button>
-                </div>
-            </td>
-        </tr>
-    `).join('');
+    } catch (error) {
+        console.error('Error loading surveys data:', error);
+        tableBody.innerHTML = '<tr><td colspan="5">データの読み込み中にエラーが発生しました</td></tr>';
+    }
 }
 
 // 部活動データ読み込み
@@ -658,42 +770,48 @@ async function loadClubsData() {
     const tableBody = document.getElementById('clubs-table-body');
     if (!tableBody) return;
     
-    // デモデータ
-    const clubsData = [
-        {
-            id: 1,
-            name: 'サッカー部',
-            category: 'sports',
-            members: 45,
-            schedule: '月・水・金'
-        },
-        {
-            id: 2,
-            name: '吹奏楽部',
-            category: 'music',
-            members: 32,
-            schedule: '火・木・土'
+    try {
+        if (supabaseQueries) {
+            const { data: clubsData, error } = await supabaseClient
+                .from('clubs')
+                .select('*')
+                .order('name', { ascending: true });
+            
+            if (error) {
+                console.error('Error loading clubs:', error);
+                tableBody.innerHTML = '<tr><td colspan="5">データの読み込みに失敗しました</td></tr>';
+                return;
+            }
+            
+            if (clubsData && clubsData.length > 0) {
+                tableBody.innerHTML = clubsData.map(item => `
+                    <tr>
+                        <td>${item.name}</td>
+                        <td><span class="status-badge status-${item.category}">${getCategoryLabel(item.category)}</span></td>
+                        <td>${item.members || 0}名</td>
+                        <td>${item.schedule || '未設定'}</td>
+                        <td>
+                            <div class="action-buttons">
+                                <button class="btn btn-sm btn-outline" onclick="editClub(${item.id})">
+                                    <i class="fas fa-edit"></i>
+                                </button>
+                                <button class="btn btn-sm btn-outline" onclick="deleteClub(${item.id})">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                `).join('');
+            } else {
+                tableBody.innerHTML = '<tr><td colspan="5">部活動がありません</td></tr>';
+            }
+        } else {
+            tableBody.innerHTML = '<tr><td colspan="5">データベースに接続できません</td></tr>';
         }
-    ];
-    
-    tableBody.innerHTML = clubsData.map(item => `
-        <tr>
-            <td>${item.name}</td>
-            <td><span class="status-badge status-${item.category}">${getCategoryLabel(item.category)}</span></td>
-            <td>${item.members}名</td>
-            <td>${item.schedule}</td>
-            <td>
-                <div class="action-buttons">
-                    <button class="btn btn-sm btn-outline" onclick="editClub(${item.id})">
-                        <i class="fas fa-edit"></i>
-                    </button>
-                    <button class="btn btn-sm btn-outline" onclick="deleteClub(${item.id})">
-                        <i class="fas fa-trash"></i>
-                    </button>
-                </div>
-            </td>
-        </tr>
-    `).join('');
+    } catch (error) {
+        console.error('Error loading clubs data:', error);
+        tableBody.innerHTML = '<tr><td colspan="5">データの読み込み中にエラーが発生しました</td></tr>';
+    }
 }
 
 // 生徒会データ読み込み
@@ -701,42 +819,45 @@ async function loadCouncilData() {
     const membersGrid = document.getElementById('members-grid');
     if (!membersGrid) return;
     
-    // デモデータ
-    const membersData = [
-        {
-            id: 1,
-            name: '会長 山田太郎',
-            role: '全体統括',
-            message: '皆さんの声を大切にします！',
-            image: null
-        },
-        {
-            id: 2,
-            name: '副会長 田中花子',
-            role: '企画運営',
-            message: 'イベント企画頑張ります！',
-            image: null
+    try {
+        if (supabaseQueries) {
+            const { data: membersData, error } = await supabaseQueries.getCouncilMembers();
+            
+            if (error) {
+                console.error('Error loading council members:', error);
+                membersGrid.innerHTML = '<div class="no-data-message">データの読み込みに失敗しました</div>';
+                return;
+            }
+            
+            if (membersData && membersData.length > 0) {
+                membersGrid.innerHTML = membersData.map(member => `
+                    <div class="member-admin-card">
+                        <div class="member-actions">
+                            <button class="btn btn-sm btn-icon btn-outline" onclick="editMember(${member.id})">
+                                <i class="fas fa-edit"></i>
+                            </button>
+                            <button class="btn btn-sm btn-icon btn-outline" onclick="deleteMember(${member.id})">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </div>
+                        <div class="member-avatar">
+                            <i class="fas fa-user"></i>
+                        </div>
+                        <h3>${member.name}</h3>
+                        <p class="member-role">${member.role}</p>
+                        <p class="member-message">"${member.message || 'よろしくお願いします'}"</p>
+                    </div>
+                `).join('');
+            } else {
+                membersGrid.innerHTML = '<div class="no-data-message">生徒会メンバーが登録されていません</div>';
+            }
+        } else {
+            membersGrid.innerHTML = '<div class="no-data-message">データベースに接続できません</div>';
         }
-    ];
-    
-    membersGrid.innerHTML = membersData.map(member => `
-        <div class="member-admin-card">
-            <div class="member-actions">
-                <button class="btn btn-sm btn-icon btn-outline" onclick="editMember(${member.id})">
-                    <i class="fas fa-edit"></i>
-                </button>
-                <button class="btn btn-sm btn-icon btn-outline" onclick="deleteMember(${member.id})">
-                    <i class="fas fa-trash"></i>
-                </button>
-            </div>
-            <div class="member-avatar">
-                <i class="fas fa-user"></i>
-            </div>
-            <h3>${member.name}</h3>
-            <p class="member-role">${member.role}</p>
-            <p class="member-message">"${member.message}"</p>
-        </div>
-    `).join('');
+    } catch (error) {
+        console.error('Error loading council data:', error);
+        membersGrid.innerHTML = '<div class="no-data-message">データの読み込み中にエラーが発生しました</div>';
+    }
 }
 
 // 通知履歴読み込み
@@ -744,34 +865,41 @@ async function loadNotificationHistory() {
     const historyContainer = document.getElementById('notification-history');
     if (!historyContainer) return;
     
-    // デモデータ
-    const historyData = [
-        {
-            title: '体育祭の準備について',
-            message: '体育祭の準備が始まります。各クラスの体育委員は...',
-            target: '全ユーザー',
-            sent_at: '2025-01-15 10:30',
-            recipients: 234
-        },
-        {
-            title: '生徒会だより1月号発行',
-            message: '1月号を発行しました。ぜひご覧ください。',
-            target: '生徒のみ',
-            sent_at: '2025-01-10 14:00',
-            recipients: 189
+    try {
+        if (supabaseQueries) {
+            const { data: historyData, error } = await supabaseClient
+                .from('notification_history')
+                .select('*')
+                .order('sent_at', { ascending: false })
+                .limit(10);
+            
+            if (error) {
+                console.error('Error loading notification history:', error);
+                historyContainer.innerHTML = '<div class="no-data-message">データの読み込みに失敗しました</div>';
+                return;
+            }
+            
+            if (historyData && historyData.length > 0) {
+                historyContainer.innerHTML = historyData.map(item => `
+                    <div class="history-item">
+                        <h4>${item.title}</h4>
+                        <p>${item.message}</p>
+                        <div class="history-meta">
+                            <span>${item.target} (${item.recipients || 0}名)</span>
+                            <span>${formatDateTime(item.sent_at)}</span>
+                        </div>
+                    </div>
+                `).join('');
+            } else {
+                historyContainer.innerHTML = '<div class="no-data-message">通知履歴がありません</div>';
+            }
+        } else {
+            historyContainer.innerHTML = '<div class="no-data-message">データベースに接続できません</div>';
         }
-    ];
-    
-    historyContainer.innerHTML = historyData.map(item => `
-        <div class="history-item">
-            <h4>${item.title}</h4>
-            <p>${item.message}</p>
-            <div class="history-meta">
-                <span>${item.target} (${item.recipients}名)</span>
-                <span>${formatDateTime(item.sent_at)}</span>
-            </div>
-        </div>
-    `).join('');
+    } catch (error) {
+        console.error('Error loading notification history:', error);
+        historyContainer.innerHTML = '<div class="no-data-message">データの読み込み中にエラーが発生しました</div>';
+    }
 }
 
 // フォーラムデータ読み込み
@@ -1082,6 +1210,25 @@ function formatDateTime(dateString) {
     return `${formatDate(dateString)} ${date.getHours().toString().padStart(2, '0')}:${date.getMinutes().toString().padStart(2, '0')}`;
 }
 
+function formatRelativeTime(dateString) {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffInSeconds = Math.floor((now - date) / 1000);
+    
+    if (diffInSeconds < 60) {
+        return 'たった今';
+    } else if (diffInSeconds < 3600) {
+        const minutes = Math.floor(diffInSeconds / 60);
+        return `${minutes}分前`;
+    } else if (diffInSeconds < 86400) {
+        const hours = Math.floor(diffInSeconds / 3600);
+        return `${hours}時間前`;
+    } else {
+        const days = Math.floor(diffInSeconds / 86400);
+        return `${days}日前`;
+    }
+}
+
 function truncateText(text, maxLength) {
     return text.length > maxLength ? text.substring(0, maxLength) + '...' : text;
 }
@@ -1122,15 +1269,35 @@ function showErrorMessage(message) {
     showMessage(message, 'error');
 }
 
+function showInfoMessage(message) {
+    showMessage(message, 'info');
+}
+
 function showMessage(message, type) {
     const messageEl = document.createElement('div');
-    messageEl.className = `${type}-message`;
-    messageEl.innerHTML = `<i class="fas fa-${type === 'success' ? 'check-circle' : 'exclamation-triangle'}"></i> ${message}`;
+    messageEl.className = `message-toast message-${type}`;
+    messageEl.innerHTML = `
+        <div class="message-content">
+            <i class="fas fa-${type === 'success' ? 'check-circle' : type === 'error' ? 'exclamation-triangle' : 'info-circle'}"></i>
+            <span>${message}</span>
+        </div>
+    `;
     
     document.body.appendChild(messageEl);
     
+    // アニメーション表示
     setTimeout(() => {
-        messageEl.remove();
+        messageEl.classList.add('show');
+    }, 100);
+    
+    // 5秒後に自動で消す
+    setTimeout(() => {
+        messageEl.classList.remove('show');
+        setTimeout(() => {
+            if (messageEl.parentNode) {
+                messageEl.remove();
+            }
+        }, 300);
     }, 5000);
 }
 
@@ -1405,14 +1572,16 @@ function startSecurityMonitoring() {
     
     // 開発者ツール検知
     securityInterval = setInterval(() => {
-        // 開発者ツールが開かれているかチェック
-        const threshold = 160;
-        if (window.outerHeight - window.innerHeight > threshold || 
-            window.outerWidth - window.innerWidth > threshold) {
-            console.warn('Developer tools detected - logging out for security');
-            handleLogout();
+        // 開発者ツールが開かれているかチェック（デバッグモードでは無効化）
+        if (!CONFIG.APP.DEBUG) {
+            const threshold = 200; // しきい値を上げて誤検知を減らす
+            if (window.outerHeight - window.innerHeight > threshold || 
+                window.outerWidth - window.innerWidth > threshold) {
+                console.warn('Developer tools detected - logging out for security');
+                handleLogout();
+            }
         }
-    }, 1000);
+    }, 2000); // チェック間隔を長くして負荷を軽減
     
     // ユーザーアクティビティ監視
     ['mousedown', 'mousemove', 'keypress', 'scroll', 'touchstart', 'click'].forEach(event => {
@@ -1443,18 +1612,19 @@ function resetInactivityTimer() {
     }, INACTIVITY_TIMEOUT);
 }
 
-// セキュリティ強化：重要な関数を保護
-Object.defineProperty(window, 'performLogin', {
-    value: undefined,
-    writable: false,
-    configurable: false
-});
+// セキュリティ強化：重要な関数を保護（performLoginは内部関数のため除外）
+// Object.defineProperty(window, 'performLogin', {
+//     value: undefined,
+//     writable: false,
+//     configurable: false
+// });
 
-Object.defineProperty(window, 'showAdminPanel', {
-    value: undefined,
-    writable: false,
-    configurable: false
-});
+// showAdminPanelは内部関数のため、セキュリティ保護から除外
+// Object.defineProperty(window, 'showAdminPanel', {
+//     value: undefined,
+//     writable: false,
+//     configurable: false
+// });
 
 // デバッグ用関数（セキュリティ強化版）
 if (CONFIG.APP.DEBUG) {
@@ -1465,7 +1635,7 @@ if (CONFIG.APP.DEBUG) {
         clearAuth: clearAuthData,
         toggleSidebar: toggleSidebar,
         openSidebar: openSidebar,
-        closeSidebar: closeSidebar
+        closeSidebar: closeSidebar,
         // login機能は削除（セキュリティのため）
         // 活動実績管理機能
         loadAchievementsData,
@@ -1493,16 +1663,21 @@ async function loadAchievementsData() {
         let achievements = [];
 
         for (const member of members) {
-            const achievementsResult = await supabaseQueries.getMemberAchievements(member.id, {
-                includePublicOnly: false // 管理者は全ての実績を表示
-            });
-            
-            if (achievementsResult.data && achievementsResult.data.length > 0) {
-                achievements = achievements.concat(achievementsResult.data.map(achievement => ({
-                    ...achievement,
-                    memberName: member.name,
-                    memberRole: member.role
-                })));
+            try {
+                const achievementsResult = await supabaseQueries.getMemberAchievements(member.id, {
+                    includePublicOnly: false // 管理者は全ての実績を表示
+                });
+                
+                if (achievementsResult.data && achievementsResult.data.length > 0) {
+                    achievements = achievements.concat(achievementsResult.data.map(achievement => ({
+                        ...achievement,
+                        memberName: member.name,
+                        memberRole: member.role
+                    })));
+                }
+            } catch (error) {
+                console.warn(`Failed to load achievements for member ${member.id}:`, error);
+                // テーブルが存在しない場合は空の配列で続行
             }
         }
 
@@ -1515,7 +1690,7 @@ async function loadAchievementsData() {
         
     } catch (error) {
         console.error('活動実績データの読み込みエラー:', error);
-        tableBody.innerHTML = '<tr><td colspan="7">データの読み込みに失敗しました</td></tr>';
+        tableBody.innerHTML = '<tr><td colspan="7">データの読み込みに失敗しました。member_achievementsテーブルが存在しない可能性があります。</td></tr>';
     }
 }
 
