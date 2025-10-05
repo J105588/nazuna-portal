@@ -8,7 +8,7 @@ const urlsToCache = [
   './js/pwa-update.js',
   './manifest.json',
   './index.html',
-  './images/icon-192x192.png'
+  'https://raw.githubusercontent.com/J105588/nazuna-portal/main/images/icon-192x192.png'
 ];
 
 // インストール時のキャッシュ
@@ -80,7 +80,7 @@ self.addEventListener('push', event => {
   let notificationData = {
     title: 'なずなポータル',
     body: 'お知らせがあります',
-    icon: './images/icon-192x192.png',
+    icon: 'https://raw.githubusercontent.com/J105588/nazuna-portal/main/images/icon-192x192.png',
     badge: './images/badge-72x72.png',
     url: './',
     tag: 'general'

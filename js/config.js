@@ -10,7 +10,7 @@ const CONFIG = {
     
     // Google Apps Script WebApp URL
     // デプロイ後にこのURLを更新してください
-    GAS_URL: 'https://script.google.com/macros/s/AKfycbzuHQZsFm4trOR2ie96_XqyDFm0zgZ4EZyd4SNiPfgdwN8bLeQpxCcqNWXh4WVp28Ke/exec',
+    GAS_URL: 'https://script.google.com/macros/s/AKfycbxCe51nnslrLQPAXPpStqgjpghq6bC7iPpenrEaE_vy7XgesfgymL-7ypiMPWDS674/exec',
     
     // Firebase設定（通知システム用）
     FIREBASE: {
@@ -58,7 +58,7 @@ const CONFIG = {
         CACHE_DURATION: 5 * 60 * 1000, // 5分
         
         // 通知設定
-        NOTIFICATION_ICON: 'images/icon-192x192.png',
+        NOTIFICATION_ICON: 'https://raw.githubusercontent.com/J105588/nazuna-portal/main/images/icon-192x192.png',
         
         // デバッグモード
         DEBUG: true,

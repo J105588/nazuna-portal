@@ -1,14 +1,20 @@
-// 通知管理システム（GAS + FCM連携版）
+// 通知管理システム（GAS + FCM連携版、iOS PWA対応強化版）
 
 class NotificationManager {
     constructor() {
         this.isSupported = 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window;
         this.registration = null;
         this.fcmToken = null;
-        this.vapidPublicKey = null; // Firebase Consoleから取得したVAPIDキー
+        this.vapidPublicKey = CONFIG.VAPID_KEY; // Firebase Consoleから取得したVAPIDキー
         this.gasEndpoint = CONFIG.GAS_URL; // GASのWebAppエンドポイント
         
-        console.log('NotificationManager initialized. Support:', this.isSupported);
+        // iOS PWA検出
+        this.isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+        this.isPWA = window.matchMedia('(display-mode: standalone)').matches || 
+                    window.navigator.standalone === true;
+        this.isIOSPWA = this.isIOS && this.isPWA;
+        
+        console.log('NotificationManager initialized. Support:', this.isSupported, 'iOS PWA:', this.isIOSPWA);
     }
     
     // 初期化
@@ -130,19 +136,24 @@ class NotificationManager {
                 }
             };
             
-            const response = await fetch(this.gasEndpoint, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify(deviceData)
+            const result = await apiClient.sendRequest('registerDevice', {
+                fcmToken: this.fcmToken,
+                userAgent: navigator.userAgent,
+                platform: this.getPlatform(),
+                browser: this.getBrowser(),
+                deviceInfo: {
+                    userAgent: navigator.userAgent,
+                    platform: this.getPlatform(),
+                    browser: this.getBrowser(),
+                    screen: {
+                        width: screen.width,
+                        height: screen.height
+                    },
+                    language: navigator.language,
+                    timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+                    online: navigator.onLine
+                }
             });
-            
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
-            }
-            
-            const result = await response.json();
             
             if (!result.success) {
                 throw new Error(result.error || 'Device registration failed');
@@ -204,22 +215,9 @@ class NotificationManager {
                 return;
             }
             
-            const response = await fetch(this.gasEndpoint, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
-                    action: 'unregisterDevice',
-                    fcmToken: this.fcmToken
-                })
+            const result = await apiClient.sendRequest('unregisterDevice', {
+                fcmToken: this.fcmToken
             });
-            
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
-            }
-            
-            const result = await response.json();
             
             if (!result.success) {
                 console.warn('Device unregistration failed:', result.error);
@@ -260,13 +258,27 @@ class NotificationManager {
     handleForegroundMessage(payload) {
         console.log('Foreground message received:', payload);
         
+        // iOS PWAの場合の処理
+        if (this.isIOSPWA) {
+            // iOS 16.4以降かどうかを確認
+            const iOSVersion = this.getIOSVersion();
+            const isIOS16_4OrLater = iOSVersion && iOSVersion >= 16.4;
+            
+            if (!isIOS16_4OrLater) {
+                // iOS 16.4未満の場合はカスタムUI
+                this.handleIOSPWANotification(payload);
+                return;
+            }
+            // iOS 16.4以降は標準APIを使用（以下の処理に続く）
+        }
+        
         const { notification, data } = payload;
         
         // カスタム通知を表示
         if (notification) {
             const options = {
                 body: notification.body,
-                icon: notification.icon || '/images/icon-192x192.png',
+                icon: notification.icon || 'https://raw.githubusercontent.com/J105588/nazuna-portal/main/images/icon-192x192.png',
                 badge: notification.badge || '/images/badge-72x72.png',
                 tag: data?.category || 'general',
                 requireInteraction: data?.priority === '2',
@@ -285,16 +297,195 @@ class NotificationManager {
         }
     }
     
-    // テスト通知の送信
-    async sendTestNotification() {
+    // iOS PWA向けの特別な通知処理
+    handleIOSPWANotification(payload) {
         try {
+            // iOS PWAではService Workerの通知が機能しないため、
+            // 代わりにネイティブのアラートやカスタムUIを使用
+            
+            // 通知データの取得
+            const notification = payload.notification || {};
+            const data = payload.data || {};
+            const notificationTitle = notification.title || 'お知らせ';
+            const notificationBody = notification.body || '';
+            const notificationUrl = data.url || '/';
+            
+            // カスタム通知UIを作成
+            const notificationElement = document.createElement('div');
+            notificationElement.className = 'ios-pwa-notification';
+            notificationElement.innerHTML = `
+                <div class="notification-content">
+                    <div class="notification-header">
+                        <img src="/images/icon-48x48.png" alt="Icon" class="notification-icon">
+                        <div class="notification-title">${notificationTitle}</div>
+                        <button class="notification-close">&times;</button>
+                    </div>
+                    <div class="notification-body">${notificationBody}</div>
+                </div>
+            `;
+            
+            // スタイルを適用
+            const styleId = 'ios-pwa-notification-style';
+            if (!document.getElementById(styleId)) {
+                const style = document.createElement('style');
+                style.id = styleId;
+                style.textContent = `
+                    .ios-pwa-notification {
+                        position: fixed;
+                        top: 10px;
+                        left: 50%;
+                        transform: translateX(-50%);
+                        width: 90%;
+                        max-width: 400px;
+                        background: rgba(250, 250, 250, 0.95);
+                        border-radius: 12px;
+                        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+                        z-index: 10000;
+                        animation: notification-slide-in 0.3s ease-out;
+                    }
+                    .notification-content {
+                        padding: 12px;
+                    }
+                    .notification-header {
+                        display: flex;
+                        align-items: center;
+                        margin-bottom: 8px;
+                    }
+                    .notification-icon {
+                        width: 20px;
+                        height: 20px;
+                        margin-right: 8px;
+                    }
+                    .notification-title {
+                        flex-grow: 1;
+                        font-weight: bold;
+                    }
+                    .notification-close {
+                        background: none;
+                        border: none;
+                        font-size: 20px;
+                        cursor: pointer;
+                        padding: 0 5px;
+                    }
+                    .notification-body {
+                        padding-left: 28px;
+                    }
+                    @keyframes notification-slide-in {
+                        from { transform: translateX(-50%) translateY(-100%); }
+                        to { transform: translateX(-50%) translateY(0); }
+                    }
+                    @keyframes notification-slide-out {
+                        from { transform: translateX(-50%) translateY(0); }
+                        to { transform: translateX(-50%) translateY(-100%); }
+                    }
+                `;
+                document.head.appendChild(style);
+            }
+            
+            document.body.appendChild(notificationElement);
+            
+            // クリックイベントを設定
+            notificationElement.addEventListener('click', () => {
+                window.location.href = notificationUrl;
+                notificationElement.remove();
+            });
+            
+            // 閉じるボタンのイベント
+            const closeButton = notificationElement.querySelector('.notification-close');
+            closeButton.addEventListener('click', (e) => {
+                e.stopPropagation();
+                notificationElement.remove();
+            });
+            
+            // 一定時間後に自動的に消える
+            setTimeout(() => {
+                if (notificationElement.parentNode) {
+                    notificationElement.style.animation = 'notification-slide-out 0.3s ease-in';
+                    setTimeout(() => notificationElement.remove(), 300);
+                }
+            }, 5000);
+            
+            // 通知音を再生（オプション）
+            if (notification.sound !== 'silent') {
+                try {
+                    const audio = new Audio('/sounds/notification.mp3');
+                    audio.play().catch(e => console.log('Could not play notification sound:', e));
+                } catch (e) {
+                    console.log('Sound playback error:', e);
+                }
+            }
+            
+        } catch (error) {
+            console.error('Error handling iOS PWA notification:', error);
+        }
+    }
+    
+    // テスト通知の送信
+    async sendTestNotification(options = {}) {
+        try {
+            // iOS PWAの場合は特別な処理
+            if (this.isIOSPWA) {
+                // iOS 16.4以降かどうかを確認
+                const iOSVersion = this.getIOSVersion();
+                const isIOS16_4OrLater = iOSVersion && iOSVersion >= 16.4;
+                
+                console.log(`iOS PWA環境でテスト通知を送信します。iOS バージョン: ${iOSVersion}`);
+                
+                // テスト通知のデータ
+                const testNotification = {
+                    notification: {
+                        title: options.title || 'テスト通知',
+                        body: options.body || 'これはテスト通知です。通知システムが正常に動作しています。',
+                        icon: options.icon || 'https://raw.githubusercontent.com/J105588/nazuna-portal/main/images/icon-192x192.png',
+                        badge: options.badge || './images/badge-72x72.png'
+                    },
+                    data: {
+                        url: options.url || window.location.href,
+                        timestamp: new Date().toISOString(),
+                        category: options.category || 'test',
+                        priority: options.requireInteraction ? '2' : '1'
+                    }
+                };
+                
+                // iOS 16.4以降は標準のNotification APIを試す
+                if (isIOS16_4OrLater && 'serviceWorker' in navigator && 'PushManager' in window) {
+                    try {
+                        console.log('iOS 16.4以降のため、標準のNotification APIを使用します');
+                        const notification = new Notification(options.title || 'テスト通知 (標準API)', {
+                            body: options.body || 'これはiOS 16.4以降の標準APIを使用したテスト通知です。',
+                            icon: options.icon || 'https://raw.githubusercontent.com/J105588/nazuna-portal/main/images/icon-192x192.png',
+                            badge: options.badge || './images/badge-72x72.png',
+                            tag: options.category || 'test-notification'
+                        });
+                        
+                        notification.onclick = function() {
+                            window.focus();
+                            this.close();
+                        };
+                        
+                        return true;
+                    } catch (error) {
+                        console.warn('標準APIでの通知に失敗しました。カスタムUIにフォールバックします:', error);
+                        // フォールバック：カスタムUI通知
+                        this.handleForegroundMessage(testNotification);
+                        return true;
+                    }
+                } else {
+                    // iOS 16.4未満またはPush APIが利用できない場合はカスタムUIで表示
+                    console.log('カスタム通知UIを使用します');
+                    this.handleForegroundMessage(testNotification);
+                    return true;
+                }
+            }
+            
+            // 通常のブラウザ向け処理
             if (Notification.permission === 'granted') {
-                const notification = new Notification('テスト通知', {
-                    body: 'これはテスト通知です。通知システムが正常に動作しています。',
-                    icon: './images/icon-192x192.png',
-                    badge: './images/badge-72x72.png',
-                    tag: 'test-notification',
-                    requireInteraction: false
+                const notification = new Notification(options.title || 'テスト通知', {
+                    body: options.body || 'これはテスト通知です。通知システムが正常に動作しています。',
+                    icon: options.icon || 'https://raw.githubusercontent.com/J105588/nazuna-portal/main/images/icon-192x192.png',
+                    badge: options.badge || './images/badge-72x72.png',
+                    tag: options.category || 'test-notification',
+                    requireInteraction: options.requireInteraction || false
                 });
                 
                 notification.onclick = function() {
@@ -315,6 +506,51 @@ class NotificationManager {
             console.error('Error sending test notification:', error);
             throw error;
         }
+    }
+    
+    // iOS PWA向けの通知サポート状況を確認
+    checkIOSPWASupport() {
+        // iOS バージョンの取得
+        const iOSVersion = this.getIOSVersion();
+        const isIOS16_4OrLater = iOSVersion && iOSVersion >= 16.4;
+        
+        const supportInfo = {
+            isIOS: this.isIOS,
+            isPWA: this.isPWA,
+            isIOSPWA: this.isIOSPWA,
+            iOSVersion: iOSVersion,
+            isIOS16_4OrLater: isIOS16_4OrLater,
+            notificationPermission: Notification.permission,
+            serviceWorkerSupported: 'serviceWorker' in navigator,
+            pushManagerSupported: 'PushManager' in window,
+            fcmSupported: typeof firebase !== 'undefined' && firebase.messaging,
+            customNotificationUI: this.isIOSPWA,
+            fullPushSupport: isIOS16_4OrLater && this.isIOSPWA
+        };
+        
+        console.log('通知サポート状況:', supportInfo);
+        
+        // iOS 16.4以降のPWAでは完全なプッシュ通知がサポートされている
+        if (this.isIOSPWA) {
+            if (isIOS16_4OrLater) {
+                console.log('iOS 16.4以降のPWAで実行中です。完全なプッシュ通知がサポートされています。');
+            } else {
+                console.log('iOS 16.4未満のPWAで実行中です。カスタム通知UIを使用します。');
+            }
+        }
+        
+        return supportInfo;
+    }
+    
+    // iOSバージョンを取得
+    getIOSVersion() {
+        if (!this.isIOS) return null;
+        
+        const match = navigator.userAgent.match(/OS\s([0-9_]+)/);
+        if (match && match[1]) {
+            return parseFloat(match[1].replace('_', '.'));
+        }
+        return null;
     }
     
     // ユーティリティ関数：Base64をUint8Arrayに変換

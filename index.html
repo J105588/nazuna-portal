@@ -20,19 +20,125 @@
     <meta name="mobile-web-app-capable" content="yes">
     
     <!-- iOS対応 -->
-    <link rel="apple-touch-icon" href="images/icon-192x192.png">
-    <link rel="apple-touch-icon" sizes="152x152" href="images/icon-152x152.png">
-    <link rel="apple-touch-icon" sizes="180x180" href="images/icon-192x192.png">
-    <link rel="apple-touch-icon" sizes="167x167" href="images/icon-192x192.png">
+    <link rel="apple-touch-icon" href="https://raw.githubusercontent.com/J105588/nazuna-portal/main/images/icon-192x192.png">
+    <link rel="apple-touch-icon" sizes="152x152" href="https://raw.githubusercontent.com/J105588/nazuna-portal/main/images/icon-152x152.png">
+    <link rel="apple-touch-icon" sizes="180x180" href="https://raw.githubusercontent.com/J105588/nazuna-portal/main/images/icon-192x192.png">
+    <link rel="apple-touch-icon" sizes="167x167" href="https://raw.githubusercontent.com/J105588/nazuna-portal/main/images/icon-192x192.png">
     
     <!-- Windows対応 -->
-    <meta name="msapplication-TileImage" content="images/icon-144x144.png">
-    <meta name="msapplication-square70x70logo" content="images/icon-72x72.png">
-    <meta name="msapplication-square150x150logo" content="images/icon-144x144.png">
-    <meta name="msapplication-wide310x150logo" content="images/icon-192x192.png">
-    <meta name="msapplication-square310x310logo" content="images/icon-512x512.png">
+    <meta name="msapplication-TileImage" content="https://raw.githubusercontent.com/J105588/nazuna-portal/main/images/icon-144x144.png">
+    <meta name="msapplication-square70x70logo" content="https://raw.githubusercontent.com/J105588/nazuna-portal/main/images/icon-72x72.png">
+    <meta name="msapplication-square150x150logo" content="https://raw.githubusercontent.com/J105588/nazuna-portal/main/images/icon-144x144.png">
+    <meta name="msapplication-wide310x150logo" content="https://raw.githubusercontent.com/J105588/nazuna-portal/main/images/icon-192x192.png">
+    <meta name="msapplication-square310x310logo" content="https://raw.githubusercontent.com/J105588/nazuna-portal/main/images/icon-512x512.png">
     <!-- Supabase CDN -->
     <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-messaging-compat.js"></script>
+    <!-- Firebase初期化 -->
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Firebase設定
+            const firebaseConfig = {
+                apiKey: "AIzaSyDQ8g88Z4rW-nX6TzCGjxFvfDptju4fOIc",
+                authDomain: "nazuna-portal.firebaseapp.com",
+                projectId: "nazuna-portal",
+                storageBucket: "nazuna-portal.firebasestorage.app",
+                messagingSenderId: "181514532945",
+                appId: "1:181514532945:web:65043ee5d7d435a7af6070"
+            };
+            
+            // Firebase初期化
+            if (typeof firebase !== 'undefined') {
+                if (!firebase.apps.length) {
+                    try {
+                        firebase.initializeApp(firebaseConfig);
+                        console.log('Firebase initialized');
+                        
+                        // Firebase Messaging初期化
+                        if (firebase.messaging.isSupported()) {
+                            const messaging = firebase.messaging();
+                            console.log('Firebase Messaging initialized');
+                            
+                            // VAPIDキー設定
+                            const vapidKey = "BCEnp7nRdNubcooPI86iEEFqavkUxRal0t3AKkjsC1nB-PYLOUiE-EnGITJKfdANSRCG7zjyRzR6ERX3ZT0tZMQ";
+                            
+                            // 通知許可の要求とトークン取得
+                            Notification.requestPermission().then((permission) => {
+                                if (permission === 'granted') {
+                                    console.log('Notification permission granted');
+                                    
+                                    // FCMトークン取得
+                                    messaging.getToken({ vapidKey: vapidKey })
+                                        .then((token) => {
+                                            if (token) {
+                                                console.log('FCM Token:', token);
+                                                // トークンをサーバーに送信する処理
+                                                if (window.notificationManager) {
+                                                    window.notificationManager.registerDevice(token);
+                                                }
+                                            } else {
+                                                console.log('No token available');
+                                            }
+                                        })
+                                        .catch((err) => {
+                                            console.error('FCM token error:', err);
+                                            
+                                            // iOS PWA環境の診断情報
+                                            const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+                                            const isPWA = window.matchMedia('(display-mode: standalone)').matches || 
+                                                        window.navigator.standalone === true;
+                                            
+                                            if (isIOS && isPWA) {
+                                                console.log('iOS PWA環境でFCMトークン取得に失敗しました。診断情報を表示します。');
+                                                if (window.notificationManager) {
+                                                    const supportInfo = window.notificationManager.checkIOSPWASupport();
+                                                    console.log('iOS PWA診断情報:', supportInfo);
+                                                }
+                                            }
+                                        });
+                                    
+                                    // フォアグラウンドメッセージの処理
+                                    messaging.onMessage((payload) => {
+                                        console.log('Foreground message received:', payload);
+                                        
+                                        // NotificationManagerに処理を委譲
+                                        if (window.notificationManager) {
+                                            window.notificationManager.handleForegroundMessage(payload);
+                                        } else {
+                                            // フォールバック処理
+                                            const notification = new Notification(payload.notification.title, {
+                                                body: payload.notification.body,
+                                                icon: payload.notification.icon || '/images/icon-192x192.png'
+                                            });
+                                        }
+                                    });
+                                }
+                            });
+                        } else {
+                            console.warn('Firebase Messaging not supported in this browser');
+                            
+                            // iOS PWAの場合は診断情報を表示
+                            const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+                            const isPWA = window.matchMedia('(display-mode: standalone)').matches || 
+                                        window.navigator.standalone === true;
+                            
+                            if (isIOS && isPWA && window.notificationManager) {
+                                const supportInfo = window.notificationManager.checkIOSPWASupport();
+                                console.log('iOS PWA環境でFirebase Messagingがサポートされていません。診断情報:', supportInfo);
+                            }
+                        }
+                    } catch (error) {
+                        console.error('Firebase initialization error:', error);
+                    }
+                }
+            } else {
+                console.warn('Firebase SDK not loaded');
+            }
+        });
+    </script>
 </head>
 <body>
     <!-- サイドバー -->

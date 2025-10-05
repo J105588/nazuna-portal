@@ -129,7 +129,7 @@ messaging.onBackgroundMessage(function(payload) {
     const notificationTitle = notification?.title || 'お知らせ';
     const notificationOptions = {
         body: notification?.body || 'お知らせがあります',
-        icon: notification?.icon || '/images/icon-192x192.png',
+        icon: notification?.icon || 'https://raw.githubusercontent.com/J105588/nazuna-portal/main/images/icon-192x192.png',
         badge: '/images/badge-72x72.png',
         tag: data?.category || 'general',
         requireInteraction: data?.priority === '2',
@@ -188,27 +188,53 @@ self.addEventListener('notificationclick', function(event) {
     return swContent;
 }
 
-// Service Workerファイルを動的に作成
+// Service Workerファイルを登録
 function setupFirebaseServiceWorker() {
     if ('serviceWorker' in navigator) {
-        const swContent = createFirebaseMessagingServiceWorker();
-        const blob = new Blob([swContent], { type: 'application/javascript' });
-        const swUrl = URL.createObjectURL(blob);
+        // iOS環境の検出
+        const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+        const isPWA = window.matchMedia('(display-mode: standalone)').matches || 
+                      window.navigator.standalone === true;
+        const isIOSPWA = isIOS && isPWA;
+        
+        // iOS PWA環境でのバージョン検出
+        let iosVersion = null;
+        if (isIOS) {
+            const match = navigator.userAgent.match(/OS (\d+)_(\d+)_?(\d+)?/);
+            if (match) {
+                iosVersion = parseFloat(`${match[1]}.${match[2]}`);
+            }
+        }
+        
+        // iOS 16.4以降はネイティブのプッシュ通知をサポート
+        const useNativePush = !isIOSPWA || (isIOSPWA && iosVersion >= 16.4);
+        
+        // 静的なService Workerファイルを使用（動的生成よりも信頼性が高い）
+        const swUrl = '/firebase-messaging-sw.js';
         
         navigator.serviceWorker.register(swUrl, { scope: './' })
             .then((registration) => {
                 console.log('Firebase Messaging Service Worker registered:', registration);
                 
-                // Firebase Messagingに登録を伝える（useServiceWorkerは非推奨）
+                // Firebase Messagingに登録を伝える
                 if (typeof firebase !== 'undefined' && firebase.messaging && firebase.messaging.isSupported()) {
                     const messaging = firebase.messaging();
-                    // messaging.useServiceWorker()は非推奨のため削除
                     // 新しいFirebase SDKでは自動的にService Workerが検出される
                     console.log('Firebase Messaging ready with Service Worker');
                 }
             })
             .catch((error) => {
                 console.error('Firebase Messaging Service Worker registration failed:', error);
+                
+                // iOS PWAの場合は特別な処理
+                if (isIOSPWA) {
+                    console.log('iOS PWA環境でService Worker登録に失敗しました。カスタム通知UIを使用します。');
+                    // iOS PWAではService Workerの制限があるため、カスタム通知UIを使用
+                    if (window.notificationManager) {
+                        const supportInfo = window.notificationManager.checkIOSPWASupport();
+                        console.log('iOS PWA診断情報:', supportInfo);
+                    }
+                }
             });
     }
 }
@@ -231,26 +257,49 @@ async function registerFCMToken(token) {
     try {
         const deviceInfo = getDeviceInfo();
         
-        const response = await fetch(CONFIG.GAS_URL, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-                action: 'registerFCMToken',
-                fcmToken: token,
-                deviceInfo: deviceInfo,
-                timestamp: new Date().toISOString()
-            })
-        });
+        // 登録の再試行ロジック
+        let retries = 3;
+        let result = null;
         
-        if (response.ok) {
+        while (retries > 0) {
+            try {
+                // GASにトークンを登録
+                result = await apiClient.sendRequest('registerFCMToken', {
+                    fcmToken: token,
+                    deviceInfo: deviceInfo,
+                    timestamp: new Date().toISOString()
+                }, {
+                    timeout: 10000 // タイムアウトを10秒に設定
+                });
+                
+                if (result.success) {
+                    break; // 成功したらループを抜ける
+                } else {
+                    console.warn(`FCM token registration failed (${retries} retries left):`, result.error);
+                    retries--;
+                    if (retries > 0) {
+                        await new Promise(resolve => setTimeout(resolve, 1000)); // 1秒待機
+                    }
+                }
+            } catch (err) {
+                console.warn(`FCM token registration error (${retries} retries left):`, err);
+                retries--;
+                if (retries > 0) {
+                    await new Promise(resolve => setTimeout(resolve, 1000)); // 1秒待機
+                }
+            }
+        }
+        
+        if (result && result.success) {
             console.log('FCM token registered successfully');
             // ローカルストレージに保存
             localStorage.setItem('fcmToken', token);
             localStorage.setItem('fcmTokenTimestamp', new Date().toISOString());
         } else {
-            console.error('Failed to register FCM token');
+            console.error('Failed to register FCM token:', result?.error || 'Registration failed after retries');
+            // オフライン時はローカルストレージに保存
+            localStorage.setItem('fcmToken', token);
+            localStorage.setItem('fcmTokenTimestamp', new Date().toISOString());
         }
     } catch (error) {
         console.error('Error registering FCM token:', error);
@@ -351,7 +400,7 @@ function testNotificationSupport() {
             // テスト通知を送信
             new Notification('なずなポータル', {
                 body: '通知機能が正常に動作しています',
-                icon: 'images/icon-192x192.png',
+                icon: 'https://raw.githubusercontent.com/J105588/nazuna-portal/main/images/icon-192x192.png',
                 tag: 'test'
             });
             return true;

@@ -29,7 +29,7 @@ self.addEventListener('push', function(event) {
         
         const options = {
             body: data.body || 'お知らせがあります',
-            icon: data.icon || '/images/icon-192x192.png',
+            icon: data.icon || 'https://raw.githubusercontent.com/J105588/nazuna-portal/main/images/icon-192x192.png',
             badge: '/images/badge-72x72.png',
             tag: data.tag || 'general',
             data: {
@@ -62,7 +62,7 @@ messaging.onBackgroundMessage(function(payload) {
     const notificationTitle = notification?.title || 'お知らせ';
     const notificationOptions = {
         body: notification?.body || 'お知らせがあります',
-        icon: notification?.icon || '/images/icon-192x192.png',
+        icon: notification?.icon || 'https://raw.githubusercontent.com/J105588/nazuna-portal/main/images/icon-192x192.png',
         badge: '/images/badge-72x72.png',
         tag: data?.category || 'general',
         requireInteraction: data?.priority === '2',
@@ -93,6 +93,42 @@ self.addEventListener('notificationclick', function(event) {
         return;
     }
     
+    // 通知クリックイベントを記録
+    try {
+        const analyticsData = {
+            eventType: 'notification_click',
+            notificationId: event.notification.tag,
+            timestamp: Date.now(),
+            action: action || 'view'
+        };
+        
+        // 分析データをキャッシュに保存（オフライン対応）
+        self.registration.pushManager.getSubscription().then(subscription => {
+            if (subscription) {
+                analyticsData.endpoint = subscription.endpoint;
+            }
+            
+            // IndexedDBに保存
+            const dbPromise = indexedDB.open('notification-analytics', 1);
+            
+            dbPromise.onupgradeneeded = function(event) {
+                const db = event.target.result;
+                if (!db.objectStoreNames.contains('events')) {
+                    db.createObjectStore('events', { keyPath: 'id', autoIncrement: true });
+                }
+            };
+            
+            dbPromise.onsuccess = function(event) {
+                const db = event.target.result;
+                const tx = db.transaction('events', 'readwrite');
+                const store = tx.objectStore('events');
+                store.add(analyticsData);
+            };
+        }).catch(err => console.error('Failed to record notification click:', err));
+    } catch (error) {
+        console.error('Error recording notification click:', error);
+    }
+    
     event.waitUntil(
         clients.matchAll({
             type: 'window',
@@ -103,8 +139,18 @@ self.addEventListener('notificationclick', function(event) {
                 const client = clientList[i];
                 if (client.url.includes(self.location.origin) && 'focus' in client) {
                     return client.focus().then(() => {
-                        if (urlToOpen !== '/' && urlToOpen !== self.location.origin) {
-                            return client.navigate(urlToOpen);
+                        // 完全なURLを構築
+                        let fullUrl = urlToOpen;
+                        if (!urlToOpen.startsWith('http') && !urlToOpen.startsWith('/')) {
+                            fullUrl = '/' + urlToOpen;
+                        }
+                        if (!urlToOpen.startsWith('http')) {
+                            fullUrl = self.location.origin + fullUrl;
+                        }
+                        
+                        // 現在のURLと異なる場合のみナビゲート
+                        if (client.url !== fullUrl) {
+                            return client.navigate(fullUrl);
                         }
                     });
                 }
@@ -112,7 +158,16 @@ self.addEventListener('notificationclick', function(event) {
             
             // 新しいタブを開く
             if (clients.openWindow) {
-                return clients.openWindow(urlToOpen);
+                // 完全なURLを構築
+                let fullUrl = urlToOpen;
+                if (!urlToOpen.startsWith('http') && !urlToOpen.startsWith('/')) {
+                    fullUrl = '/' + urlToOpen;
+                }
+                if (!urlToOpen.startsWith('http')) {
+                    fullUrl = self.location.origin + fullUrl;
+                }
+                
+                return clients.openWindow(fullUrl);
             }
         }).catch(function(error) {
             console.error('Error handling notification click:', error);

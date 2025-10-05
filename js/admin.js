@@ -368,24 +368,11 @@ async function performLogin(email, password) {
             return false;
         }
         
-        // 本番環境でのGAS認証
-        const response = await fetch(CONFIG.GAS_URL, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-                action: 'adminLogin',
-                email: email,
-                password: password
-            })
+        // 本番環境でのGAS認証（JSONP使用）
+        const result = await apiClient.sendRequest('adminLogin', {
+            email: email,
+            password: password
         });
-        
-        if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
-        }
-        
-        const result = await response.json();
         
         if (result.success && result.admin) {
             const userData = {
@@ -1090,9 +1077,8 @@ async function sendPushNotification(data) {
             return { success: true, recipients: 150, historyId: 'debug-' + Date.now() };
         }
         
-        // GASに通知送信要求
-        const requestData = {
-            action: 'sendNotification',
+        // 通知データの準備
+        const notificationData = {
             templateKey: getTemplateKeyFromData(data),
             templateData: {
                 title: data.title,
@@ -1106,22 +1092,37 @@ async function sendPushNotification(data) {
             adminPassword: 'admin' // 実際の運用では適切な認証を実装
         };
         
-        const response = await fetch(CONFIG.GAS_URL, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify(requestData)
-        });
+        // 通知送信の再試行ロジック
+        let retries = 3;
+        let result = null;
         
-        if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
+        while (retries > 0) {
+            try {
+                // GASに通知送信要求（JSONP使用）
+                result = await apiClient.sendRequest('sendNotification', notificationData, {
+                    timeout: 15000 // タイムアウトを15秒に設定
+                });
+                
+                if (result.success) {
+                    break; // 成功したらループを抜ける
+                } else {
+                    console.warn(`Notification sending failed (${retries} retries left):`, result.error);
+                    retries--;
+                    if (retries > 0) {
+                        await new Promise(resolve => setTimeout(resolve, 1000)); // 1秒待機
+                    }
+                }
+            } catch (err) {
+                console.warn(`Notification request error (${retries} retries left):`, err);
+                retries--;
+                if (retries > 0) {
+                    await new Promise(resolve => setTimeout(resolve, 1000)); // 1秒待機
+                }
+            }
         }
         
-        const result = await response.json();
-        
-        if (!result.success) {
-            throw new Error(result.error || 'Notification sending failed');
+        if (!result || !result.success) {
+            throw new Error((result?.error) || 'Notification sending failed after retries');
         }
         
         console.log('Notification sent successfully:', result.data);
@@ -1138,12 +1139,13 @@ function getTemplateKeyFromData(data) {
     // タイトルや内容から適切なテンプレートを判定
     const title = data.title.toLowerCase();
     
-    if (title.includes('緊急') || title.includes('重要')) {
-        return 'emergency_alert';
-    } else if (title.includes('アンケート')) {
+    if (title.includes('アンケート')) {
         return 'survey_created';
     } else if (title.includes('イベント') || title.includes('行事')) {
         return 'event_reminder';
+    } else if (title.includes('緊急') || title.includes('重要')) {
+        // 重要なお知らせセクションは削除されたが、緊急・重要カテゴリは維持
+        return 'news_published';
     } else {
         return 'news_published';
     }
@@ -1159,7 +1161,8 @@ function getNotificationUrl(data) {
         case 'event_reminder':
             return './news.html#events';
         case 'emergency_alert':
-            return './news.html#important';
+            // 重要なお知らせセクションが削除されたため、通常のニュースページに遷移
+            return './news.html';
         default:
             return './news.html';
     }

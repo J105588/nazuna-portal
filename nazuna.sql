@@ -465,4 +465,72 @@ INSERT INTO news (title, content, summary, type, priority) VALUES
 ('新型コロナウイルス対策について', '感染症対策の徹底をお願いいたします。', '感染症対策の徹底について', 'important', 2)
 ON CONFLICT DO NOTHING;
 
+-- ========================================
+-- 9. セキュリティ設定の確認とトラブルシューティング
+-- ========================================
+
+-- 9.1 RLS有効化の確認
+SELECT schemaname, tablename, rowsecurity 
+FROM pg_tables 
+WHERE schemaname = 'public' 
+AND rowsecurity = true;
+
+-- 9.2 ポリシーの確認
+SELECT schemaname, tablename, policyname, permissive, roles, cmd, qual 
+FROM pg_policies 
+WHERE schemaname = 'public'
+ORDER BY tablename, policyname;
+
+-- ========================================
+-- 10. 運用時の注意事項
+-- ========================================
+
+-- 10.1 管理者認証
+-- - Supabaseのダッシュボードで管理者ユーザーを作成
+-- - auth.usersテーブルでroleカラムを'admin'に設定
+-- - または、カスタム認証ロジックを実装
+
+-- 10.2 匿名ユーザーの制限
+-- - 匿名ユーザーは読み取り専用アクセスのみ
+-- - 投稿や回答は認証なしで可能（必要に応じて制限を追加）
+
+-- 10.3 セキュリティ監査
+-- - 定期的にポリシーの見直しを行う
+-- - ログの監視と異常なアクセスの検出
+-- - データのバックアップと復旧計画の策定
+
+-- ========================================
+-- 11. トラブルシューティング
+-- ========================================
+
+-- 11.1 よくある問題
+-- - ポリシーが適用されない場合: RLSが有効化されているか確認
+-- - アクセス拒否エラー: ポリシーの条件を確認
+-- - 管理者権限が効かない場合: ロール設定を確認
+
+-- 11.2 デバッグ用クエリ
+-- 現在のユーザー情報を確認
+-- SELECT auth.uid(), auth.role();
+
+-- テーブルのRLS状態を確認
+-- SELECT tablename, rowsecurity FROM pg_tables WHERE schemaname = 'public';
+
+-- ポリシーの詳細を確認
+-- SELECT * FROM pg_policies WHERE schemaname = 'public';
+
+-- ========================================
+-- 12. ロールと権限の設定
+-- ========================================
+
+-- 12.1 管理者ロールの設定
+-- 注意: 実際の運用時は、Supabaseのダッシュボードで管理者ロールを設定してください
+-- CREATE ROLE admin;
+-- GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO admin;
+
+-- 12.2 サービスロールの設定（GAS用）
+-- 注意: 実際の運用時は、GAS用のサービスロールを設定してください
+-- CREATE ROLE gas_service;
+-- GRANT SELECT, INSERT, UPDATE ON ALL TABLES IN SCHEMA public TO gas_service;
+-- GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO gas_service;
+-- GRANT EXECUTE ON ALL FUNCTIONS IN SCHEMA public TO gas_service;
 

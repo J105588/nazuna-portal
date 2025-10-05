@@ -455,14 +455,36 @@ function closeSidebar() {
     document.body.style.overflow = '';
 }
 
+// 画像のプリロード
+function preloadImage(url) {
+    return new Promise((resolve, reject) => {
+        const img = new Image();
+        img.onload = () => resolve(img);
+        img.onerror = () => reject(new Error(`Failed to load image: ${url}`));
+        img.src = url;
+    });
+}
+
 // オープニング画面を表示
-function showOpeningScreen() {
+async function showOpeningScreen() {
     console.log('Showing opening screen...');
     
     // 既存のオープニング画面があれば削除
     const existing = document.getElementById('opening-screen');
     if (existing) {
         existing.remove();
+    }
+    
+    // 画像をプリロード
+    const iconUrl = 'https://raw.githubusercontent.com/J105588/nazuna-portal/main/images/icon.png';
+    let imageLoaded = false;
+    
+    try {
+        await preloadImage(iconUrl);
+        imageLoaded = true;
+        console.log('Opening image preloaded successfully');
+    } catch (error) {
+        console.warn('Failed to preload opening image:', error);
     }
     
     const openingHTML = `
@@ -490,7 +512,7 @@ function showOpeningScreen() {
                 <div class="opening-particle"></div>
             </div>
             <div class="opening-logo">
-                <img src="https://raw.githubusercontent.com/J105588/nazuna-portal/main/images/icon.png" alt="なずなポータル" class="opening-logo-img">
+                <img src="${iconUrl}" alt="なずなポータル" class="opening-logo-img" style="opacity: ${imageLoaded ? '1' : '0'}; transition: opacity 0.5s ease-in-out;">
             </div>
             <h1 class="opening-title" data-text="なずなポータル">なずなポータル</h1>
             <p class="opening-subtitle">みんなでつくる学校生活</p>
@@ -504,6 +526,21 @@ function showOpeningScreen() {
     
     document.body.insertAdjacentHTML('afterbegin', openingHTML);
     console.log('Opening screen added to DOM');
+    
+    // 画像がまだ読み込まれていない場合は、読み込み完了後に表示
+    if (!imageLoaded) {
+        const img = document.querySelector('.opening-logo-img');
+        if (img) {
+            img.onload = () => {
+                img.style.opacity = '1';
+                console.log('Opening image loaded and displayed');
+            };
+            img.onerror = () => {
+                console.error('Failed to load opening image');
+                img.style.opacity = '1'; // エラーでも表示する
+            };
+        }
+    }
     
     // デバッグ用：オープニング画面をクリックで閉じる
     const openingScreen = document.getElementById('opening-screen');

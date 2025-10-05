@@ -16,7 +16,8 @@ function getConfig() {
     // Firebase設定
     FIREBASE_PROJECT_ID: properties.getProperty('FIREBASE_PROJECT_ID') || 'your-project-id',
     FIREBASE_SERVER_KEY: properties.getProperty('FIREBASE_SERVER_KEY') || 'your-server-key',
-    FCM_ENDPOINT: 'https://fcm.googleapis.com/fcm/send',
+    FCM_ENDPOINT: 'https://fcm.googleapis.com/v1/projects/{PROJECT_ID}/messages:send',
+    FIREBASE_ACCESS_TOKEN: properties.getProperty('FIREBASE_ACCESS_TOKEN') || 'your-access-token',
     
     // スプレッドシート設定（後方互換性のため）
     SPREADSHEET_ID: properties.getProperty('SPREADSHEET_ID') || 'YOUR_SPREADSHEET_ID_HERE',
@@ -70,7 +71,7 @@ const SHEETS = {
 // メイン関数（WebAppのエントリーポイント）
 // ========================================
 
-// GET リクエスト処理（後方互換性のため）
+// GET リクエスト処理（JSONP対応）
 function doGet(e) {
   const action = e.parameter.action;
   const callback = e.parameter.callback;
@@ -96,6 +97,43 @@ function doGet(e) {
         break;
       case 'getMembers':
         result = getMembers(e.parameter);
+        break;
+      // POST系のアクションもGETで処理（JSONP対応）
+      case 'adminLogin':
+        result = adminLogin(e.parameter);
+        break;
+      case 'registerDevice':
+        result = registerDevice(e.parameter);
+        break;
+      case 'unregisterDevice':
+        result = unregisterDevice(e.parameter);
+        break;
+      case 'sendNotification':
+        result = sendNotification(e.parameter);
+        break;
+      case 'sendBulkNotification':
+        result = sendBulkNotification(e.parameter);
+        break;
+      case 'getNotificationHistory':
+        result = getNotificationHistory(e.parameter);
+        break;
+      case 'getNotificationStatistics':
+        result = getNotificationStatistics(e.parameter);
+        break;
+      case 'updateNews':
+        result = updateNews(e.parameter);
+        break;
+      case 'updateSurvey':
+        result = updateSurvey(e.parameter);
+        break;
+      case 'updateClub':
+        result = updateClub(e.parameter);
+        break;
+      case 'replyToPost':
+        result = replyToPost(e.parameter);
+        break;
+      case 'registerFCMToken':
+        result = registerFCMToken(e.parameter);
         break;
       default:
         result = { success: false, error: 'Invalid action: ' + action };
@@ -443,7 +481,10 @@ function initializeSpreadsheet() {
 // 管理者ログイン
 function adminLogin(data) {
   try {
-    const { email, password } = data;
+    // URLパラメータまたはJSONボディからデータを取得
+    const email = data.email || data.parameter?.email;
+    const password = data.password || data.parameter?.password;
+    
     const adminCredentials = getAdminCredentials();
     
     if (adminCredentials[email] && adminCredentials[email].password === password) {
@@ -508,10 +549,61 @@ function setupAdminAccounts() {
 // 通知システム
 // ========================================
 
+// FCMトークン登録（firebase-config.js用）
+function registerFCMToken(params) {
+  try {
+    const { fcmToken, deviceInfo } = params;
+    
+    if (!fcmToken) {
+      return { success: false, error: 'FCM token is required' };
+    }
+    
+    const deviceData = {
+      fcm_token: fcmToken,
+      user_agent: deviceInfo?.userAgent || '',
+      platform: deviceInfo?.platform || 'web',
+      browser: deviceInfo?.browser || '',
+      device_info: deviceInfo || {},
+      is_active: true,
+      last_used_at: new Date().toISOString()
+    };
+    
+    const response = supabaseRequest('POST', 'device_registrations', deviceData);
+    
+    if (response.error) {
+      // 既存のトークンの場合は更新
+      if (response.error.code === '23505') { // unique violation
+        const updateResponse = supabaseRequest('PATCH', 
+          `device_registrations?fcm_token=eq.${fcmToken}`, 
+          {
+            is_active: true,
+            last_used_at: new Date().toISOString(),
+            user_agent: deviceInfo?.userAgent,
+            device_info: deviceInfo
+          }
+        );
+        return { success: !updateResponse.error, data: updateResponse.data };
+      }
+      return { success: false, error: response.error.message };
+    }
+    
+    return { success: true, data: response.data };
+    
+  } catch (error) {
+    console.error('Error registering FCM token:', error);
+    return { success: false, error: error.toString() };
+  }
+}
+
 // デバイス登録
 function registerDevice(data) {
   try {
-    const { fcmToken, userAgent, platform, browser, deviceInfo } = data;
+    // URLパラメータまたはJSONボディからデータを取得
+    const fcmToken = data.fcmToken || data.parameter?.fcmToken;
+    const userAgent = data.userAgent || data.parameter?.userAgent;
+    const platform = data.platform || data.parameter?.platform;
+    const browser = data.browser || data.parameter?.browser;
+    const deviceInfo = data.deviceInfo || data.parameter?.deviceInfo;
     
     if (!fcmToken) {
       return { success: false, error: 'FCM token is required' };
@@ -579,7 +671,12 @@ function unregisterDevice(data) {
 // 通知送信
 function sendNotification(data) {
   try {
-    const { templateKey, templateData, targetType = 'all', targetCriteria = {}, adminEmail } = data;
+    // URLパラメータまたはJSONボディからデータを取得
+    const templateKey = data.templateKey || data.parameter?.templateKey;
+    const templateData = data.templateData || data.parameter?.templateData;
+    const targetType = data.targetType || data.parameter?.targetType || 'all';
+    const targetCriteria = data.targetCriteria || data.parameter?.targetCriteria || {};
+    const adminEmail = data.adminEmail || data.parameter?.adminEmail;
     
     // 通知テンプレートを取得
     const template = getNotificationTemplate(templateKey);
@@ -621,21 +718,56 @@ function sendNotification(data) {
   }
 }
 
-// 一括通知送信
+// 一括通知送信（拡張版）
 function sendBulkNotification(data) {
   try {
-    const { notifications } = data;
+    const { notifications, options = {} } = data;
     const results = [];
+    const config = getConfig();
+    const batchSize = options.batchSize || config.MAX_BATCH_SIZE;
+    const delayMs = options.delayMs || 100;
+    let successCount = 0;
+    let failureCount = 0;
     
-    for (const notification of notifications) {
-      const result = sendNotification(notification);
-      results.push(result);
+    // バッチ処理の最適化
+    for (let i = 0; i < notifications.length; i += batchSize) {
+      const batch = notifications.slice(i, i + batchSize);
+      const batchResults = [];
       
-      // レート制限対応
-      Utilities.sleep(100);
+      // 並列処理の制限
+      const promises = batch.map(notification => {
+        return new Promise(resolve => {
+          const result = sendNotification(notification);
+          if (result.success) successCount++;
+          else failureCount++;
+          batchResults.push(result);
+          resolve();
+        });
+      });
+      
+      // バッチ内の全ての通知が処理されるのを待つ
+      for (const promise of promises) {
+        await promise;
+      }
+      
+      results.push(...batchResults);
+      
+      // レート制限対応（バッチ間の遅延）
+      if (i + batchSize < notifications.length) {
+        Utilities.sleep(delayMs * batch.length);
+      }
     }
     
-    return { success: true, data: results };
+    return { 
+      success: true, 
+      data: results,
+      summary: {
+        total: notifications.length,
+        success: successCount,
+        failure: failureCount,
+        batches: Math.ceil(notifications.length / batchSize)
+      }
+    };
     
   } catch (error) {
     console.error('Error sending bulk notifications:', error);
@@ -676,6 +808,8 @@ function sendFCMNotifications(devices, message, historyId) {
   let successCount = 0;
   let failureCount = 0;
   const deliveries = [];
+  const retryAttempts = config.RETRY_ATTEMPTS || 3;
+  const retryDelay = config.RETRY_DELAY || 1000;
   
   // バッチ処理
   for (let i = 0; i < devices.length; i += config.MAX_BATCH_SIZE) {
@@ -688,7 +822,7 @@ function sendFCMNotifications(devices, message, historyId) {
           notification: {
             title: message.title,
             body: message.body,
-            icon: message.icon || '/images/icon-192x192.png',
+            icon: message.icon || 'https://raw.githubusercontent.com/J105588/nazuna-portal/main/images/icon-192x192.png',
             badge: message.badge || '/images/badge-72x72.png',
             click_action: message.action_url || '/',
             tag: message.category || 'general'
@@ -703,16 +837,32 @@ function sendFCMNotifications(devices, message, historyId) {
           time_to_live: 86400 // 24時間
         };
         
-        const response = sendFCMMessage(fcmMessage);
+        // リトライロジックを実装
+        let response = null;
+        let attempt = 0;
+        let success = false;
         
-        if (response.success) {
+        while (attempt < retryAttempts && !success) {
+          response = sendFCMMessage(fcmMessage);
+          success = response.success;
+          
+          if (!success && attempt < retryAttempts - 1) {
+            console.log(`Retry attempt ${attempt + 1} for token: ${device.fcm_token}`);
+            Utilities.sleep(retryDelay * (attempt + 1)); // 指数バックオフ
+          }
+          
+          attempt++;
+        }
+        
+        if (success) {
           successCount++;
           deliveries.push({
             history_id: historyId,
             device_id: device.id,
             fcm_message_id: response.message_id,
             status: 'sent',
-            sent_at: new Date().toISOString()
+            sent_at: new Date().toISOString(),
+            retry_count: attempt - 1
           });
         } else {
           failureCount++;
@@ -722,12 +872,14 @@ function sendFCMNotifications(devices, message, historyId) {
             status: 'failed',
             error_code: response.error_code,
             error_message: response.error_message,
-            sent_at: new Date().toISOString()
+            sent_at: new Date().toISOString(),
+            retry_count: attempt - 1
           });
           
           // 無効なトークンの場合はデバイスを無効化
-          if (response.error_code === 'InvalidRegistration' || 
-              response.error_code === 'NotRegistered') {
+          if (response.error_code === 'INVALID_ARGUMENT' || 
+              response.error_code === 'UNREGISTERED' ||
+              response.error_code === 'NOT_FOUND') {
             deactivateDevice(device.fcm_token);
           }
         }
@@ -735,6 +887,13 @@ function sendFCMNotifications(devices, message, historyId) {
       } catch (error) {
         console.error('Error sending to device:', device.fcm_token, error);
         failureCount++;
+        deliveries.push({
+          history_id: historyId,
+          device_id: device.id,
+          status: 'error',
+          error_message: error.toString(),
+          sent_at: new Date().toISOString()
+        });
       }
     }
     
@@ -752,33 +911,169 @@ function sendFCMNotifications(devices, message, historyId) {
   return { successCount, failureCount };
 }
 
-// FCMメッセージ送信
+// FCMメッセージ送信（HTTP v1 API対応・拡張版）
 function sendFCMMessage(message) {
   try {
     const config = getConfig();
     
-    const response = UrlFetchApp.fetch(config.FCM_ENDPOINT, {
-      method: 'POST',
+    // HTTP v1 API用のエンドポイントURLを構築
+    const endpoint = `https://fcm.googleapis.com/v1/projects/${config.FIREBASE_PROJECT_ID}/messages:send`;
+    
+    // 基本的な通知設定
+    const notification = {
+      title: message.notification.title,
+      body: message.notification.body,
+      image: message.notification.image || message.notification.icon
+    };
+    
+    // プラットフォーム別の設定を準備
+    const webpushConfig = {
       headers: {
-        'Authorization': 'key=' + config.FIREBASE_SERVER_KEY,
-        'Content-Type': 'application/json'
+        TTL: (message.time_to_live || 86400).toString(),
+        Urgency: message.priority === 'high' ? 'high' : 'normal'
       },
-      payload: JSON.stringify(message)
-    });
+      notification: {
+        icon: message.notification.icon || 'https://raw.githubusercontent.com/J105588/nazuna-portal/main/images/icon-192x192.png',
+        badge: message.notification.badge || '/images/badge-72x72.png',
+        vibrate: [200, 100, 200],
+        requireInteraction: message.requireInteraction || message.priority >= 2,
+        actions: message.actions || [
+          { action: 'view', title: '詳細を見る' },
+          { action: 'dismiss', title: '閉じる' }
+        ],
+        tag: message.data.category || 'general',
+        renotify: message.renotify || false,
+        silent: message.silent || false,
+        timestamp: Date.now()
+      },
+      fcm_options: {
+        link: message.data.url || '/'
+      }
+    };
     
-    const responseData = JSON.parse(response.getContentText());
+    // iOSデバイス向け設定（APNs対応強化版）
+    const apnsConfig = {
+      headers: {
+        'apns-priority': message.priority === 'high' ? '10' : '5',
+        'apns-expiration': Math.floor(Date.now() / 1000) + (message.time_to_live || 86400),
+        'apns-push-type': 'alert',
+        'apns-topic': message.apns_topic || 'jp.school.nazuna-portal'
+      },
+      payload: {
+        aps: {
+          alert: {
+            title: message.notification.title,
+            body: message.notification.body,
+            subtitle: message.notification.subtitle || '',
+            'title-loc-key': message.notification.title_loc_key,
+            'title-loc-args': message.notification.title_loc_args,
+            'loc-key': message.notification.loc_key,
+            'loc-args': message.notification.loc_args,
+            'action-loc-key': message.notification.action_loc_key,
+            'launch-image': message.notification.launch_image
+          },
+          sound: message.sound || 'default',
+          badge: message.badge_count || 1,
+          'mutable-content': 1,
+          'content-available': 1,
+          category: message.data.category || 'GENERAL',
+          'thread-id': message.thread_id || message.data.category || 'general',
+          'target-content-id': message.target_content_id || '',
+          'interruption-level': message.priority === 'high' ? 'time-sensitive' : 'active',
+          'relevance-score': message.relevance_score || 1.0
+        },
+        fcm_options: {
+          image: message.notification.image || message.notification.icon
+        },
+        // カスタムデータをAPNsペイロードに追加
+        data: message.data || {},
+        url: message.data?.url || '/',
+        category: message.data?.category || 'general',
+        notification_id: message.data?.notification_id || '',
+        timestamp: Date.now().toString()
+      }
+    };
     
-    if (response.getResponseCode() === 200 && responseData.success === 1) {
-      return {
-        success: true,
-        message_id: responseData.multicast_id
-      };
-    } else {
-      const error = responseData.results ? responseData.results[0].error : 'Unknown error';
+    // Androidデバイス向け設定
+    const androidConfig = {
+      priority: message.priority === 'high' ? 'HIGH' : 'NORMAL',
+      ttl: `${message.time_to_live || 86400}s`,
+      notification: {
+        icon: message.notification.icon || 'ic_notification',
+        color: message.color || '#4285F4',
+        sound: message.sound || 'default',
+        clickAction: message.data.url || '/',
+        tag: message.data.category || 'general',
+        channelId: message.channelId || 'default'
+      }
+    };
+    
+    // HTTP v1 API用のメッセージ形式に変換
+    const v1Message = {
+      message: {
+        token: message.to,
+        notification: notification,
+        data: message.data,
+        webpush: webpushConfig,
+        apns: apnsConfig,
+        android: androidConfig,
+        fcm_options: {
+          analytics_label: message.data.category || 'notification'
+        }
+      }
+    };
+    
+    // バリデーションモードの場合
+    if (message.validate_only) {
+      v1Message.validate_only = true;
+    }
+    
+    // Access Tokenを取得
+    const accessToken = getFirebaseAccessToken();
+    if (!accessToken) {
       return {
         success: false,
-        error_code: error,
-        error_message: responseData.failure || error
+        error_code: 'AuthenticationError',
+        error_message: 'Failed to get Firebase access token'
+      };
+    }
+    
+    // FCM APIにリクエスト送信
+    const response = UrlFetchApp.fetch(endpoint, {
+      method: 'POST',
+      headers: {
+        'Authorization': 'Bearer ' + accessToken,
+        'Content-Type': 'application/json'
+      },
+      payload: JSON.stringify(v1Message),
+      muteHttpExceptions: true // エラーレスポンスも取得するため
+    });
+    
+    const responseCode = response.getResponseCode();
+    let responseData;
+    
+    try {
+      responseData = JSON.parse(response.getContentText());
+    } catch (e) {
+      responseData = { error: { message: 'Failed to parse response' } };
+    }
+    
+    // レスポンス処理
+    if (responseCode === 200 && responseData.name) {
+      return {
+        success: true,
+        message_id: responseData.name.split('/').pop(), // メッセージIDを抽出
+        response_code: responseCode,
+        response_data: responseData
+      };
+    } else {
+      console.error('FCM API error:', responseCode, responseData);
+      return {
+        success: false,
+        error_code: responseData.error?.status || responseData.error?.code || `HTTP_${responseCode}`,
+        error_message: responseData.error?.message || 'Unknown error',
+        response_code: responseCode,
+        response_data: responseData
       };
     }
     
@@ -792,16 +1087,46 @@ function sendFCMMessage(message) {
   }
 }
 
-// 通知テンプレート取得
-function getNotificationTemplate(templateKey) {
-  const response = supabaseRequest('GET', 
-    `notification_templates?template_key=eq.${templateKey}&is_active=eq.true&limit=1`
-  );
+// 通知テンプレート取得（拡張版）
+function getNotificationTemplate(templateKey, options = {}) {
+  let query = `notification_templates?`;
   
-  return response.data && response.data.length > 0 ? response.data[0] : null;
+  // テンプレートキーによる検索
+  if (templateKey) {
+    query += `template_key=eq.${templateKey}&`;
+  }
+  
+  // カテゴリによる検索
+  if (options.category) {
+    query += `category=eq.${options.category}&`;
+  }
+  
+  // アクティブなテンプレートのみ取得
+  if (options.active_only !== false) {
+    query += `is_active=eq.true&`;
+  }
+  
+  // 並び順の指定
+  if (options.order_by) {
+    query += `order=${options.order_by}.${options.ascending !== false ? 'asc' : 'desc'}&`;
+  } else {
+    query += `order=priority.desc&`;
+  }
+  
+  // 取得件数の制限
+  query += `limit=${options.limit || 1}`;
+  
+  const response = supabaseRequest('GET', query);
+  
+  // 単一レコード取得か複数レコード取得かの判断
+  if (templateKey && !options.return_all) {
+    return response.data && response.data.length > 0 ? response.data[0] : null;
+  } else {
+    return response.data || [];
+  }
 }
 
-// メッセージ生成
+// メッセージ生成（拡張版）
 function generateMessage(template, data) {
   let title = template.title_template;
   let body = template.body_template;
@@ -813,15 +1138,90 @@ function generateMessage(template, data) {
     body = body.replace(regex, value);
   }
   
-  return {
+  // 日時変数を置換
+  const now = new Date();
+  const dateVars = {
+    'YYYY': now.getFullYear(),
+    'MM': (now.getMonth() + 1).toString().padStart(2, '0'),
+    'DD': now.getDate().toString().padStart(2, '0'),
+    'HH': now.getHours().toString().padStart(2, '0'),
+    'mm': now.getMinutes().toString().padStart(2, '0'),
+    'ss': now.getSeconds().toString().padStart(2, '0'),
+    'WEEKDAY': ['日', '月', '火', '水', '木', '金', '土'][now.getDay()]
+  };
+  
+  for (const [key, value] of Object.entries(dateVars)) {
+    const regex = new RegExp(`{{${key}}}`, 'g');
+    title = title.replace(regex, value);
+    body = body.replace(regex, value);
+  }
+  
+  // アクションURLの処理（クエリパラメータ付加など）
+  let actionUrl = template.action_url || '/';
+  if (data.url) {
+    actionUrl = data.url;
+  }
+  
+  // URLにパラメータを追加
+  if (template.append_params && data) {
+    const url = new URL(actionUrl, 'https://example.com'); // 相対URLを絶対URLに変換するためのベースURL
+    
+    // テンプレートで指定されたパラメータを追加
+    if (template.url_params) {
+      for (const param of template.url_params) {
+        if (data[param.key]) {
+          url.searchParams.set(param.key, data[param.key]);
+        }
+      }
+    }
+    
+    // 通知IDを追加
+    url.searchParams.set('notification_id', data.notification_id || Utilities.getUuid());
+    
+    // 相対URLの場合は、ホスト部分を除去
+    actionUrl = url.pathname + url.search + url.hash;
+    if (!template.action_url.startsWith('http')) {
+      actionUrl = actionUrl.replace(/^https?:\/\/example\.com/, '');
+    }
+  }
+  
+  // 通知アクションの設定
+  let actions = template.actions || [];
+  if (data.actions) {
+    try {
+      if (typeof data.actions === 'string') {
+        actions = JSON.parse(data.actions);
+      } else {
+        actions = data.actions;
+      }
+    } catch (e) {
+      console.error('Failed to parse actions:', e);
+    }
+  }
+  
+  // 通知オプションの設定
+  const options = {
     title: title,
     body: body,
-    icon: template.icon_url,
-    action_url: template.action_url,
-    category: template.category,
-    priority: template.priority,
-    actions: template.actions
+    icon: data.icon || template.icon_url,
+    image: data.image || template.image_url,
+    badge: data.badge || template.badge_url || '/images/badge-72x72.png',
+    action_url: actionUrl,
+    category: data.category || template.category || 'general',
+    priority: parseInt(data.priority || template.priority || 1),
+    actions: actions,
+    sound: data.sound || template.sound || 'default',
+    vibrate: data.vibrate || template.vibrate || [200, 100, 200],
+    requireInteraction: data.requireInteraction || template.require_interaction || false,
+    renotify: data.renotify || template.renotify || false,
+    silent: data.silent || template.silent || false,
+    timestamp: Date.now(),
+    ttl: data.ttl || template.ttl || 86400, // 24時間
+    color: data.color || template.color || '#4285F4',
+    channelId: data.channelId || template.channel_id || 'default'
   };
+  
+  return options;
 }
 
 // 対象デバイス取得
@@ -976,6 +1376,94 @@ function replyToPost(data) {
 }
 
 // ========================================
+// Firebase認証関数
+// ========================================
+
+// Firebase Access Tokenを取得（サービスアカウントキーを使用）
+function getFirebaseAccessToken() {
+  try {
+    const config = getConfig();
+    
+    // キャッシュからトークンを取得（有効期限内であれば再利用）
+    const cache = CacheService.getScriptCache();
+    const cachedToken = cache.get('FIREBASE_ACCESS_TOKEN');
+    
+    if (cachedToken) {
+      return cachedToken;
+    }
+    
+    // サービスアカウントキー情報を取得
+    const serviceAccountKey = JSON.parse(
+      PropertiesService.getScriptProperties().getProperty('FIREBASE_SERVICE_ACCOUNT_KEY')
+    );
+    
+    if (!serviceAccountKey) {
+      throw new Error('Firebase service account key not configured. Please set FIREBASE_SERVICE_ACCOUNT_KEY in PropertiesService.');
+    }
+    
+    // JWT（JSON Web Token）を作成
+    const now = Math.floor(Date.now() / 1000);
+    const expTime = now + 3600; // 1時間の有効期限
+    
+    const header = {
+      alg: 'RS256',
+      typ: 'JWT',
+      kid: serviceAccountKey.private_key_id
+    };
+    
+    const payload = {
+      iss: serviceAccountKey.client_email,
+      sub: serviceAccountKey.client_email,
+      aud: 'https://oauth2.googleapis.com/token',
+      iat: now,
+      exp: expTime,
+      scope: 'https://www.googleapis.com/auth/firebase.messaging'
+    };
+    
+    // JWTの署名部分を作成
+    const headerBase64 = Utilities.base64EncodeWebSafe(JSON.stringify(header)).replace(/=+$/, '');
+    const payloadBase64 = Utilities.base64EncodeWebSafe(JSON.stringify(payload)).replace(/=+$/, '');
+    const toSign = headerBase64 + '.' + payloadBase64;
+    
+    // 秘密鍵で署名
+    const signature = Utilities.computeRsaSha256Signature(
+      toSign,
+      serviceAccountKey.private_key
+    );
+    const signatureBase64 = Utilities.base64EncodeWebSafe(signature).replace(/=+$/, '');
+    
+    // 完全なJWTを作成
+    const jwt = headerBase64 + '.' + payloadBase64 + '.' + signatureBase64;
+    
+    // Google OAuth2 APIを使用してアクセストークンを取得
+    const response = UrlFetchApp.fetch('https://oauth2.googleapis.com/token', {
+      method: 'POST',
+      contentType: 'application/x-www-form-urlencoded',
+      payload: {
+        grant_type: 'urn:ietf:params:oauth:grant-type:jwt-bearer',
+        assertion: jwt
+      }
+    });
+    
+    const responseData = JSON.parse(response.getContentText());
+    const accessToken = responseData.access_token;
+    
+    if (!accessToken) {
+      throw new Error('Failed to obtain access token: ' + JSON.stringify(responseData));
+    }
+    
+    // トークンをキャッシュに保存（50分間有効）
+    cache.put('FIREBASE_ACCESS_TOKEN', accessToken, 3000); // 50分 = 3000秒
+    
+    return accessToken;
+    
+  } catch (error) {
+    console.error('Error getting Firebase access token:', error);
+    return null;
+  }
+}
+
+// ========================================
 // ユーティリティ関数
 // ========================================
 
@@ -1062,6 +1550,7 @@ function initializeGASProperties() {
     'SUPABASE_SERVICE_KEY': 'YOUR_SUPABASE_SERVICE_KEY_HERE',
     'FIREBASE_PROJECT_ID': 'your-project-id',
     'FIREBASE_SERVER_KEY': 'your-server-key',
+    'FIREBASE_ACCESS_TOKEN': 'your-firebase-access-token',
     'SPREADSHEET_ID': 'YOUR_SPREADSHEET_ID_HERE'
   };
   
