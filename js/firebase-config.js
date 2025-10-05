@@ -5,8 +5,8 @@
 // 実際の運用時はFirebase Consoleから取得した設定値を使用
 // ES6 importは使用せず、CDNから読み込まれたFirebase SDKを使用
 
-// APIクライアントのインスタンスを参照
-let apiClient = null;
+// APIクライアントはグローバルを参照（重複定義を避ける）
+// window.apiClient が未定義の場合のみ初期化します
 
 // Your web app's Firebase configuration
 const firebaseConfig = {
@@ -30,8 +30,10 @@ function initializeFirebase() {
     try {
         // APIクライアントの初期化
         if (typeof APIClient !== 'undefined') {
-            apiClient = new APIClient();
-            console.log('API client initialized successfully');
+            if (!window.apiClient) {
+                window.apiClient = new APIClient();
+                console.log('API client initialized successfully');
+            }
         } else {
             console.warn('APIClient class not available');
         }
@@ -57,16 +59,25 @@ function initializeFirebase() {
                 console.log('VAPID key available for token generation');
             }
             
+            // FCM用のService Workerを先に登録
+            setupFirebaseServiceWorker();
+
             // 通知許可の要求（iOS対応）
             requestNotificationPermission()
                 .then((permission) => {
                     if (permission === 'granted') {
                         console.log('Notification permission granted');
-                        // VAPIDキーをgetToken()のオプションで指定
-                        const tokenOptions = vapidKey && vapidKey !== 'your-vapid-key-here' 
+                        // VAPIDキーとService Worker登録をgetToken()に渡す
+                        const baseOptions = vapidKey && vapidKey !== 'your-vapid-key-here' 
                             ? { vapidKey: vapidKey } 
                             : {};
-                        return messaging.getToken(tokenOptions);
+                        return navigator.serviceWorker.getRegistration('./').then((reg) => {
+                            const tokenOptions = { ...baseOptions };
+                            if (reg) {
+                                tokenOptions.serviceWorkerRegistration = reg;
+                            }
+                            return messaging.getToken(tokenOptions);
+                        });
                     } else {
                         console.log('Notification permission denied');
                         return null;
@@ -301,13 +312,13 @@ async function registerFCMToken(token) {
         while (retries > 0) {
             try {
                 // GASにトークンを登録
-                result = await apiClient.sendRequest('registerFCMToken', {
+                result = await (window.apiClient ? window.apiClient.sendRequest('registerFCMToken', {
                     fcmToken: token,
                     deviceInfo: deviceInfo,
                     timestamp: new Date().toISOString()
                 }, {
                     timeout: 10000 // タイムアウトを10秒に設定
-                });
+                }) : Promise.resolve({ success: false, error: 'API client unavailable' }));
                 
                 if (result.success) {
                     break; // 成功したらループを抜ける

@@ -59,11 +59,13 @@ function initializeSupabase() {
         // Supabaseクライアントの初期化
         if (typeof supabase !== 'undefined') {
             supabaseClient = supabase.createClient(CONFIG.SUPABASE.URL, CONFIG.SUPABASE.ANON_KEY);
+            window.supabaseClient = supabaseClient;
             console.log('Supabase client initialized');
             
             // SupabaseQueriesインスタンスの作成
             if (typeof SupabaseQueries !== 'undefined') {
                 supabaseQueries = new SupabaseQueries(supabaseClient);
+                window.supabaseQueries = supabaseQueries;
                 console.log('SupabaseQueries initialized');
             } else {
                 console.warn('SupabaseQueries class not found');
@@ -1071,12 +1073,6 @@ async function sendNotification() {
 // 実際の通知送信処理（GAS + FCM）
 async function sendPushNotification(data) {
     try {
-        if (CONFIG.APP.DEBUG) {
-            // デバッグモード
-            console.log('Debug: Sending notification:', data);
-            return { success: true, recipients: 150, historyId: 'debug-' + Date.now() };
-        }
-        
         // 通知データの準備
         const notificationData = {
             templateKey: getTemplateKeyFromData(data),
@@ -1089,7 +1085,7 @@ async function sendPushNotification(data) {
             targetType: data.target || 'all',
             targetCriteria: getTargetCriteria(data.target),
             adminEmail: currentUser?.email || 'admin@school.ac.jp',
-            adminPassword: 'admin' // 実際の運用では適切な認証を実装
+            adminPassword: 'admin' // TODO: 実運用の認証に置換
         };
         
         // 通知送信の再試行ロジック
@@ -1194,11 +1190,39 @@ async function sendNewsNotification(title, content) {
 
 // データ保存処理（デモ）
 async function saveNewsData(data) {
-    if (CONFIG.APP.DEBUG) {
-        console.log('Debug: Saving news:', data);
-        return { success: true };
-    } else {
-        return await apiClient.sendRequest('saveNews', data);
+    try {
+        if (!window.supabaseClient) {
+            throw new Error('Supabase client not initialized');
+        }
+        const isEdit = !!data.id;
+        const payload = {
+            title: data.title,
+            category: data.category,
+            content: data.content,
+            is_published: true,
+            date: new Date().toISOString()
+        };
+        let result;
+        if (isEdit) {
+            result = await window.supabaseClient
+                .from('news')
+                .update(payload)
+                .eq('id', data.id)
+                .select();
+        } else {
+            result = await window.supabaseClient
+                .from('news')
+                .insert([payload])
+                .select();
+        }
+        if (result.error) {
+            console.error('Supabase news save error:', result.error);
+            return { success: false, error: result.error.message };
+        }
+        return { success: true, data: result.data?.[0] || null };
+    } catch (e) {
+        console.error('saveNewsData error:', e);
+        return { success: false, error: e.message };
     }
 }
 

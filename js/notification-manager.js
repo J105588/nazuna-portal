@@ -5,7 +5,7 @@ class NotificationManager {
         this.isSupported = 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window;
         this.registration = null;
         this.fcmToken = null;
-        this.vapidPublicKey = CONFIG.VAPID_KEY; // Firebase Consoleから取得したVAPIDキー
+        this.vapidPublicKey = (window.vapidKey || (CONFIG.FIREBASE && CONFIG.FIREBASE.VAPID_KEY)) || null; // Firebase Consoleから取得したVAPIDキー
         this.gasEndpoint = CONFIG.GAS_URL; // GASのWebAppエンドポイント
         
         // iOS PWA検出
@@ -267,17 +267,17 @@ class NotificationManager {
                 // Firebase SDK使用時
                 const messaging = firebase.messaging();
                 
-                // VAPIDキーをgetToken()のオプションで指定（usePublicVapidKeyは非推奨）
+                // ServiceWorker登録を取得して getToken に渡す
+                const swReg = await navigator.serviceWorker.getRegistration('./');
                 const tokenOptions = this.vapidPublicKey ? { vapidKey: this.vapidPublicKey } : {};
+                if (swReg) {
+                    tokenOptions.serviceWorkerRegistration = swReg;
+                }
                 this.fcmToken = await messaging.getToken(tokenOptions);
                 console.log('FCM token obtained:', this.fcmToken);
                 
-                // トークン更新の監視
-                messaging.onTokenRefresh(async () => {
-                    const tokenOptions = this.vapidPublicKey ? { vapidKey: this.vapidPublicKey } : {};
-                    this.fcmToken = await messaging.getToken(tokenOptions);
-                    await this.registerDevice();
-                });
+                // Firebase v9 compatでは onTokenRefresh は提供されないため、
+                // SW の更新時や許可変更時に再取得する実装は別途行う
                 
                 // フォアグラウンドメッセージの処理
                 messaging.onMessage((payload) => {
@@ -356,7 +356,13 @@ class NotificationManager {
             });
             
             if (!result.success) {
-                throw new Error(result.error || 'Device registration failed');
+                const errMsg = String(result.error || '');
+                // 重複トークン（ユニーク制約違反）は成功扱い
+                if (errMsg.includes('duplicate key value') || errMsg.includes('23505')) {
+                    console.log('Device already registered for this token. Treating as success.');
+                } else {
+                    throw new Error(result.error || 'Device registration failed');
+                }
             }
             
             console.log('Device registered successfully:', result.data);
@@ -368,6 +374,16 @@ class NotificationManager {
             return result.data;
             
         } catch (error) {
+            // GAS 側からのJSONPエラー（例: 409/23505 重複トークン）はここに来る
+            const msg = String(error && (error.message || error))
+                .toLowerCase();
+            if (msg.includes('duplicate key value') || msg.includes('23505') || msg.includes('409')) {
+                console.log('Device already registered (duplicate token). Treating as success.');
+                // ローカル保存のみ行い、成功として扱う
+                localStorage.setItem('fcm-token', this.fcmToken || localStorage.getItem('fcm-token') || '');
+                localStorage.setItem('device-registered', new Date().toISOString());
+                return { alreadyRegistered: true };
+            }
             console.error('Error registering device:', error);
             throw error;
         }
