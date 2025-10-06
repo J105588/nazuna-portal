@@ -60,7 +60,11 @@ class PWAUpdater {
     }
 
     handleControllerChange() {
-        // ページをリロードしてアップデートを適用
+        // 待機中SWが存在しない場合はリロードしない（無限更新防止）
+        if (!this.registration || !this.registration.waiting) {
+            console.log('Controller changed but no waiting SW; skipping reload');
+            return;
+        }
         if (this.updateAvailable) {
             console.log('Reloading page for update');
             window.location.reload();

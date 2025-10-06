@@ -1,4 +1,4 @@
-const CACHE_NAME = 'nazuna-portal-v10';
+const CACHE_NAME = 'nazuna-portal-v11';
 const urlsToCache = [
   './',
   './css/style.css',
@@ -61,15 +61,18 @@ self.addEventListener('activate', event => {
   const cacheWhitelist = [CACHE_NAME];
   
   event.waitUntil(
-    caches.keys().then(cacheNames => {
-      return Promise.all(
+    (async () => {
+      const cacheNames = await caches.keys();
+      await Promise.all(
         cacheNames.map(cacheName => {
           if (cacheWhitelist.indexOf(cacheName) === -1) {
             return caches.delete(cacheName);
           }
         })
       );
-    })
+      // 直ちにクライアントを制御して古いSWによるループを防止
+      await self.clients.claim();
+    })()
   );
 });
 
