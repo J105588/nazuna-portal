@@ -19,7 +19,7 @@ firebase.initializeApp(firebaseConfig);
 // Firebase Messaging初期化
 const messaging = firebase.messaging();
 
-// iOS対応: 通知許可の確認
+// iOS対応: 通知許可の確認（カスタムメッセージ対応版）
 self.addEventListener('push', function(event) {
     console.log('Push event received:', event);
     
@@ -27,24 +27,27 @@ self.addEventListener('push', function(event) {
         const data = event.data.json();
         console.log('Push data:', data);
         
+        // カスタムメッセージのデータを優先使用
         const options = {
-            body: data.body || 'お知らせがあります',
+            body: data.body || data.message || 'お知らせがあります',
             icon: data.icon || 'https://raw.githubusercontent.com/J105588/nazuna-portal/main/images/icon-192x192.png',
-            badge: '/images/badge-72x72.png',
-            tag: data.tag || 'general',
+            badge: data.badge || '/images/badge-72x72.png',
+            tag: data.tag || data.category || 'general',
             data: {
-                url: data.url || '/',
+                url: data.url || data.action_url || '/',
                 category: data.category || 'general',
-                timestamp: Date.now()
+                timestamp: data.timestamp || Date.now(),
+                originalData: data
             },
-            actions: [
+            actions: data.actions || [
                 { action: 'view', title: '詳細を見る' },
                 { action: 'dismiss', title: '閉じる' }
             ],
             requireInteraction: data.requireInteraction || false,
-            silent: false,
-            vibrate: [200, 100, 200],
-            timestamp: Date.now()
+            silent: data.silent || false,
+            vibrate: data.vibrate || [200, 100, 200],
+            renotify: data.renotify || false,
+            timestamp: data.timestamp || Date.now()
         };
         
         event.waitUntil(

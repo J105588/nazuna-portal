@@ -1359,6 +1359,252 @@ body {
     border-color: #2980b9;
 }
 
+/* PWAアップデートモジュール */
+.pwa-update-module {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    background: var(--surface-color);
+    border-radius: 1rem;
+    box-shadow: var(--shadow-xl);
+    border: 1px solid var(--border-color);
+    z-index: 1000;
+    max-width: 400px;
+    width: 90%;
+    transform: translateX(100%);
+    transition: transform 0.3s ease;
+}
+
+.pwa-update-module.pwa-update-module-show {
+    transform: translateX(0);
+}
+
+.pwa-update-module-content {
+    padding: 1.5rem;
+}
+
+.pwa-update-module-header {
+    display: flex;
+    align-items: center;
+    margin-bottom: 1rem;
+    gap: 1rem;
+}
+
+.pwa-update-module-icon {
+    color: var(--secondary-color);
+    font-size: 1.5rem;
+}
+
+.pwa-update-module-title {
+    flex: 1;
+}
+
+.pwa-update-module-title h3 {
+    margin: 0 0 0.25rem;
+    color: var(--primary-color);
+    font-size: 1.1rem;
+}
+
+.pwa-update-module-title p {
+    margin: 0;
+    color: var(--text-light);
+    font-size: 0.9rem;
+}
+
+.pwa-update-module-close {
+    background: none;
+    border: none;
+    color: var(--text-light);
+    cursor: pointer;
+    padding: 0.5rem;
+    border-radius: 0.5rem;
+    transition: background-color 0.3s ease;
+}
+
+.pwa-update-module-close:hover {
+    background: var(--background-color);
+}
+
+.pwa-update-module-body {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+
+.pwa-update-module-info {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.pwa-update-module-item {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    color: var(--text-color);
+    font-size: 0.9rem;
+}
+
+.pwa-update-module-item i {
+    color: var(--secondary-color);
+    width: 1rem;
+}
+
+.pwa-update-module-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.pwa-update-module-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    padding: 0.75rem 1rem;
+    border: 2px solid var(--border-color);
+    background: var(--surface-color);
+    color: var(--text-color);
+    border-radius: 0.5rem;
+    cursor: pointer;
+    font-weight: 500;
+    transition: all 0.3s ease;
+    text-decoration: none;
+}
+
+.pwa-update-module-btn:hover {
+    background: var(--background-color);
+    border-color: var(--secondary-color);
+}
+
+.pwa-update-module-btn-primary {
+    background: var(--secondary-color);
+    color: white;
+    border-color: var(--secondary-color);
+}
+
+.pwa-update-module-btn-primary:hover {
+    background: #2980b9;
+    border-color: #2980b9;
+}
+
+/* PWAアップデート詳細モーダル */
+.pwa-update-details {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 2000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.pwa-update-details.pwa-update-details-show {
+    opacity: 1;
+}
+
+.pwa-update-details-content {
+    background: var(--surface-color);
+    border-radius: 1rem;
+    box-shadow: var(--shadow-xl);
+    border: 1px solid var(--border-color);
+    max-width: 600px;
+    width: 90%;
+    max-height: 80vh;
+    overflow-y: auto;
+}
+
+.pwa-update-details-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1.5rem;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.pwa-update-details-header h3 {
+    margin: 0;
+    color: var(--primary-color);
+}
+
+.pwa-update-details-close {
+    background: none;
+    border: none;
+    color: var(--text-light);
+    cursor: pointer;
+    padding: 0.5rem;
+    border-radius: 0.5rem;
+    transition: background-color 0.3s ease;
+}
+
+.pwa-update-details-close:hover {
+    background: var(--background-color);
+}
+
+.pwa-update-details-body {
+    padding: 1.5rem;
+}
+
+.pwa-update-details-section {
+    margin-bottom: 2rem;
+}
+
+.pwa-update-details-section h4 {
+    margin: 0 0 1rem;
+    color: var(--primary-color);
+    font-size: 1rem;
+}
+
+.pwa-update-details-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.75rem 0;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.pwa-update-details-item:last-child {
+    border-bottom: none;
+}
+
+.status-active {
+    color: #27ae60;
+    font-weight: 500;
+}
+
+.status-inactive {
+    color: #e74c3c;
+    font-weight: 500;
+}
+
+.pwa-update-details-cache {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.pwa-update-details-cache-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.5rem;
+    background: var(--background-color);
+    border-radius: 0.5rem;
+    font-size: 0.9rem;
+}
+
+.pwa-update-details-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    margin-top: 2rem;
+}
+
 /* PWAアップデートローディング */
 .pwa-update-loading {
     position: fixed;

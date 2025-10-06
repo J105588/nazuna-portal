@@ -679,7 +679,7 @@ function unregisterDevice(data) {
   }
 }
 
-// 通知送信
+// 通知送信（カスタムメッセージ対応版）
 function sendNotification(data) {
   try {
     // URLパラメータまたはJSONボディからデータを取得
@@ -689,31 +689,66 @@ function sendNotification(data) {
     const targetCriteria = data.targetCriteria || data.parameter?.targetCriteria || {};
     const adminEmail = data.adminEmail || data.parameter?.adminEmail;
     
-    // 通知テンプレートを取得
-    var template = getNotificationTemplate(templateKey);
-    if (!template) {
-      // フォールバック: テンプレート未登録でも送信可能にする
-      template = {
-        id: null,
-        title_template: '{{title}}',
-        body_template: '{{message}}',
-        icon_url: '',
-        image_url: '',
-        badge_url: '/images/badge-72x72.png',
-        action_url: '/news.html',
-        category: 'general',
-        priority: 1,
-        url_params: [],
-        append_params: false,
-        actions: []
+    // カスタムメッセージの直接送信を優先
+    let message;
+    if (templateData && templateData.title && templateData.message) {
+      // カスタムメッセージを直接使用（テンプレート不要）
+      message = {
+        title: templateData.title,
+        body: templateData.message,
+        icon: templateData.icon || 'https://raw.githubusercontent.com/J105588/nazuna-portal/main/images/icon-192x192.png',
+        image: templateData.image || '',
+        badge: templateData.badge || '/images/badge-72x72.png',
+        action_url: templateData.url || '/news.html',
+        category: templateData.category || 'general',
+        priority: parseInt(templateData.priority || 1),
+        actions: templateData.actions || [
+          { action: 'view', title: '詳細を見る' },
+          { action: 'dismiss', title: '閉じる' }
+        ],
+        sound: templateData.sound || 'default',
+        vibrate: templateData.vibrate || [200, 100, 200],
+        requireInteraction: templateData.requireInteraction || false,
+        renotify: templateData.renotify || false,
+        silent: templateData.silent || false,
+        timestamp: Date.now(),
+        ttl: templateData.ttl || 86400,
+        color: templateData.color || '#4285F4',
+        channelId: templateData.channelId || 'default',
+        data: {
+          url: templateData.url || '/news.html',
+          category: templateData.category || 'general',
+          timestamp: Date.now(),
+          originalData: templateData
+        }
       };
+    } else {
+      // テンプレートベースの処理（後方互換性）
+      var template = getNotificationTemplate(templateKey);
+      if (!template) {
+        // フォールバック: テンプレート未登録でも送信可能にする
+        template = {
+          id: null,
+          title_template: '{{title}}',
+          body_template: '{{message}}',
+          icon_url: '',
+          image_url: '',
+          badge_url: '/images/badge-72x72.png',
+          action_url: '/news.html',
+          category: 'general',
+          priority: 1,
+          url_params: [],
+          append_params: false,
+          actions: []
+        };
+      }
+      
+      // テンプレートを使用してメッセージを生成
+      message = generateMessage(template, templateData, {
+        customTitle: templateData.title,
+        customBody: templateData.message
+      });
     }
-    
-    // カスタム入力値を優先してメッセージを生成
-    const message = generateMessage(template, templateData, {
-      customTitle: templateData.title,
-      customBody: templateData.message
-    });
     
     // 対象デバイスを取得
     const devices = getTargetDevices(targetType, targetCriteria);
@@ -948,6 +983,25 @@ function sendFCMMessage(message) {
       image: message.image || message.icon
     };
     
+    // カスタムデータをFCMに渡すための設定
+    const customData = {
+      title: message.title,
+      body: message.body,
+      message: message.body,
+      icon: message.icon,
+      badge: message.badge,
+      url: message.action_url,
+      category: message.category,
+      tag: message.category,
+      requireInteraction: message.requireInteraction,
+      actions: JSON.stringify(message.actions || []),
+      vibrate: JSON.stringify(message.vibrate || [200, 100, 200]),
+      silent: message.silent,
+      renotify: message.renotify,
+      timestamp: message.timestamp,
+      originalData: JSON.stringify(message.data || {})
+    };
+    
     // プラットフォーム別の設定を準備
     const webpushConfig = {
       headers: {
@@ -1030,17 +1084,17 @@ function sendFCMMessage(message) {
       }
     };
     
-    // HTTP v1 API用のメッセージ形式に変換
+    // HTTP v1 API用のメッセージ形式に変換（カスタムデータ対応）
     const v1Message = {
       message: {
         token: message.to,
         notification: notification,
-        data: message.data,
+        data: customData, // カスタムデータを使用
         webpush: webpushConfig,
         apns: apnsConfig,
         android: androidConfig,
         fcm_options: {
-          analytics_label: message.data.category || 'notification'
+          analytics_label: message.category || 'notification'
         }
       }
     };

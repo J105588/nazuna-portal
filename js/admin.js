@@ -243,6 +243,19 @@ function setupEventListeners() {
     // ログアウト
     logoutBtn.addEventListener('click', handleLogout);
     
+    // PWA更新ボタン
+    const pwaUpdateBtn = document.getElementById('pwa-update-btn');
+    if (pwaUpdateBtn) {
+        pwaUpdateBtn.addEventListener('click', () => {
+            if (window.showPWAUpdateModule) {
+                window.showPWAUpdateModule();
+            } else {
+                console.warn('PWA update module not available');
+                alert('PWA更新モジュールが利用できません。ページを再読み込みしてください。');
+            }
+        });
+    }
+    
     // メニューナビゲーション
     menuItems.forEach(item => {
         item.addEventListener('click', (e) => {
@@ -1210,17 +1223,25 @@ async function sendNotification() {
     }
 }
 
-// 実際の通知送信処理（GAS + FCM）
+// 実際の通知送信処理（GAS + FCM）- カスタムメッセージ対応版
 async function sendPushNotification(data) {
     try {
-        // 通知データの準備
+        // カスタムメッセージを直接送信するためのデータ準備
         const notificationData = {
-            templateKey: getTemplateKeyFromData(data),
+            templateKey: '', // テンプレートを使用しない
             templateData: {
                 title: data.title,
-                summary: data.message.substring(0, 100),
                 message: data.message,
-                url: getNotificationUrl(data)
+                url: getNotificationUrl(data),
+                category: getCategoryFromTitle(data.title),
+                priority: getPriorityFromTitle(data.title),
+                icon: 'https://raw.githubusercontent.com/J105588/nazuna-portal/main/images/icon-192x192.png',
+                badge: '/images/badge-72x72.png',
+                requireInteraction: data.title.includes('緊急') || data.title.includes('重要'),
+                actions: [
+                    { action: 'view', title: '詳細を見る' },
+                    { action: 'dismiss', title: '閉じる' }
+                ]
             },
             targetType: data.target || 'all',
             targetCriteria: getTargetCriteria(data.target),
@@ -1300,7 +1321,7 @@ async function sendPushNotification(data) {
     }
 }
 
-// 通知タイプからテンプレートキーを取得
+// 通知タイプからテンプレートキーを取得（後方互換性のため残す）
 function getTemplateKeyFromData(data) {
     // 明示指定があればそれを優先
     if (data && data.templateKey) return data.templateKey;
@@ -1309,6 +1330,24 @@ function getTemplateKeyFromData(data) {
     if (title.includes('イベント') || title.includes('行事')) return 'event_reminder';
     if (title.includes('緊急') || title.includes('重要')) return 'news_published';
     return 'news_published';
+}
+
+// タイトルからカテゴリを判定
+function getCategoryFromTitle(title) {
+    const lowerTitle = (title || '').toLowerCase();
+    if (lowerTitle.includes('緊急') || lowerTitle.includes('重要')) return 'urgent';
+    if (lowerTitle.includes('アンケート')) return 'survey';
+    if (lowerTitle.includes('イベント') || lowerTitle.includes('行事')) return 'event';
+    if (lowerTitle.includes('お知らせ') || lowerTitle.includes('ニュース')) return 'news';
+    return 'general';
+}
+
+// タイトルから優先度を判定
+function getPriorityFromTitle(title) {
+    const lowerTitle = (title || '').toLowerCase();
+    if (lowerTitle.includes('緊急')) return 3; // 最高優先度
+    if (lowerTitle.includes('重要')) return 2; // 高優先度
+    return 1; // 通常優先度
 }
 
 // 通知URLを生成

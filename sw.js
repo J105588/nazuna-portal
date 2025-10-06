@@ -1,4 +1,4 @@
-const CACHE_NAME = 'nazuna-portal-v9';
+const CACHE_NAME = 'nazuna-portal-v10';
 const urlsToCache = [
   './',
   './css/style.css',
@@ -73,7 +73,7 @@ self.addEventListener('activate', event => {
   );
 });
 
-// プッシュ通知の受信
+// プッシュ通知の受信（カスタムメッセージ対応版）
 self.addEventListener('push', event => {
   console.log('Push message received:', event);
   
@@ -90,15 +90,31 @@ self.addEventListener('push', event => {
   if (event.data) {
     try {
       const data = event.data.json();
+      console.log('Parsed push data:', data);
+      
+      // カスタムメッセージのデータを優先使用
       notificationData = {
         title: data.title || notificationData.title,
         body: data.body || data.message || notificationData.body,
         icon: data.icon || notificationData.icon,
         badge: data.badge || notificationData.badge,
-        url: data.url || notificationData.url,
-        tag: data.tag || notificationData.tag,
+        url: data.url || data.action_url || notificationData.url,
+        tag: data.tag || data.category || notificationData.tag,
         requireInteraction: data.requireInteraction || false,
-        actions: data.actions || []
+        actions: data.actions || [
+          { action: 'view', title: '詳細を見る' },
+          { action: 'dismiss', title: '閉じる' }
+        ],
+        vibrate: data.vibrate || [200, 100, 200],
+        silent: data.silent || false,
+        renotify: data.renotify || false,
+        timestamp: data.timestamp || Date.now(),
+        data: {
+          url: data.url || data.action_url || './',
+          category: data.category || 'general',
+          timestamp: data.timestamp || Date.now(),
+          originalData: data
+        }
       };
     } catch (error) {
       console.error('Error parsing push data:', error);
