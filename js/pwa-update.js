@@ -295,6 +295,8 @@ class PWAUpdater {
                 loadingModal.remove();
             }, 300);
         }
+        // オーバーレイ類を後処理で確実に除去
+        this.cleanupOverlays();
     }
 
     // アップデートエラー表示
@@ -362,12 +364,43 @@ class PWAUpdater {
             
             // 強制リロード（キャッシュを無視）
             console.log('Forcing reload with cache bypass...');
+            // リロード前にオーバーレイ・スクロール制御を解除
+            this.cleanupOverlays();
             window.location.reload(true);
             
         } catch (error) {
             console.error('Error during cache clear and reload:', error);
             // エラーが発生してもリロードは実行
+            this.cleanupOverlays();
             window.location.reload(true);
+        }
+    }
+
+    // 画面上に残りがちなオーバーレイやスクロール制御を除去
+    cleanupOverlays() {
+        try {
+            const selectors = [
+                '.opening-screen',
+                '.modal-overlay',
+                '.sidebar-overlay',
+                '#main-overlay',
+                '.pwa-update-notification',
+                '.pwa-update-loading',
+                '.pwa-update-error',
+                '.pwa-update-module',
+                '.pwa-update-details'
+            ];
+            selectors.forEach(sel => {
+                document.querySelectorAll(sel).forEach(el => {
+                    // アニメーション用クラスを外してから除去
+                    el.classList && el.classList.remove('active', 'show');
+                    if (el.parentElement) el.remove();
+                });
+            });
+            // ボディのスクロールを復帰
+            document.body && (document.body.style.overflow = '');
+        } catch (e) {
+            console.warn('Overlay cleanup warning:', e);
         }
     }
     

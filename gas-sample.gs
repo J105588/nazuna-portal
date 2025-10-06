@@ -985,12 +985,9 @@ function sendFCMMessage(message) {
     // HTTP v1 API用のエンドポイントURLを構築
     const endpoint = `https://fcm.googleapis.com/v1/projects/${config.FIREBASE_PROJECT_ID}/messages:send`;
     
-    // 基本的な通知設定（カスタム値をそのまま使用）
-    const notification = {
-      title: message.title,
-      body: message.body,
-      image: message.image || message.icon
-    };
+    // ブラウザ側のデフォルト描画を避けるため、通知のタイトル/本文はService Workerで表示
+    // HTTP v1の notification フィールドは送らない（データ経由で統一）
+    const notification = undefined;
     
     // カスタムデータをFCMに渡すための設定
     const customData = {
@@ -1016,20 +1013,6 @@ function sendFCMMessage(message) {
       headers: {
         TTL: String(message.time_to_live || 86400),
         Urgency: message.priority === 'high' ? 'high' : 'normal'
-      },
-      notification: {
-        icon: message.icon || 'https://raw.githubusercontent.com/J105588/nazuna-portal/main/images/icon-192x192.png',
-        badge: message.badge || '/images/badge-72x72.png',
-        vibrate: message.vibrate || [200, 100, 200],
-        requireInteraction: message.requireInteraction || message.priority >= 2,
-        actions: message.actions || [
-          { action: 'view', title: '詳細を見る' },
-          { action: 'dismiss', title: '閉じる' }
-        ],
-        tag: (message.data && message.data.category) || message.category || 'general',
-        renotify: message.renotify || false,
-        silent: message.silent || false,
-        timestamp: message.timestamp || Date.now()
       },
       fcm_options: {
         link: (message.action_url || (message.data && message.data.url)) || '/'
@@ -1097,8 +1080,8 @@ function sendFCMMessage(message) {
     const v1Message = {
       message: {
         token: message.to,
-        notification: notification,
-        data: customData, // カスタムデータを使用
+        // notification は送らず、data のみを使用
+        data: customData,
         webpush: webpushConfig,
         apns: apnsConfig,
         android: androidConfig,

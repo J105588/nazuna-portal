@@ -1,4 +1,4 @@
-const CACHE_NAME = 'nazuna-portal-v13';
+const CACHE_NAME = 'nazuna-portal-v14';
 const urlsToCache = [
   './',
   './css/style.css',
@@ -92,40 +92,51 @@ self.addEventListener('push', event => {
   // プッシュデータがある場合は解析
   if (event.data) {
     try {
-      let raw = null;
-      try {
-        raw = event.data.text();
-      } catch (e) {}
-      let data = null;
-      if (raw) {
-        try { data = JSON.parse(raw); } catch (e) { data = { body: raw }; }
-      } else {
-        try { data = event.data.json(); } catch (e) { data = {}; }
-      }
-      console.log('Parsed push data:', data);
-      
-      // カスタムメッセージのデータを優先使用
+      const parseData = () => {
+        try { return event.data.json(); } catch (e) {}
+        try { return JSON.parse(event.data.text()); } catch (e) {}
+        return { body: event.data.text() };
+      };
+      const rawData = parseData();
+      console.log('Parsed push data:', rawData);
+      const d = rawData || {};
+      const fromData = d.data || d; // HTTP v1 data優先
+      const fromNotification = d.notification || {};
+      const title = fromData.title || fromNotification.title || d.title || notificationData.title;
+      const body = fromData.body || fromData.message || fromNotification.body || d.body || notificationData.body;
+      const icon = fromData.icon || fromNotification.icon || notificationData.icon;
+      const badge = fromData.badge || fromNotification.badge || notificationData.badge;
+      const url = fromData.url || fromData.action_url || d.action_url || notificationData.url;
+      const tag = fromData.tag || fromData.category || fromNotification.tag || notificationData.tag;
+      const actions = (() => {
+        const a = fromData.actions || fromNotification.actions;
+        if (!a) return [ { action: 'view', title: '詳細を見る' }, { action: 'dismiss', title: '閉じる' } ];
+        if (typeof a === 'string') { try { return JSON.parse(a); } catch { return notificationData.actions; } }
+        return a;
+      })();
+      const vibrate = fromData.vibrate ? (typeof fromData.vibrate === 'string' ? JSON.parse(fromData.vibrate) : fromData.vibrate) : [200, 100, 200];
+      const requireInteraction = !!fromData.requireInteraction;
+      const renotify = !!fromData.renotify;
+      const silent = !!fromData.silent;
+      const timestamp = fromData.timestamp || Date.now();
       notificationData = {
-        title: data.title || notificationData.title,
-        body: data.body || data.message || notificationData.body,
-        icon: data.icon || notificationData.icon,
-        badge: data.badge || notificationData.badge,
-        url: data.url || data.action_url || notificationData.url,
-        tag: data.tag || data.category || notificationData.tag,
-        requireInteraction: data.requireInteraction || false,
-        actions: data.actions || [
-          { action: 'view', title: '詳細を見る' },
-          { action: 'dismiss', title: '閉じる' }
-        ],
-        vibrate: data.vibrate || [200, 100, 200],
-        silent: data.silent || false,
-        renotify: data.renotify || false,
-        timestamp: data.timestamp || Date.now(),
+        title,
+        body,
+        icon,
+        badge,
+        url,
+        tag,
+        requireInteraction,
+        actions,
+        vibrate,
+        silent,
+        renotify,
+        timestamp,
         data: {
-          url: data.url || data.action_url || './',
-          category: data.category || 'general',
-          timestamp: data.timestamp || Date.now(),
-          originalData: data
+          url,
+          category: fromData.category || 'general',
+          timestamp,
+          originalData: d
         }
       };
     } catch (error) {
