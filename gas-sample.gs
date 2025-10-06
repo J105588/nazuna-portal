@@ -689,47 +689,31 @@ function sendNotification(data) {
     const targetCriteria = data.targetCriteria || data.parameter?.targetCriteria || {};
     const adminEmail = data.adminEmail || data.parameter?.adminEmail;
     
-    // カスタムメッセージ対応（テンプレート不要）
-    var template = null;
-    var message = null;
-    
-    if (templateKey && templateKey.trim() !== '') {
-      // テンプレートキーが指定されている場合はテンプレートを使用
-      template = getNotificationTemplate(templateKey);
-      if (template) {
-        message = generateMessage(template, templateData, {
-          customTitle: templateData.title,
-          customBody: templateData.message
-        });
-      }
-    }
-    
-    // テンプレートが取得できない、またはテンプレートキーが空の場合はカスタムメッセージを使用
-    if (!message) {
-      message = {
-        title: templateData.customTitle || templateData.title || 'お知らせ',
-        body: templateData.customBody || templateData.message || '新しいお知らせがあります',
-        icon: templateData.icon || 'https://raw.githubusercontent.com/J105588/nazuna-portal/main/images/icon-192x192.png',
-        image: templateData.image || '',
-        badge: templateData.badge || '/images/badge-72x72.png',
-        action_url: templateData.url || '/news.html',
-        category: templateData.category || 'custom',
-        priority: parseInt(templateData.priority || 1),
-        actions: templateData.actions || [
-          { action: 'view', title: '詳細を見る' },
-          { action: 'dismiss', title: '閉じる' }
-        ],
-        sound: templateData.sound || 'default',
-        vibrate: templateData.vibrate || [200, 100, 200],
-        requireInteraction: templateData.requireInteraction || false,
-        renotify: templateData.renotify || false,
-        silent: templateData.silent || false,
-        timestamp: Date.now(),
-        ttl: templateData.ttl || 86400,
-        color: templateData.color || '#4285F4',
-        channelId: templateData.channelId || 'default'
+    // 通知テンプレートを取得
+    var template = getNotificationTemplate(templateKey);
+    if (!template) {
+      // フォールバック: テンプレート未登録でも送信可能にする
+      template = {
+        id: null,
+        title_template: '{{title}}',
+        body_template: '{{message}}',
+        icon_url: '',
+        image_url: '',
+        badge_url: '/images/badge-72x72.png',
+        action_url: '/news.html',
+        category: 'general',
+        priority: 1,
+        url_params: [],
+        append_params: false,
+        actions: []
       };
     }
+    
+    // カスタム入力値を優先してメッセージを生成
+    const message = generateMessage(template, templateData, {
+      customTitle: templateData.title,
+      customBody: templateData.message
+    });
     
     // 対象デバイスを取得
     const devices = getTargetDevices(targetType, targetCriteria);
