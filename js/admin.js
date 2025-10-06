@@ -54,17 +54,33 @@ if (typeof APIClient === 'undefined') {
                         return resolve(cached.data);
                     }
                 }
-                const callbackName = 'callback_' + Date.now() + '_' + Math.random().toString(36).substr(2);
-                const timeout = setTimeout(() => { this.cleanup(callbackName); reject(new Error(CONFIG.MESSAGES.ERROR.NETWORK)); }, options.timeout || 10000);
-                window.gasCallbacks = window.gasCallbacks || {};
-                window.gasCallbacks[callbackName] = (data) => {
-                    clearTimeout(timeout);
-                    if (data && data.success && options.useCache) {
-                        this.cache.set(cacheKey, { data, timestamp: Date.now() });
-                    }
-                    if (data && data.success) resolve(data); else reject(new Error((data && data.error) || CONFIG.MESSAGES.ERROR.SERVER));
-                    this.cleanup(callbackName);
-                };
+        const callbackName = 'callback_' + Date.now() + '_' + Math.random().toString(36).substr(2);
+        const timeout = setTimeout(() => { this.cleanup(callbackName); reject(new Error(CONFIG.MESSAGES.ERROR.NETWORK)); }, options.timeout || 10000);
+        
+        // Ensure gasCallbacks object exists and is properly initialized
+        if (!window.gasCallbacks) {
+            window.gasCallbacks = {};
+        }
+        
+        // Create the callback function with proper error handling
+        window.gasCallbacks[callbackName] = (data) => {
+            try {
+                clearTimeout(timeout);
+                if (data && data.success && options.useCache) {
+                    this.cache.set(cacheKey, { data, timestamp: Date.now() });
+                }
+                if (data && data.success) {
+                    resolve(data);
+                } else {
+                    reject(new Error((data && data.error) || CONFIG.MESSAGES.ERROR.SERVER));
+                }
+            } catch (error) {
+                console.error('Callback execution error:', error);
+                reject(new Error('Callback execution failed'));
+            } finally {
+                this.cleanup(callbackName);
+            }
+        };
                 const queryParams = new URLSearchParams({ action, callback: 'gasCallbacks.' + callbackName, timestamp: Date.now(), ...params });
                 const script = document.createElement('script');
                 script.id = 'jsonp_' + callbackName;
@@ -1005,8 +1021,11 @@ async function loadNotificationTemplates() {
 // テンプレート選択変更時にタイトル/本文を下書き反映
 function onTemplateChange() {
     const key = document.getElementById('notification-template')?.value || '';
-    if (!key) return;
-    // 簡易ルール: 既知キーで定型文を挿入（DBに本文があれば本来はそれを使う）
+    if (!key) {
+        // テンプレート未選択時は何もしない（カスタム入力保持）
+        return;
+    }
+    // 簡易ルール: 既知キーで定型文を挿入（空のフィールドのみ）
     const titleEl = document.getElementById('notification-title');
     const bodyEl = document.getElementById('notification-message');
     if (!titleEl || !bodyEl) return;
@@ -1020,6 +1039,14 @@ function onTemplateChange() {
         if (!titleEl.value) titleEl.value = 'お知らせ公開';
         if (!bodyEl.value) bodyEl.value = '最新のお知らせを公開しました。';
     }
+}
+
+// 通知フォームをクリア
+function clearNotificationForm() {
+    document.getElementById('notification-template').value = '';
+    document.getElementById('notification-title').value = '';
+    document.getElementById('notification-message').value = '';
+    document.getElementById('notification-target').value = 'all';
 }
 
 // フォーラムデータ読み込み
@@ -1165,6 +1192,15 @@ async function sendNotification() {
         return;
     }
     
+    // デバッグ情報を表示
+    console.log('Sending notification with data:', {
+        title,
+        message,
+        target,
+        templateKey,
+        timestamp: new Date().toISOString()
+    });
+    
     const sendBtn = document.getElementById('send-notification-btn');
     sendBtn.disabled = true;
     sendBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 送信中...';
@@ -1202,14 +1238,20 @@ async function sendNotification() {
 // 実際の通知送信処理（GAS + FCM）
 async function sendPushNotification(data) {
     try {
-        // 通知データの準備
+        // カスタムメッセージ用の通知データを準備（テンプレート不要）
         const notificationData = {
-            templateKey: getTemplateKeyFromData(data),
+            // テンプレートキーを空にしてカスタムメッセージを強制
+            templateKey: '', // 空文字列でテンプレートを無効化
             templateData: {
                 title: data.title,
                 summary: data.message.substring(0, 100),
                 message: data.message,
-                url: getNotificationUrl(data)
+                url: getNotificationUrl(data),
+                // カスタム通知用の追加データ
+                customTitle: data.title,
+                customBody: data.message,
+                category: 'custom',
+                priority: 1
             },
             targetType: data.target || 'all',
             targetCriteria: getTargetCriteria(data.target),
@@ -1217,67 +1259,62 @@ async function sendPushNotification(data) {
             adminPassword: 'admin' // TODO: 実運用の認証に置換
         };
         
-        // 通知送信の再試行ロジック
+        // 通知送信の再試行ロジック（改善版）
         let retries = 3;
         let result = null;
+        let lastError = null;
         
         while (retries > 0) {
             try {
+                console.log(`Sending notification (${4 - retries}/3 attempts)...`);
+                
                 // GASに通知送信要求（JSONP使用）
                 result = await apiClient.sendRequest('sendNotification', notificationData, {
-                    timeout: 15000 // タイムアウトを15秒に設定
+                    timeout: 20000, // タイムアウトを20秒に延長
+                    useCache: false // キャッシュを無効化して最新データを取得
                 });
                 
-                if (result.success) {
+                if (result && result.success) {
+                    console.log('Notification sent successfully:', result);
                     break; // 成功したらループを抜ける
                 } else {
-                    console.warn(`Notification sending failed (${retries} retries left):`, result.error);
-                    // テンプレート未登録エラー時はテンプレートなしで再試行
-                    const msg = String(result.error || '').toLowerCase();
-                    if (msg.includes('template not found')) {
-                        console.warn('Template not found. Retrying without templateKey...');
-                        const fallbackData = { ...notificationData, templateKey: '' };
-                        try {
-                            const fallback = await apiClient.sendRequest('sendNotification', fallbackData, { timeout: 15000 });
-                            if (fallback && fallback.success) {
-                                result = fallback;
-                                break;
-                            }
-                        } catch (e) {
-                            // 続行して通常のリトライへ
+                    lastError = result?.error || 'Unknown error';
+                    console.warn(`Notification sending failed (${retries - 1} retries left):`, lastError);
+                    
+                    // ネットワークエラーの場合は即座にリトライ
+                    const errorMsg = String(lastError).toLowerCase();
+                    if (errorMsg.includes('network') || errorMsg.includes('timeout') || errorMsg.includes('connection')) {
+                        console.log('Network error detected, retrying immediately...');
+                    } else {
+                        // その他のエラーは少し待機してからリトライ
+                        if (retries > 1) {
+                            await new Promise(resolve => setTimeout(resolve, 2000)); // 2秒待機
                         }
-                    }
-                    retries--;
-                    if (retries > 0) {
-                        await new Promise(resolve => setTimeout(resolve, 1000)); // 1秒待機
                     }
                 }
             } catch (err) {
-                console.warn(`Notification request error (${retries} retries left):`, err);
-                // テンプレート未登録が明確な場合もフォールバックを試す
-                const emsg = String(err && (err.message || err)).toLowerCase();
-                if (emsg.includes('template not found')) {
-                    console.warn('Template not found (exception). Retrying without templateKey...');
-                    const fallbackData = { ...notificationData, templateKey: '' };
-                    try {
-                        const fallback = await apiClient.sendRequest('sendNotification', fallbackData, { timeout: 15000 });
-                        if (fallback && fallback.success) {
-                            result = fallback;
-                            break;
-                        }
-                    } catch (e2) {
-                        // fall through to retry countdown
+                lastError = err.message || err.toString();
+                console.warn(`Notification request error (${retries - 1} retries left):`, lastError);
+                
+                // ネットワークエラーの場合は即座にリトライ
+                const errorMsg = String(lastError).toLowerCase();
+                if (errorMsg.includes('network') || errorMsg.includes('timeout') || errorMsg.includes('connection')) {
+                    console.log('Network error detected, retrying immediately...');
+                } else {
+                    // その他のエラーは少し待機してからリトライ
+                    if (retries > 1) {
+                        await new Promise(resolve => setTimeout(resolve, 2000)); // 2秒待機
                     }
                 }
-                retries--;
-                if (retries > 0) {
-                    await new Promise(resolve => setTimeout(resolve, 1000)); // 1秒待機
-                }
             }
+            
+            retries--;
         }
         
         if (!result || !result.success) {
-            throw new Error((result?.error) || 'Notification sending failed after retries');
+            const errorMessage = lastError || result?.error || 'Notification sending failed after retries';
+            console.error('Final notification failure:', errorMessage);
+            throw new Error(errorMessage);
         }
         
         console.log('Notification sent successfully:', result.data);
@@ -1748,71 +1785,71 @@ function removeQuestion(button) {
 // ハンバーガーメニューの初期化
 function initializeHamburgerMenu() {
     const hamburgerMenu = document.getElementById('hamburger-menu');
-    const sidebar = document.getElementById('sidebar');
-    const sidebarClose = document.getElementById('sidebar-close');
+    const adminSidebar = document.getElementById('admin-sidebar');
+    const adminSidebarClose = document.getElementById('admin-sidebar-close');
     const mainOverlay = document.getElementById('main-overlay');
     
     if (hamburgerMenu) {
         hamburgerMenu.addEventListener('click', function() {
-            toggleSidebar();
+            toggleAdminSidebar();
         });
     }
     
-    if (sidebarClose) {
-        sidebarClose.addEventListener('click', function() {
-            closeSidebar();
+    if (adminSidebarClose) {
+        adminSidebarClose.addEventListener('click', function() {
+            closeAdminSidebar();
         });
     }
     
     if (mainOverlay) {
         mainOverlay.addEventListener('click', function() {
-            closeSidebar();
+            closeAdminSidebar();
         });
     }
     
     // ESCキーでサイドバーを閉じる
     document.addEventListener('keydown', function(e) {
         if (e.key === 'Escape') {
-            closeSidebar();
+            closeAdminSidebar();
         }
     });
 }
 
-// サイドバーの開閉
-function toggleSidebar() {
-    const sidebar = document.getElementById('sidebar');
+// 管理画面サイドバーの開閉
+function toggleAdminSidebar() {
+    const adminSidebar = document.getElementById('admin-sidebar');
     const hamburgerMenu = document.getElementById('hamburger-menu');
     const mainOverlay = document.getElementById('main-overlay');
     
-    if (sidebar && hamburgerMenu) {
-        const isOpen = sidebar.classList.contains('active');
+    if (adminSidebar && hamburgerMenu) {
+        const isOpen = adminSidebar.classList.contains('active');
         
         if (isOpen) {
-            closeSidebar();
+            closeAdminSidebar();
         } else {
-            openSidebar();
+            openAdminSidebar();
         }
     }
 }
 
-function openSidebar() {
-    const sidebar = document.getElementById('sidebar');
+function openAdminSidebar() {
+    const adminSidebar = document.getElementById('admin-sidebar');
     const hamburgerMenu = document.getElementById('hamburger-menu');
     const mainOverlay = document.getElementById('main-overlay');
     
-    if (sidebar) sidebar.classList.add('active');
+    if (adminSidebar) adminSidebar.classList.add('active');
     if (hamburgerMenu) hamburgerMenu.classList.add('active');
     if (mainOverlay) mainOverlay.classList.add('active');
     
     document.body.style.overflow = 'hidden';
 }
 
-function closeSidebar() {
-    const sidebar = document.getElementById('sidebar');
+function closeAdminSidebar() {
+    const adminSidebar = document.getElementById('admin-sidebar');
     const hamburgerMenu = document.getElementById('hamburger-menu');
     const mainOverlay = document.getElementById('main-overlay');
     
-    if (sidebar) sidebar.classList.remove('active');
+    if (adminSidebar) adminSidebar.classList.remove('active');
     if (hamburgerMenu) hamburgerMenu.classList.remove('active');
     if (mainOverlay) mainOverlay.classList.remove('active');
     
@@ -1898,9 +1935,52 @@ if (CONFIG.APP.DEBUG) {
         // 活動実績管理機能
         loadAchievementsData,
         showAchievementModal,
-        clearAchievementFilters
+        clearAchievementFilters,
+        // サイドバー管理機能
+        toggleAdminSidebar,
+        openAdminSidebar,
+        closeAdminSidebar,
+        // 通知テスト機能
+        testNotification: async function() {
+            console.log('Testing notification system...');
+            try {
+                const result = await sendPushNotification({
+                    title: 'テスト通知',
+                    message: 'これはテスト通知です。システムが正常に動作しています。',
+                    target: 'all'
+                });
+                console.log('Test notification result:', result);
+                return result;
+            } catch (error) {
+                console.error('Test notification failed:', error);
+                throw error;
+            }
+        },
+        // PWA更新機能
+        checkPWAUpdates: function() {
+            if (window.checkForPWAUpdates) {
+                window.checkForPWAUpdates();
+                console.log('PWA update check initiated');
+            } else {
+                console.warn('PWA update functionality not available');
+            }
+        },
+        getPWAStatus: function() {
+            if (window.pwaUpdater) {
+                const status = window.pwaUpdater.getPWAStatus();
+                console.log('PWA Status:', status);
+                return status;
+            } else {
+                console.warn('PWA updater not available');
+                return null;
+            }
+        }
     };
     console.log('Admin debug functions available (login disabled for security)');
+    console.log('Available functions:');
+    console.log('- adminDebug.testNotification() - Test notification system');
+    console.log('- adminDebug.checkPWAUpdates() - Check for PWA updates');
+    console.log('- adminDebug.getPWAStatus() - Get PWA status');
 }
 
 // ========================================

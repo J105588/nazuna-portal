@@ -10,6 +10,8 @@ class PWAUpdater {
     init() {
         if ('serviceWorker' in navigator) {
             this.registerServiceWorker();
+            // ステータス表示を追加
+            this.showUpdateStatus();
         } else {
             console.log('Service Worker not supported');
         }
@@ -50,10 +52,12 @@ class PWAUpdater {
                     console.log('App update available');
                     this.updateAvailable = true;
                     this.showUpdateNotification();
+                    this.updateStatusDisplay();
                 } else {
                     // 初回インストール
                     console.log('App cached for offline use');
                     this.showCachedNotification();
+                    this.updateStatusDisplay();
                 }
             }
         });
@@ -69,22 +73,25 @@ class PWAUpdater {
 
     showUpdateNotification() {
         const notification = this.createNotification(
-            'アップデートが利用可能です',
-            'アプリの新しいバージョンが利用可能です。今すぐアップデートしますか？',
+            '🚀 新しいバージョンが利用可能です',
+            'アプリの新しいバージョンが利用可能です。最新の機能と改善をお楽しみください。',
             [
                 {
-                    text: 'アップデート',
+                    text: '今すぐアップデート',
                     action: () => this.applyUpdate(),
                     primary: true
                 },
                 {
-                    text: '後で',
-                    action: () => this.dismissNotification()
+                    text: '後で通知',
+                    action: () => this.scheduleUpdateReminder()
                 }
             ]
         );
 
         this.showNotification(notification);
+        
+        // 更新通知をより目立たせるため、追加の視覚的効果を適用
+        this.addUpdateNotificationEffects(notification);
     }
 
     showCachedNotification() {
@@ -297,6 +304,114 @@ class PWAUpdater {
         setTimeout(() => {
             errorModal.classList.add('pwa-update-error-show');
         }, 100);
+    }
+
+    // 更新通知の視覚的効果を追加
+    addUpdateNotificationEffects(notification) {
+        // パルス効果を追加
+        notification.style.animation = 'pulse 2s infinite';
+        
+        // 点滅効果を追加
+        const icon = notification.querySelector('.pwa-update-icon i');
+        if (icon) {
+            icon.style.animation = 'blink 1.5s infinite';
+        }
+        
+        // 5秒後に自動的に目立たせる
+        setTimeout(() => {
+            notification.classList.add('pwa-update-notification-urgent');
+        }, 5000);
+    }
+
+    // 更新リマインダーをスケジュール
+    scheduleUpdateReminder() {
+        this.dismissNotification();
+        
+        // 10分後にリマインダーを表示
+        setTimeout(() => {
+            if (this.updateAvailable) {
+                this.showUpdateReminder();
+            }
+        }, 10 * 60 * 1000); // 10分
+        
+        // ローカルストレージにリマインダー情報を保存
+        localStorage.setItem('pwa-update-reminder', JSON.stringify({
+            scheduled: true,
+            timestamp: Date.now(),
+            reminderTime: Date.now() + (10 * 60 * 1000)
+        }));
+    }
+
+    // 更新リマインダーを表示
+    showUpdateReminder() {
+        const notification = this.createNotification(
+            '⏰ アップデートのお知らせ',
+            'まだアップデートしていません。最新の機能をお見逃しなく！',
+            [
+                {
+                    text: '今すぐアップデート',
+                    action: () => this.applyUpdate(),
+                    primary: true
+                },
+                {
+                    text: 'もう少し待つ',
+                    action: () => this.scheduleUpdateReminder()
+                }
+            ]
+        );
+
+        this.showNotification(notification);
+        this.addUpdateNotificationEffects(notification);
+    }
+
+    // 更新状況を表示するステータス表示を追加
+    showUpdateStatus() {
+        const statusContainer = document.createElement('div');
+        statusContainer.className = 'pwa-update-status';
+        statusContainer.innerHTML = `
+            <div class="pwa-update-status-content">
+                <div class="pwa-update-status-icon">
+                    <i class="fas fa-sync-alt"></i>
+                </div>
+                <div class="pwa-update-status-text">
+                    <span class="pwa-update-status-label">更新状況:</span>
+                    <span class="pwa-update-status-value">チェック中...</span>
+                </div>
+                <div class="pwa-update-status-actions">
+                    <button class="pwa-update-status-btn" onclick="window.checkForPWAUpdates()">
+                        <i class="fas fa-refresh"></i>
+                    </button>
+                </div>
+            </div>
+        `;
+        
+        // ヘッダーに追加
+        const header = document.querySelector('header') || document.querySelector('.header');
+        if (header) {
+            header.appendChild(statusContainer);
+        } else {
+            document.body.insertBefore(statusContainer, document.body.firstChild);
+        }
+        
+        // ステータスを更新
+        this.updateStatusDisplay();
+    }
+
+    // ステータス表示を更新
+    updateStatusDisplay() {
+        const statusValue = document.querySelector('.pwa-update-status-value');
+        if (statusValue) {
+            if (this.updateAvailable) {
+                statusValue.textContent = '更新利用可能';
+                statusValue.className = 'pwa-update-status-value pwa-update-status-available';
+            } else if (this.registration) {
+                statusValue.textContent = '最新版';
+                statusValue.className = 'pwa-update-status-value pwa-update-status-current';
+            } else {
+                statusValue.textContent = '未登録';
+                statusValue.className = 'pwa-update-status-value pwa-update-status-error';
+            }
+        }
     }
 
     // PWAの状態を取得

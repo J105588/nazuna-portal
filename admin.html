@@ -18,23 +18,6 @@
     <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-messaging-compat.js"></script>
 </head>
 <body>
-    <!-- サイドバー -->
-    <div class="sidebar" id="sidebar">
-        <div class="sidebar-header">
-            <h3>なずなポータル</h3>
-            <span class="sidebar-close" id="sidebar-close">&times;</span>
-        </div>
-        <nav class="sidebar-nav">
-            <a href="index.html"><i class="fas fa-home"></i> ホーム</a>
-            <a href="news.html"><i class="fas fa-newspaper"></i> お知らせ</a>
-            <a href="council.html"><i class="fas fa-users"></i> 生徒会紹介</a>
-            <a href="clubs.html"><i class="fas fa-futbol"></i> 部活動</a>
-            <a href="forum.html"><i class="fas fa-comments"></i> なずなフォーラム</a>
-            <a href="survey.html"><i class="fas fa-poll"></i> アンケート</a>
-            <a href="admin.html" class="active"><i class="fas fa-cog"></i> 管理画面</a>
-        </nav>
-    </div>
-
     <!-- メインコンテンツオーバーレイ -->
     <div class="main-overlay" id="main-overlay"></div>
 
@@ -95,7 +78,13 @@
         </header>
 
         <!-- サイドバー -->
-        <div class="admin-sidebar">
+        <div class="admin-sidebar" id="admin-sidebar">
+            <div class="sidebar-header">
+                <h3>管理メニュー</h3>
+                <button class="sidebar-close" id="admin-sidebar-close">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
             <nav class="admin-menu">
                 <ul>
                     <li>
@@ -405,10 +394,16 @@
                                 <option value="teachers">教職員のみ</option>
                             </select>
                         </div>
-                        <button class="btn btn-primary" id="send-notification-btn">
-                            <i class="fas fa-paper-plane"></i>
-                            通知を送信
-                        </button>
+                        <div class="form-actions">
+                            <button class="btn btn-primary" id="send-notification-btn">
+                                <i class="fas fa-paper-plane"></i>
+                                通知を送信
+                            </button>
+                            <button type="button" class="btn btn-outline" onclick="clearNotificationForm()">
+                                <i class="fas fa-eraser"></i>
+                                クリア
+                            </button>
+                        </div>
                     </div>
                     <div class="notification-history">
                         <h3>配信履歴</h3>

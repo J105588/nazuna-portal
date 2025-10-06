@@ -1,5 +1,148 @@
 /* 管理画面専用スタイル */
 
+/* レスポンシブ対応 */
+@media (max-width: 768px) {
+    .admin-main {
+        grid-template-columns: 1fr;
+        grid-template-areas: 
+            "header"
+            "content";
+    }
+    
+    .admin-sidebar {
+        position: fixed;
+        top: 0;
+        left: -280px;
+        width: 280px;
+        height: 100vh;
+        background: var(--surface-color);
+        box-shadow: var(--shadow-xl);
+        z-index: 1000;
+        transition: left 0.3s ease;
+        overflow-y: auto;
+    }
+    
+    .admin-sidebar.active {
+        left: 0;
+    }
+    
+    .admin-sidebar .sidebar-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 1rem;
+        border-bottom: 1px solid var(--border-color);
+        background: var(--primary-color);
+        color: white;
+    }
+    
+    .admin-sidebar .sidebar-header h3 {
+        margin: 0;
+        font-size: 1.1rem;
+    }
+    
+    .admin-sidebar .sidebar-close {
+        background: none;
+        border: none;
+        color: white;
+        font-size: 1.2rem;
+        cursor: pointer;
+        padding: 0.5rem;
+    }
+    
+    .admin-content {
+        margin-left: 0;
+        padding: 1rem;
+    }
+    
+    .admin-header {
+        padding: 1rem;
+    }
+    
+    .admin-nav {
+        flex-direction: column;
+        gap: 1rem;
+    }
+    
+    .admin-user {
+        flex-direction: column;
+        gap: 0.5rem;
+        align-items: flex-start;
+    }
+    
+    .section-header {
+        flex-direction: column;
+        gap: 1rem;
+        align-items: flex-start;
+    }
+    
+    .section-controls {
+        width: 100%;
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+    
+    .filter-controls {
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+    
+    .form-actions {
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+    
+    .admin-table-container {
+        overflow-x: auto;
+    }
+    
+    .admin-table {
+        min-width: 600px;
+    }
+    
+    .members-grid {
+        grid-template-columns: 1fr;
+        gap: 1rem;
+    }
+    
+    .notification-panel {
+        flex-direction: column;
+    }
+    
+    .notification-form,
+    .notification-history {
+        width: 100%;
+    }
+}
+
+@media (max-width: 480px) {
+    .login-container {
+        padding: 2rem 1.5rem;
+        margin: 1rem;
+    }
+    
+    .admin-content {
+        padding: 0.5rem;
+    }
+    
+    .admin-header {
+        padding: 0.5rem;
+    }
+    
+    .hamburger-menu {
+        display: block;
+    }
+    
+    .admin-sidebar {
+        width: 100vw;
+        left: -100vw;
+    }
+    
+    .admin-sidebar.active {
+        left: 0;
+    }
+}
+
 /* ログイン画面 */
 .login-screen {
     position: fixed;
