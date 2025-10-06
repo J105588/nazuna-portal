@@ -1,4 +1,4 @@
-const CACHE_NAME = 'nazuna-portal-v11';
+const CACHE_NAME = 'nazuna-portal-v13';
 const urlsToCache = [
   './',
   './css/style.css',
@@ -92,7 +92,16 @@ self.addEventListener('push', event => {
   // プッシュデータがある場合は解析
   if (event.data) {
     try {
-      const data = event.data.json();
+      let raw = null;
+      try {
+        raw = event.data.text();
+      } catch (e) {}
+      let data = null;
+      if (raw) {
+        try { data = JSON.parse(raw); } catch (e) { data = { body: raw }; }
+      } else {
+        try { data = event.data.json(); } catch (e) { data = {}; }
+      }
       console.log('Parsed push data:', data);
       
       // カスタムメッセージのデータを優先使用
@@ -121,7 +130,7 @@ self.addEventListener('push', event => {
       };
     } catch (error) {
       console.error('Error parsing push data:', error);
-      notificationData.body = event.data.text();
+      try { notificationData.body = event.data.text(); } catch (e) {}
     }
   }
   
@@ -137,7 +146,7 @@ self.addEventListener('push', event => {
     data: {
       url: notificationData.url,
       dateOfArrival: Date.now(),
-      originalData: event.data ? event.data.json() : null
+      originalData: notificationData.data?.originalData || null
     }
   };
   

@@ -65,7 +65,23 @@ if (typeof APIClient === 'undefined') {
                     if (data && data.success) resolve(data); else reject(new Error((data && data.error) || CONFIG.MESSAGES.ERROR.SERVER));
                     this.cleanup(callbackName);
                 };
-                const queryParams = new URLSearchParams({ action, callback: 'gasCallbacks.' + callbackName, timestamp: Date.now(), ...params });
+                // オブジェクト型のパラメータはJSON文字列にシリアライズ（JSONPのため）
+                const serializedParams = { action, callback: 'gasCallbacks.' + callbackName, timestamp: Date.now() };
+                Object.keys(params || {}).forEach(key => {
+                    const val = params[key];
+                    if (val !== null && typeof val === 'object') {
+                        try {
+                            serializedParams[key] = JSON.stringify(val);
+                        } catch (e) {
+                            serializedParams[key] = String(val);
+                        }
+                    } else if (typeof val === 'undefined') {
+                        serializedParams[key] = '';
+                    } else {
+                        serializedParams[key] = val;
+                    }
+                });
+                const queryParams = new URLSearchParams(serializedParams);
                 const script = document.createElement('script');
                 script.id = 'jsonp_' + callbackName;
                 script.src = `${this.baseURL}?${queryParams}`;

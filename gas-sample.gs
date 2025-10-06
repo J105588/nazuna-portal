@@ -579,7 +579,7 @@ function registerFCMToken(params) {
       last_used_at: new Date().toISOString()
     };
     
-    const response = supabaseRequest('POST', 'device_registrations', deviceData);
+    const response = supabaseRequest('POST', 'device_registrations?on_conflict=fcm_token', deviceData);
     
     if (response.error) {
       // 既存のトークンの場合は更新
@@ -630,7 +630,7 @@ function registerDevice(data) {
       last_used_at: new Date().toISOString()
     };
     
-    const response = supabaseRequest('POST', 'device_registrations', deviceData);
+    const response = supabaseRequest('POST', 'device_registrations?on_conflict=fcm_token', deviceData);
     
     if (response.error) {
       // 既存のトークンの場合は更新
@@ -684,13 +684,22 @@ function sendNotification(data) {
   try {
     // URLパラメータまたはJSONボディからデータを取得
     const templateKey = data.templateKey || data.parameter?.templateKey;
-    const templateData = data.templateData || data.parameter?.templateData;
+    // JSONPで渡された文字列をオブジェクトに復元
+    let templateData = data.templateData || data.parameter?.templateData;
+    if (typeof templateData === 'string') {
+      try { templateData = JSON.parse(templateData); } catch (e) {}
+    }
     const targetType = data.targetType || data.parameter?.targetType || 'all';
-    const targetCriteria = data.targetCriteria || data.parameter?.targetCriteria || {};
+    let targetCriteria = data.targetCriteria || data.parameter?.targetCriteria || {};
+    if (typeof targetCriteria === 'string') {
+      try { targetCriteria = JSON.parse(targetCriteria); } catch (e) {}
+    }
     const adminEmail = data.adminEmail || data.parameter?.adminEmail;
     
     // カスタムメッセージの直接送信を優先
     let message;
+    // テンプレートが存在しないケース（カスタム送信）に備えて初期化
+    var template = null;
     if (templateData && templateData.title && templateData.message) {
       // カスタムメッセージを直接使用（テンプレート不要）
       message = {
@@ -724,7 +733,7 @@ function sendNotification(data) {
       };
     } else {
       // テンプレートベースの処理（後方互換性）
-      var template = getNotificationTemplate(templateKey);
+      template = getNotificationTemplate(templateKey);
       if (!template) {
         // フォールバック: テンプレート未登録でも送信可能にする
         template = {
@@ -1009,21 +1018,21 @@ function sendFCMMessage(message) {
         Urgency: message.priority === 'high' ? 'high' : 'normal'
       },
       notification: {
-        icon: message.notification.icon || 'https://raw.githubusercontent.com/J105588/nazuna-portal/main/images/icon-192x192.png',
-        badge: message.notification.badge || '/images/badge-72x72.png',
-        vibrate: [200, 100, 200],
+        icon: message.icon || 'https://raw.githubusercontent.com/J105588/nazuna-portal/main/images/icon-192x192.png',
+        badge: message.badge || '/images/badge-72x72.png',
+        vibrate: message.vibrate || [200, 100, 200],
         requireInteraction: message.requireInteraction || message.priority >= 2,
         actions: message.actions || [
           { action: 'view', title: '詳細を見る' },
           { action: 'dismiss', title: '閉じる' }
         ],
-        tag: message.data.category || 'general',
+        tag: (message.data && message.data.category) || message.category || 'general',
         renotify: message.renotify || false,
         silent: message.silent || false,
-        timestamp: Date.now()
+        timestamp: message.timestamp || Date.now()
       },
       fcm_options: {
-        link: message.data.url || '/'
+        link: (message.action_url || (message.data && message.data.url)) || '/'
       }
     };
     
@@ -1362,13 +1371,26 @@ function getTargetDevices(targetType, criteria) {
   query += `&last_used_at=gte.${thirtyDaysAgo}`;
   
   const response = supabaseRequest('GET', query);
-  return response.data || [];
+  const list = response.data || [];
+  // fcm_token で重複排除（同一端末の多重登録対策）
+  const seen = {};
+  const deduped = [];
+  for (var i = 0; i < list.length; i++) {
+    var dev = list[i];
+    var token = dev && dev.fcm_token;
+    if (!token) continue;
+    if (!seen[token]) {
+      seen[token] = true;
+      deduped.push(dev);
+    }
+  }
+  return deduped;
 }
 
 // 通知履歴作成
 function createNotificationHistory(template, message, targetType, criteria, totalRecipients, adminEmail) {
   const historyData = {
-    template_id: template.id,
+    template_id: (template && typeof template === 'object') ? (template.id || null) : null,
     title: message.title,
     body: message.body,
     icon_url: message.icon,
@@ -1384,7 +1406,13 @@ function createNotificationHistory(template, message, targetType, criteria, tota
   };
   
   const response = supabaseRequest('POST', 'notification_history', historyData);
-  return response.data[0].id;
+  // 安全にIDを取得（失敗時はUUIDを返す）
+  try {
+    if (response && response.data && response.data[0] && response.data[0].id) {
+      return response.data[0].id;
+    }
+  } catch (e) {}
+  return Utilities.getUuid();
 }
 
 // 通知履歴更新
@@ -1609,7 +1637,7 @@ function supabaseRequest(method, endpoint, data = null) {
     if (method === 'POST' || method === 'PATCH') {
       headers['Prefer'] = 'return=representation';
     }
-    const options = { method: method, headers: headers };
+    const options = { method: method, headers: headers, muteHttpExceptions: true };
     
     if (data && (method === 'POST' || method === 'PATCH')) {
       options.payload = JSON.stringify(data);

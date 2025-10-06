@@ -4,6 +4,9 @@ class PWAUpdater {
     constructor() {
         this.registration = null;
         this.updateAvailable = false;
+        this.updatePromptShown = false;
+        this.isApplying = false;
+        this.updateIntervalId = null;
         this.init();
     }
 
@@ -22,6 +25,8 @@ class PWAUpdater {
 
             // アップデートをチェック
             this.registration.addEventListener('updatefound', () => {
+                // 重複ガード
+                if (this.pendingWorker && this.pendingWorker.state !== 'redundant') return;
                 console.log('New Service Worker found');
                 this.handleUpdateFound();
             });
@@ -32,7 +37,7 @@ class PWAUpdater {
                 this.handleControllerChange();
             });
 
-            // 定期的にアップデートをチェック
+            // 定期的にアップデートをチェック（重複防止）
             this.startPeriodicUpdateCheck();
 
         } catch (error) {
@@ -42,14 +47,18 @@ class PWAUpdater {
 
     handleUpdateFound() {
         const newWorker = this.registration.installing;
-        
+        if (!newWorker) return;
+        this.pendingWorker = newWorker;
         newWorker.addEventListener('statechange', () => {
             if (newWorker.state === 'installed') {
                 if (navigator.serviceWorker.controller) {
                     // 既存のService Workerがある場合、アップデートが利用可能
                     console.log('App update available');
                     this.updateAvailable = true;
-                    this.showUpdateNotification();
+                    if (!this.updatePromptShown) {
+                        this.updatePromptShown = true;
+                        this.showUpdateNotification();
+                    }
                 } else {
                     // 初回インストール
                     console.log('App cached for offline use');
@@ -67,6 +76,8 @@ class PWAUpdater {
         }
         if (this.updateAvailable) {
             console.log('Reloading page for update');
+            this.updateAvailable = false;
+            this.updatePromptShown = false;
             window.location.reload();
         }
     }
@@ -93,9 +104,6 @@ class PWAUpdater {
         );
 
         this.showNotification(notification);
-        
-        // 更新モジュールを画面に表示
-        this.showUpdateModule();
     }
 
     showCachedNotification() {
@@ -175,6 +183,8 @@ class PWAUpdater {
     }
 
     async applyUpdate() {
+        if (this.isApplying) return;
+        this.isApplying = true;
         if (this.registration && this.registration.waiting) {
             try {
                 // ローディング表示を開始
@@ -196,6 +206,8 @@ class PWAUpdater {
                         console.log('Update applied successfully');
                         clearTimeout(timeoutId);
                         this.hideUpdateLoading();
+                        this.updateAvailable = false;
+                        this.updatePromptShown = false;
                         // キャッシュを完全にクリアしてからリロード
                         this.forceReloadWithCacheClear();
                     }
@@ -208,6 +220,8 @@ class PWAUpdater {
                     console.log('Controller changed, update complete');
                     clearTimeout(timeoutId);
                     this.hideUpdateLoading();
+                    this.updateAvailable = false;
+                    this.updatePromptShown = false;
                     this.forceReloadWithCacheClear();
                 };
                 
@@ -222,16 +236,18 @@ class PWAUpdater {
             console.warn('No waiting service worker found');
             this.showUpdateError();
         }
+        this.isApplying = false;
     }
 
     startPeriodicUpdateCheck() {
-        // 30分ごとにアップデートをチェック
-        setInterval(() => {
+        // 30分ごとにアップデートをチェック（多重起動防止）
+        if (this.updateIntervalId) clearInterval(this.updateIntervalId);
+        this.updateIntervalId = setInterval(() => {
             if (this.registration) {
                 console.log('Checking for updates...');
                 this.registration.update();
             }
-        }, 30 * 60 * 1000); // 30分
+        }, 30 * 60 * 1000);
     }
 
     // 手動でアップデートをチェック
