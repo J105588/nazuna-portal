@@ -58,24 +58,18 @@ function initializeFirebase() {
             if (vapidKey && vapidKey !== 'your-vapid-key-here') {
                 console.log('VAPID key available for token generation');
             }
-            
-            // FCM用のService Workerを先に登録
-            setupFirebaseServiceWorker();
 
             // 通知許可の要求（iOS対応）
             requestNotificationPermission()
                 .then((permission) => {
                     if (permission === 'granted') {
                         console.log('Notification permission granted');
-                        // VAPIDキーとService Worker登録をgetToken()に渡す
-                        const baseOptions = vapidKey && vapidKey !== 'your-vapid-key-here' 
-                            ? { vapidKey: vapidKey } 
+                        // 既存のアプリSW(sw.js)登録を使用してトークンを取得
+                        const baseOptions = vapidKey && vapidKey !== 'your-vapid-key-here'
+                            ? { vapidKey: vapidKey }
                             : {};
-                        return navigator.serviceWorker.getRegistration('./').then((reg) => {
-                            const tokenOptions = { ...baseOptions };
-                            if (reg) {
-                                tokenOptions.serviceWorkerRegistration = reg;
-                            }
+                        return navigator.serviceWorker.ready.then((registration) => {
+                            const tokenOptions = { ...baseOptions, serviceWorkerRegistration: registration };
                             return messaging.getToken(tokenOptions);
                         });
                     } else {
@@ -126,7 +120,7 @@ function requestNotificationPermission() {
     });
 }
 
-// Firebase Messaging Service Worker用の設定
+// Firebase Messaging Service Worker用の設定（未使用: 単一SW構成のため）
 function createFirebaseMessagingServiceWorker() {
     const swContent = `
 // Firebase Messaging Service Worker
@@ -210,81 +204,9 @@ self.addEventListener('notificationclick', function(event) {
     return swContent;
 }
 
-// Service Workerファイルを登録
+// Service Workerファイルを登録（無効化: 既存のsw.jsを使用する）
 function setupFirebaseServiceWorker() {
-    if ('serviceWorker' in navigator) {
-        // iOS環境の検出
-        const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
-        const isPWA = window.matchMedia('(display-mode: standalone)').matches || 
-                      window.navigator.standalone === true;
-        const isIOSPWA = isIOS && isPWA;
-        
-        // iOS PWA環境でのバージョン検出
-        let iosVersion = null;
-        if (isIOS) {
-            const match = navigator.userAgent.match(/OS (\d+)_(\d+)_?(\d+)?/);
-            if (match) {
-                iosVersion = parseFloat(`${match[1]}.${match[2]}`);
-            }
-        }
-        
-        // iOS 16.4以降はネイティブのプッシュ通知をサポート
-        const useNativePush = !isIOSPWA || (isIOSPWA && iosVersion >= 16.4);
-        
-        // 静的なService Workerファイルを使用（動的生成よりも信頼性が高い）
-        const swUrl = './firebase-messaging-sw.js';
-        
-        // Service Workerの登録を最大3回試行する
-        let retryCount = 0;
-        const maxRetries = 3;
-        
-        const registerServiceWorker = () => {
-            navigator.serviceWorker.register(swUrl, { scope: './' })
-                .then((registration) => {
-                    console.log('Firebase Messaging Service Worker registered:', registration);
-                    
-                    // Firebase Messagingに登録を伝える
-                    if (typeof firebase !== 'undefined' && firebase.messaging && firebase.messaging.isSupported()) {
-                        const messaging = firebase.messaging();
-                        // 新しいFirebase SDKでは自動的にService Workerが検出される
-                        console.log('Firebase Messaging ready with Service Worker');
-                    }
-                    
-                    // iOS 16.4以降のPWAの場合、通知許可を確認
-                    if (isIOSPWA && iosVersion >= 16.4) {
-                        console.log('iOS 16.4以降のPWA環境を検出しました。プッシュ通知がサポートされています。');
-                        // 通知許可状態を確認
-                        if (window.notificationManager) {
-                            const supportInfo = window.notificationManager.checkIOSPWASupport();
-                            console.log('iOS PWA通知サポート状況:', supportInfo);
-                        }
-                    }
-                })
-                .catch((error) => {
-                    console.error(`Firebase Messaging Service Worker registration failed (attempt ${retryCount + 1}/${maxRetries}):`, error);
-                    
-                    // 再試行
-                    if (retryCount < maxRetries - 1) {
-                        retryCount++;
-                        console.log(`Retrying Service Worker registration in 1 second... (attempt ${retryCount + 1}/${maxRetries})`);
-                        setTimeout(registerServiceWorker, 1000);
-                    } else {
-                        // iOS PWAの場合は特別な処理
-                        if (isIOSPWA) {
-                            console.log('iOS PWA環境でService Worker登録に失敗しました。カスタム通知UIを使用します。');
-                            // iOS PWAではService Workerの制限があるため、カスタム通知UIを使用
-                            if (window.notificationManager) {
-                                const supportInfo = window.notificationManager.checkIOSPWASupport();
-                                console.log('iOS PWA診断情報:', supportInfo);
-                            }
-                        }
-                    }
-                });
-        };
-        
-        // 最初の試行を開始
-        registerServiceWorker();
-    }
+    // NO-OP: Use main application Service Worker (sw.js)
 }
 
 // 初期化処理

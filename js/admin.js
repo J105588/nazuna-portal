@@ -127,7 +127,7 @@ async function hashPassword(password) {
  * ログイン処理
  */
 async function performLogin(email, password) {
-    const loginButton = document.getElementById('login-button');
+    const loginButton = document.getElementById('login-btn');
     const loginError = document.getElementById('login-error');
     
     // ボタンを無効化
@@ -172,8 +172,10 @@ async function performLogin(email, password) {
         loginError.style.display = 'block';
         
         // ボタンを再有効化
-        loginButton.disabled = false;
-        loginButton.textContent = 'ログイン';
+        if (loginButton) {
+            loginButton.disabled = false;
+            loginButton.textContent = 'ログイン';
+        }
     }
 }
 
@@ -198,33 +200,29 @@ function performLogout() {
  * ログイン画面を表示
  */
 function showLoginScreen() {
-    const loginContainer = document.getElementById('login-container');
-    const adminContainer = document.getElementById('admin-container');
+    const loginContainer = document.getElementById('login-screen');
+    const adminContainer = document.getElementById('admin-main');
     
-    if (loginContainer && adminContainer) {
-        loginContainer.style.display = 'flex';
-        adminContainer.style.display = 'none';
-    }
+    if (loginContainer) loginContainer.style.display = 'block';
+    if (adminContainer) adminContainer.style.display = 'none';
 }
 
 /**
  * 管理画面を表示
  */
 function showAdminPanel(user) {
-    const loginContainer = document.getElementById('login-container');
-    const adminContainer = document.getElementById('admin-container');
+    const loginContainer = document.getElementById('login-screen');
+    const adminContainer = document.getElementById('admin-main');
     const adminUserName = document.getElementById('admin-user-name');
     
-    if (loginContainer && adminContainer) {
-        loginContainer.style.display = 'none';
-        adminContainer.style.display = 'block';
-    }
+    if (loginContainer) loginContainer.style.display = 'none';
+    if (adminContainer) adminContainer.style.display = 'block';
     
     if (adminUserName && user) {
         adminUserName.textContent = user.email;
     }
     
-    // データを読み込み
+    // デフォルト表示
     loadAdminData();
 }
 
@@ -308,7 +306,7 @@ function setupEventListeners() {
     }
     
     // ログアウトボタン
-    const logoutButton = document.getElementById('logout-button');
+    const logoutButton = document.getElementById('logout-btn');
     if (logoutButton) {
         logoutButton.addEventListener('click', (e) => {
             e.preventDefault();
@@ -319,56 +317,53 @@ function setupEventListeners() {
         });
     }
     
-    // 通知送信フォーム
-    const notificationForm = document.getElementById('notification-form');
-    if (notificationForm) {
-        notificationForm.addEventListener('submit', async (e) => {
+    // 通知送信（ボタン）
+    const sendNotificationBtn = document.getElementById('send-notification-btn');
+    if (sendNotificationBtn) {
+        sendNotificationBtn.addEventListener('click', async (e) => {
             e.preventDefault();
             await sendNotification();
         });
     }
     
-    // タブ切り替え
-    const tabButtons = document.querySelectorAll('.tab-button');
-    tabButtons.forEach(button => {
-        button.addEventListener('click', () => {
-            const tabName = button.getAttribute('data-tab');
-            switchTab(tabName);
+    // サイドバー メニュー切替
+    const menuItems = document.querySelectorAll('.menu-item[data-section]');
+    menuItems.forEach(item => {
+        item.addEventListener('click', (e) => {
+            e.preventDefault();
+            const section = item.getAttribute('data-section');
+            showSection(section);
+            document.querySelectorAll('.menu-item').forEach(mi => mi.classList.remove('active'));
+            item.classList.add('active');
         });
     });
+
+    // PWA更新モジュール
+    const pwaBtn = document.getElementById('pwa-update-btn');
+    if (pwaBtn) {
+        pwaBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            if (window.showPWAUpdateModule) {
+                window.showPWAUpdateModule();
+            } else if (window.pwaUpdater && window.pwaUpdater.showUpdateModule) {
+                window.pwaUpdater.showUpdateModule();
+            }
+        });
+    }
 }
 
 // =====================================
 // タブ切り替え
 // =====================================
 
-function switchTab(tabName) {
-    // 全てのタブコンテンツを非表示
-    const tabContents = document.querySelectorAll('.tab-content');
-    tabContents.forEach(content => {
-        content.style.display = 'none';
-    });
-    
-    // 全てのタブボタンを非アクティブ
-    const tabButtons = document.querySelectorAll('.tab-button');
-    tabButtons.forEach(button => {
-        button.classList.remove('active');
-    });
-    
-    // 選択されたタブを表示
-    const selectedTab = document.getElementById(tabName + '-tab');
-    if (selectedTab) {
-        selectedTab.style.display = 'block';
-    }
-    
-    // 選択されたボタンをアクティブ
-    const selectedButton = document.querySelector(`[data-tab="${tabName}"]`);
-    if (selectedButton) {
-        selectedButton.classList.add('active');
-    }
-    
-    // タブに応じてデータを読み込み
-    loadTabData(tabName);
+function showSection(sectionName) {
+    // セクションの表示切替
+    const sections = document.querySelectorAll('.admin-section');
+    sections.forEach(sec => sec.classList.remove('active'));
+    const target = document.getElementById(sectionName + '-section');
+    if (target) target.classList.add('active');
+    // セクションに応じてデータ読み込み
+    loadTabData(sectionName);
 }
 
 // =====================================
@@ -376,8 +371,8 @@ function switchTab(tabName) {
 // =====================================
 
 async function loadAdminData() {
-    // デフォルトで通知タブを表示
-    switchTab('notifications');
+    // デフォルトでダッシュボードを表示
+    showSection('dashboard');
 }
 
 async function loadTabData(tabName) {
@@ -406,34 +401,38 @@ async function loadTabData(tabName) {
 // =====================================
 
 async function sendNotification() {
-    const title = document.getElementById('notification-title').value.trim();
-    const body = document.getElementById('notification-body').value.trim();
-    const url = document.getElementById('notification-url').value.trim() || '/';
-    const category = document.getElementById('notification-category').value;
-    const sendButton = document.getElementById('send-notification-button');
+    const titleEl = document.getElementById('notification-title');
+    const bodyEl = document.getElementById('notification-message');
+    const targetEl = document.getElementById('notification-target');
+    const sendButton = document.getElementById('send-notification-btn');
+    
+    const title = (titleEl && titleEl.value.trim()) || '';
+    const body = (bodyEl && bodyEl.value.trim()) || '';
+    const target = (targetEl && targetEl.value) || 'all';
     
     if (!title || !body) {
         showError('タイトルと本文を入力してください');
         return;
     }
     
-    sendButton.disabled = true;
-    sendButton.textContent = '送信中...';
+    if (sendButton) { sendButton.disabled = true; sendButton.textContent = '送信中...'; }
     
     try {
-        // 全デバイスに送信
+        // 全デバイスに送信（GAS側の実装に合わせてエンドポイントを選択）
         const result = await window.apiClient.sendRequest('sendBulkNotifications', {
             title: title,
             body: body,
-            url: url,
-            category: category
+            target: target,
+            url: '/',
+            category: 'general'
         });
         
         if (result.success) {
             showSuccess(`通知を送信しました（成功: ${result.results.success}, 失敗: ${result.results.failed}）`);
             
             // フォームをリセット
-            document.getElementById('notification-form').reset();
+            if (titleEl) titleEl.value = '';
+            if (bodyEl) bodyEl.value = '';
             
             // 通知履歴を再読み込み
             await loadNotificationHistory();
@@ -447,8 +446,7 @@ async function sendNotification() {
         showError(error.message || '通知の送信に失敗しました');
         
     } finally {
-        sendButton.disabled = false;
-        sendButton.textContent = '通知を送信';
+        if (sendButton) { sendButton.disabled = false; sendButton.textContent = '通知を送信'; }
     }
 }
 
