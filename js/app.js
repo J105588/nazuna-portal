@@ -911,7 +911,7 @@ async function loadClubs() {
     const fallbackClubs = [];
     
     const renderClub = (club) => `
-        <div class="club-card">
+        <div class="club-card" data-category="${club.category || ''}">
             ${club.image_url ? `<img src="${club.image_url}" alt="${club.name}" class="club-image">` : 
               `<div class="club-image" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);"></div>`}
             <h3>${club.name}</h3>
@@ -933,13 +933,13 @@ async function loadNews() {
     const fallbackNews = [];
     
     const renderNews = (item) => `
-        <div class="news-item">
+        <div class="news-item" data-category="${item.category || 'general'}">
             <div class="news-date">${formatDate(item.date || item.created_at)}</div>
             <div class="news-content">
                 <h3>${item.title}</h3>
                 <p>${item.content}</p>
             </div>
-            <span class="news-type ${item.type}">${getNewsTypeLabel(item.type)}</span>
+            <span class="news-type ${item.category || 'general'}">${getNewsTypeLabel(item.category || 'general')}</span>
         </div>
     `;
     

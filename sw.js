@@ -1,321 +1,480 @@
-const CACHE_NAME = 'nazuna-portal-v14';
-const urlsToCache = [
-  './',
-  './css/style.css',
-  './js/app.js',
-  './js/config.js',
-  './js/pwa-install.js',
-  './js/pwa-update.js',
-  './manifest.json',
-  './index.html',
-  'https://raw.githubusercontent.com/J105588/nazuna-portal/main/images/icon-192x192.png'
+/**
+ * Service Worker - Nazuna Portal
+ * キャッシュ戦略の最適化 + FCM通知データ構造統一
+ */
+
+// =====================================
+// キャッシュ設定
+// =====================================
+
+const CACHE_VERSION = 18;
+const CACHE_NAME = `nazuna-portal-v${CACHE_VERSION}`;
+const CACHE_PREFIX = 'nazuna-portal-v';
+
+// キャッシュするリソース（存在確認済み）
+const STATIC_CACHE_FILES = [
+  '/',
+  '/index.html',
+  '/forum.html',
+  '/admin.html',
+  '/css/style.css',
+  '/js/app.js',
+  '/js/config.js',
+  '/js/notification-manager.js',
+  '/js/admin.js'
 ];
 
-// インストール時のキャッシュ
-self.addEventListener('install', event => {
-  event.waitUntil(
-    caches.open(CACHE_NAME)
-      .then(cache => {
-        console.log('Opened cache');
-        return cache.addAll(urlsToCache);
-      })
-  );
-});
+// オプションのリソース（存在しない場合はスキップ）
+const OPTIONAL_CACHE_FILES = [
+  '/schedule.html',
+  '/js/api-client.js',
+  '/images/icon-192x192.png',
+  '/images/icon-512x512.png',
+  '/images/badge-72x72.png'
+];
 
-// リクエスト時のキャッシュ戦略
-self.addEventListener('fetch', event => {
-  event.respondWith((async () => {
-    const cached = await caches.match(event.request);
-    if (cached) {
-      return cached;
-    }
+// 動的にキャッシュするパターン
+const DYNAMIC_CACHE_PATTERNS = [
+  /^https:\/\/fonts\.googleapis\.com/,
+  /^https:\/\/fonts\.gstatic\.com/,
+  /\.(?:png|jpg|jpeg|svg|gif|webp)$/
+];
 
-    // navigation preload 対応
-    const preload = event.preloadResponse ? await event.preloadResponse : null;
-    if (preload) {
-      const preloadClone = preload.clone();
-      event.waitUntil(
-        caches.open(CACHE_NAME).then(cache => cache.put(event.request, preloadClone))
-      );
-      return preload;
-    }
+// キャッシュしないパターン
+const NO_CACHE_PATTERNS = [
+  /\/api\//,
+  /supabase\.co/,
+  /googleapis\.com\/.*\/messages/
+];
 
-    try {
-      const networkResponse = await fetch(event.request);
-      if (!networkResponse || networkResponse.status !== 200 || networkResponse.type !== 'basic') {
-        return networkResponse;
-      }
-      const responseToCache = networkResponse.clone();
-      event.waitUntil(
-        caches.open(CACHE_NAME).then(cache => cache.put(event.request, responseToCache))
-      );
-      return networkResponse;
-    } catch (e) {
-      return caches.match('./');
-    }
-  })());
-});
+// =====================================
+// インストール
+// =====================================
 
-// 古いキャッシュの削除
-self.addEventListener('activate', event => {
-  const cacheWhitelist = [CACHE_NAME];
+self.addEventListener('install', (event) => {
+  console.log('[SW] Installing Service Worker version', CACHE_VERSION);
   
   event.waitUntil(
     (async () => {
-      const cacheNames = await caches.keys();
-      await Promise.all(
-        cacheNames.map(cacheName => {
-          if (cacheWhitelist.indexOf(cacheName) === -1) {
-            return caches.delete(cacheName);
+      try {
+        const cache = await caches.open(CACHE_NAME);
+        
+        // 必須リソースをキャッシュ
+        const requiredFiles = STATIC_CACHE_FILES.map(async (url) => {
+          try {
+            const response = await fetch(url);
+            if (response.ok) {
+              await cache.put(url, response);
+              console.log(`[SW] Cached (required): ${url}`);
+              return true;
+            } else {
+              console.warn(`[SW] Failed to cache required file ${url}: ${response.status}`);
+              return false;
+            }
+          } catch (error) {
+            console.warn(`[SW] Failed to cache required file ${url}:`, error.message);
+            return false;
           }
-        })
-      );
-      // 直ちにクライアントを制御して古いSWによるループを防止
-      await self.clients.claim();
+        });
+        
+        // オプションリソースをキャッシュ
+        const optionalFiles = OPTIONAL_CACHE_FILES.map(async (url) => {
+          try {
+            const response = await fetch(url);
+            if (response.ok) {
+              await cache.put(url, response);
+              console.log(`[SW] Cached (optional): ${url}`);
+              return true;
+            } else {
+              console.log(`[SW] Skipped optional file ${url}: ${response.status}`);
+              return false;
+            }
+          } catch (error) {
+            console.log(`[SW] Skipped optional file ${url}:`, error.message);
+            return false;
+          }
+        });
+        
+        const cachePromises = [...requiredFiles, ...optionalFiles];
+        
+        const results = await Promise.allSettled(cachePromises);
+        const successCount = results.filter(r => r.status === 'fulfilled' && r.value === true).length;
+        
+        const totalFiles = STATIC_CACHE_FILES.length + OPTIONAL_CACHE_FILES.length;
+        console.log(`[SW] Caching complete: ${successCount}/${totalFiles} files cached successfully`);
+        
+        // 即座にアクティブ化
+        await self.skipWaiting();
+        
+      } catch (error) {
+        console.error('[SW] Installation failed:', error);
+        // エラーが発生してもService Workerは有効にする
+        await self.skipWaiting();
+      }
     })()
   );
 });
 
-// プッシュ通知の受信（カスタムメッセージ対応版）
-self.addEventListener('push', event => {
-  console.log('Push message received:', event);
+// =====================================
+// アクティベーション（古いキャッシュ削除）
+// =====================================
+
+self.addEventListener('activate', (event) => {
+  console.log('[SW] Activating Service Worker version', CACHE_VERSION);
+  
+  event.waitUntil(
+    (async () => {
+      try {
+        // 全てのキャッシュ名を取得
+        const cacheNames = await caches.keys();
+        
+        console.log('[SW] Found caches:', cacheNames);
+        
+        // 古いキャッシュを削除
+        const deletePromises = cacheNames.map((cacheName) => {
+          // nazuna-portalで始まるキャッシュのみ対象
+          if (cacheName.startsWith(CACHE_PREFIX)) {
+            const version = parseInt(cacheName.replace(CACHE_PREFIX, ''));
+            
+            // 現在のバージョンより古い場合削除
+            if (!isNaN(version) && version < CACHE_VERSION) {
+              console.log('[SW] Deleting old cache:', cacheName);
+              return caches.delete(cacheName);
+            }
+          }
+          
+          return Promise.resolve();
+        });
+        
+        await Promise.all(deletePromises);
+        
+        console.log('[SW] Old caches deleted successfully');
+        
+        // 即座に全てのクライアントをコントロール
+        await self.clients.claim();
+        
+        console.log('[SW] Service Worker activated and claimed clients');
+        
+      } catch (error) {
+        console.error('[SW] Activation failed:', error);
+      }
+    })()
+  );
+});
+
+// =====================================
+// フェッチ戦略
+// =====================================
+
+self.addEventListener('fetch', (event) => {
+  const { request } = event;
+  const url = new URL(request.url);
+  
+  // キャッシュしないパターンをチェック
+  const shouldNotCache = NO_CACHE_PATTERNS.some(pattern => pattern.test(request.url));
+  
+  if (shouldNotCache) {
+    // ネットワークのみ
+    event.respondWith(fetch(request));
+    return;
+  }
+  
+  // GETリクエストのみキャッシュ対象
+  if (request.method !== 'GET') {
+    event.respondWith(fetch(request));
+    return;
+  }
+  
+  // ナビゲーションリクエスト（HTMLページ）
+  if (request.mode === 'navigate') {
+    event.respondWith(handleNavigationRequest(request));
+    return;
+  }
+  
+  // 静的リソース
+  event.respondWith(handleResourceRequest(request));
+});
+
+/**
+ * ナビゲーションリクエストの処理
+ * ネットワーク優先、フォールバックでキャッシュ
+ */
+async function handleNavigationRequest(request) {
+  try {
+    // ネットワークから取得を試みる
+    const networkResponse = await fetch(request);
+    
+    // 成功した場合はキャッシュに保存
+    if (networkResponse && networkResponse.ok) {
+      const cache = await caches.open(CACHE_NAME);
+      cache.put(request, networkResponse.clone());
+    }
+    
+    return networkResponse;
+    
+  } catch (error) {
+    console.log('[SW] Network failed, trying cache:', request.url);
+    
+    // ネットワークが失敗した場合はキャッシュから取得
+    const cachedResponse = await caches.match(request);
+    
+    if (cachedResponse) {
+      return cachedResponse;
+    }
+    
+    // キャッシュにもない場合はオフラインページ
+    return caches.match('/index.html');
+  }
+}
+
+/**
+ * リソースリクエストの処理
+ * キャッシュ優先、フォールバックでネットワーク
+ */
+async function handleResourceRequest(request) {
+  // まずキャッシュを確認
+  const cachedResponse = await caches.match(request);
+  
+  if (cachedResponse) {
+    // バックグラウンドで更新（Stale-While-Revalidate）
+    updateCacheInBackground(request);
+    return cachedResponse;
+  }
+  
+  // キャッシュになければネットワークから取得
+  try {
+    const networkResponse = await fetch(request);
+    
+    // 動的にキャッシュするか判定
+    const shouldCache = DYNAMIC_CACHE_PATTERNS.some(pattern => 
+      pattern.test(request.url)
+    );
+    
+    if (shouldCache && networkResponse && networkResponse.ok) {
+      const cache = await caches.open(CACHE_NAME);
+      cache.put(request, networkResponse.clone());
+    }
+    
+    return networkResponse;
+    
+  } catch (error) {
+    console.error('[SW] Fetch failed:', request.url, error);
+    
+    // ネットワークエラーの場合は空のレスポンスを返す
+    return new Response('Network error', {
+      status: 408,
+      headers: { 'Content-Type': 'text/plain' }
+    });
+  }
+}
+
+/**
+ * バックグラウンドでキャッシュを更新
+ */
+async function updateCacheInBackground(request) {
+  try {
+    const networkResponse = await fetch(request);
+    
+    if (networkResponse && networkResponse.ok) {
+      const cache = await caches.open(CACHE_NAME);
+      await cache.put(request, networkResponse);
+      console.log('[SW] Cache updated in background:', request.url);
+    }
+    
+  } catch (error) {
+    // バックグラウンド更新の失敗は無視
+    console.log('[SW] Background update failed:', request.url);
+  }
+}
+
+// =====================================
+// プッシュ通知（統一されたデータ構造）
+// =====================================
+
+self.addEventListener('push', (event) => {
+  console.log('[SW] Push notification received');
   
   let notificationData = {
-    title: 'なずなポータル',
-    body: 'お知らせがあります',
-    icon: 'https://raw.githubusercontent.com/J105588/nazuna-portal/main/images/icon-192x192.png',
-    badge: './images/badge-72x72.png',
-    url: './',
-    tag: 'general'
+    title: 'お知らせ',
+    body: '',
+    icon: '/images/icon-192x192.png',
+    badge: '/images/badge-72x72.png',
+    url: '/'
   };
   
-  // プッシュデータがある場合は解析
+  // プッシュデータを解析
   if (event.data) {
     try {
-      const parseData = () => {
-        try { return event.data.json(); } catch (e) {}
-        try { return JSON.parse(event.data.text()); } catch (e) {}
-        return { body: event.data.text() };
-      };
-      const rawData = parseData();
-      console.log('Parsed push data:', rawData);
-      const d = rawData || {};
-      const fromData = d.data || d; // HTTP v1 data優先
-      const fromNotification = d.notification || {};
-      const title = fromData.title || fromNotification.title || d.title || notificationData.title;
-      const body = fromData.body || fromData.message || fromNotification.body || d.body || notificationData.body;
-      const icon = fromData.icon || fromNotification.icon || notificationData.icon;
-      const badge = fromData.badge || fromNotification.badge || notificationData.badge;
-      const url = fromData.url || fromData.action_url || d.action_url || notificationData.url;
-      const tag = fromData.tag || fromData.category || fromNotification.tag || notificationData.tag;
-      const actions = (() => {
-        const a = fromData.actions || fromNotification.actions;
-        if (!a) return [ { action: 'view', title: '詳細を見る' }, { action: 'dismiss', title: '閉じる' } ];
-        if (typeof a === 'string') { try { return JSON.parse(a); } catch { return notificationData.actions; } }
-        return a;
-      })();
-      const vibrate = fromData.vibrate ? (typeof fromData.vibrate === 'string' ? JSON.parse(fromData.vibrate) : fromData.vibrate) : [200, 100, 200];
-      const requireInteraction = !!fromData.requireInteraction;
-      const renotify = !!fromData.renotify;
-      const silent = !!fromData.silent;
-      const timestamp = fromData.timestamp || Date.now();
-      notificationData = {
-        title,
-        body,
-        icon,
-        badge,
-        url,
-        tag,
-        requireInteraction,
-        actions,
-        vibrate,
-        silent,
-        renotify,
-        timestamp,
-        data: {
-          url,
-          category: fromData.category || 'general',
-          timestamp,
-          originalData: d
-        }
-      };
+      const payload = event.data.json();
+      console.log('[SW] Push payload:', payload);
+      
+      // Firebase HTTP v1 API形式（統一されたデータ構造）
+      // GAS側から送信されるデータ構造に対応
+      if (payload.data) {
+        notificationData.title = payload.data.title || notificationData.title;
+        notificationData.body = payload.data.body || notificationData.body;
+        notificationData.url = payload.data.url || notificationData.url;
+        notificationData.icon = payload.data.icon || notificationData.icon;
+        notificationData.badge = payload.data.badge || notificationData.badge;
+      }
+      
+      // notification フィールドがある場合も対応（フォールバック）
+      if (payload.notification) {
+        notificationData.title = payload.notification.title || notificationData.title;
+        notificationData.body = payload.notification.body || notificationData.body;
+      }
+      
     } catch (error) {
-      console.error('Error parsing push data:', error);
-      try { notificationData.body = event.data.text(); } catch (e) {}
+      console.error('[SW] Failed to parse push data:', error);
+      // デフォルト値を使用
     }
   }
   
+  // 通知オプション
   const options = {
     body: notificationData.body,
     icon: notificationData.icon,
     badge: notificationData.badge,
     vibrate: [200, 100, 200],
-    requireInteraction: notificationData.requireInteraction,
-    tag: notificationData.tag,
-    renotify: true,
-    actions: notificationData.actions,
     data: {
       url: notificationData.url,
-      dateOfArrival: Date.now(),
-      originalData: notificationData.data?.originalData || null
-    }
+      timestamp: Date.now()
+    },
+    actions: [
+      {
+        action: 'open',
+        title: '開く'
+      },
+      {
+        action: 'close',
+        title: '閉じる'
+      }
+    ],
+    requireInteraction: false,
+    tag: 'nazuna-notification-' + Date.now()
   };
   
+  // 通知を表示
   event.waitUntil(
     self.registration.showNotification(notificationData.title, options)
   );
 });
 
-// 通知のクリック処理
-self.addEventListener('notificationclick', event => {
-  console.log('Notification clicked:', event);
+// =====================================
+// 通知クリック
+// =====================================
+
+self.addEventListener('notificationclick', (event) => {
+  console.log('[SW] Notification clicked:', event.action);
   
   event.notification.close();
   
-  const urlToOpen = event.notification.data?.url || './';
+  // 「閉じる」アクションの場合は何もしない
+  if (event.action === 'close') {
+    return;
+  }
   
+  // URLを取得
+  const urlToOpen = event.notification.data?.url || '/';
+  
+  // クライアントを開く
   event.waitUntil(
-    clients.matchAll({
-      type: 'window',
-      includeUncontrolled: true
-    }).then(clientList => {
-      // 既に開いているタブがあるかチェック
-      for (let i = 0; i < clientList.length; i++) {
-        const client = clientList[i];
-        if (client.url.includes(self.location.origin) && 'focus' in client) {
-          // 既存のタブにフォーカスして、必要に応じてナビゲート
-          return client.focus().then(() => {
-            if (urlToOpen !== './') {
-              return client.navigate(urlToOpen);
-            }
-          });
+    (async () => {
+      try {
+        // 既存のウィンドウを確認
+        const allClients = await clients.matchAll({
+          type: 'window',
+          includeUncontrolled: true
+        });
+        
+        // 同じURLのウィンドウが既に開いている場合はフォーカス
+        for (const client of allClients) {
+          const clientUrl = new URL(client.url);
+          const targetUrl = new URL(urlToOpen, self.location.origin);
+          
+          if (clientUrl.pathname === targetUrl.pathname) {
+            return client.focus();
+          }
         }
-      }
-      
-      // 新しいタブを開く
-      if (clients.openWindow) {
+        
+        // 新しいウィンドウを開く
         return clients.openWindow(urlToOpen);
+        
+      } catch (error) {
+        console.error('[SW] Failed to open window:', error);
       }
-    })
+    })()
   );
 });
 
-// 通知のアクションボタンクリック処理
-self.addEventListener('notificationclick', event => {
-  if (event.action) {
-    console.log('Notification action clicked:', event.action);
-    
-    event.notification.close();
-    
-    // アクションに応じた処理
-    let urlToOpen = './';
-    switch (event.action) {
-      case 'view_news':
-        urlToOpen = './news.html';
-        break;
-      case 'view_forum':
-        urlToOpen = './forum.html';
-        break;
-      case 'view_survey':
-        urlToOpen = './survey.html';
-        break;
-      case 'dismiss':
-        return; // 何もしない
-    }
-    
-    event.waitUntil(clients.openWindow(urlToOpen));
-  }
-});
+// =====================================
+// メッセージ受信（クライアントからの通信）
+// =====================================
 
-// バックグラウンド同期
-self.addEventListener('sync', event => {
-  console.log('Background sync:', event.tag);
-  
-  if (event.tag === 'background-sync') {
-    event.waitUntil(doBackgroundSync());
-  }
-});
-
-// バックグラウンド同期処理
-async function doBackgroundSync() {
-  try {
-    console.log('Performing background sync...');
-    
-    // オフライン時に蓄積されたデータを送信
-    const offlineData = await getOfflineData();
-    if (offlineData.length > 0) {
-      for (const data of offlineData) {
-        await sendToServer(data);
-      }
-      await clearOfflineData();
-    }
-    
-    console.log('Background sync completed');
-  } catch (error) {
-    console.error('Background sync failed:', error);
-  }
-}
-
-// オフラインデータの取得
-async function getOfflineData() {
-  try {
-    const cache = await caches.open('offline-data');
-    const requests = await cache.keys();
-    const data = [];
-    
-    for (const request of requests) {
-      const response = await cache.match(request);
-      if (response) {
-        const json = await response.json();
-        data.push(json);
-      }
-    }
-    
-    return data;
-  } catch (error) {
-    console.error('Error getting offline data:', error);
-    return [];
-  }
-}
-
-// サーバーへのデータ送信
-async function sendToServer(data) {
-  try {
-    const response = await fetch('/api/sync', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify(data)
-    });
-    
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
-    }
-    
-    return await response.json();
-  } catch (error) {
-    console.error('Error sending data to server:', error);
-    throw error;
-  }
-}
-
-// オフラインデータのクリア
-async function clearOfflineData() {
-  try {
-    await caches.delete('offline-data');
-    console.log('Offline data cleared');
-  } catch (error) {
-    console.error('Error clearing offline data:', error);
-  }
-}
-
-// Service Workerからのメッセージ受信
-self.addEventListener('message', event => {
-  console.log('Service Worker received message:', event.data);
+self.addEventListener('message', (event) => {
+  console.log('[SW] Message received:', event.data);
   
   if (event.data && event.data.type === 'SKIP_WAITING') {
-    console.log('Skipping waiting and activating new service worker');
     self.skipWaiting();
   }
+  
+  if (event.data && event.data.type === 'CLEAR_CACHE') {
+    event.waitUntil(
+      caches.keys().then(cacheNames => {
+        return Promise.all(
+          cacheNames.map(cacheName => {
+            if (cacheName.startsWith(CACHE_PREFIX)) {
+              console.log('[SW] Clearing cache:', cacheName);
+              return caches.delete(cacheName);
+            }
+          })
+        );
+      })
+    );
+  }
+  
+  if (event.data && event.data.type === 'GET_VERSION') {
+    event.ports[0].postMessage({
+      version: CACHE_VERSION,
+      cacheName: CACHE_NAME
+    });
+  }
 });
+
+// =====================================
+// バックグラウンド同期（オプション）
+// =====================================
+
+self.addEventListener('sync', (event) => {
+  console.log('[SW] Background sync:', event.tag);
+  
+  if (event.tag === 'sync-notifications') {
+    event.waitUntil(syncNotifications());
+  }
+});
+
+async function syncNotifications() {
+  try {
+    // バックグラウンドで通知データを同期
+    console.log('[SW] Syncing notifications...');
+    
+    // ここに同期ロジックを実装
+    
+  } catch (error) {
+    console.error('[SW] Sync failed:', error);
+  }
+}
+
+// =====================================
+// エラーハンドリング
+// =====================================
+
+self.addEventListener('error', (event) => {
+  console.error('[SW] Error:', event.error);
+});
+
+self.addEventListener('unhandledrejection', (event) => {
+  console.error('[SW] Unhandled rejection:', event.reason);
+});
+
+console.log('[SW] Service Worker loaded, version:', CACHE_VERSION);

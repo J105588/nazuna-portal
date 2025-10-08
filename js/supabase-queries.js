@@ -81,7 +81,7 @@ class SupabaseQueries {
         const {
             limit = 10,
             offset = 0,
-            type = null,
+            category = null,
             publishedOnly = true
         } = options;
 
@@ -93,16 +93,16 @@ class SupabaseQueries {
             let query = this.client
                 .from('news')
                 .select('*')
-                .order('priority', { ascending: false })
                 .order('date', { ascending: false })
+                .order('priority', { ascending: false })
                 .range(offset, offset + limit - 1);
 
             if (publishedOnly) {
                 query = query.eq('is_published', true);
             }
 
-            if (type) {
-                query = query.eq('type', type);
+            if (category) {
+                query = query.eq('category', category);
             }
 
             const { data, error } = await query;
@@ -776,8 +776,18 @@ class SupabaseQueries {
             let query = this.client
                 .from(tableName)
                 .select('*')
-                .order(orderBy, { ascending: orderDirection === 'asc' })
                 .range(offset, offset + limit - 1);
+
+            // 指定カラムが存在しないテーブルでも落ちないように安全な並び替え
+            try {
+                query = query.order(orderBy, { ascending: orderDirection === 'asc' });
+            } catch (e) {
+                // orderByが無効な場合はid/created_atの順でフォールバック
+                try { query = query.order('created_at', { ascending: orderDirection === 'asc' }); }
+                catch (e2) {
+                    try { query = query.order('id', { ascending: true }); } catch (e3) {}
+                }
+            }
 
             // フィルターを適用
             Object.entries(filters).forEach(([key, value]) => {

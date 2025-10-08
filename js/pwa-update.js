@@ -7,12 +7,69 @@ class PWAUpdater {
         this.updatePromptShown = false;
         this.isApplying = false;
         this.updateIntervalId = null;
-        this.init();
+        this.channel = null;
+        if (!window.__pwaUpdaterInitialized) {
+            window.__pwaUpdaterInitialized = true;
+            this.ensureStyles();
+            this.init();
+        }
     }
 
     init() {
         if ('serviceWorker' in navigator) {
             this.registerServiceWorker();
+            // タブがアクティブになったときに軽量チェック
+            document.addEventListener('visibilitychange', () => {
+                if (!document.hidden) {
+                    this.throttledUpdateCheck();
+                }
+            });
+
+            // Service Worker からのメッセージを受信
+            navigator.serviceWorker.addEventListener('message', (event) => {
+                const data = event.data || {};
+                if (!data || !data.type) return;
+                switch (data.type) {
+                    case 'UPDATE_AVAILABLE':
+                        this.updateAvailable = true;
+                        if (!this.updatePromptShown) {
+                            this.updatePromptShown = true;
+                            this.showUpdateNotification();
+                        }
+                        break;
+                    case 'RELOAD':
+                        window.location.reload();
+                        break;
+                    default:
+                        break;
+                }
+            });
+
+            // BroadcastChannel 経由のメッセージリスナー
+            try {
+                if (window.BroadcastChannel) {
+                    this.channel = new BroadcastChannel('pwa-updates');
+                    this.channel.addEventListener('message', (ev) => {
+                        const data = ev.data || {};
+                        if (!data || !data.type) return;
+                        switch (data.type) {
+                            case 'UPDATE_AVAILABLE':
+                                this.updateAvailable = true;
+                                if (!this.updatePromptShown) {
+                                    this.updatePromptShown = true;
+                                    this.showUpdateNotification();
+                                }
+                                break;
+                            case 'INSTALLED':
+                            case 'ACTIVATED':
+                                // 必要に応じてログやUI反映
+                                break;
+                            default:
+                                break;
+                        }
+                    });
+                }
+            } catch {}
         } else {
             console.log('Service Worker not supported');
         }
@@ -69,40 +126,33 @@ class PWAUpdater {
     }
 
     handleControllerChange() {
-        // 待機中SWが存在しない場合はリロードしない（無限更新防止）
-        if (!this.registration || !this.registration.waiting) {
-            console.log('Controller changed but no waiting SW; skipping reload');
-            return;
-        }
+        console.log('Service Worker controller changed');
+        
+        // 更新が利用可能な場合のみリロード
         if (this.updateAvailable) {
             console.log('Reloading page for update');
             this.updateAvailable = false;
             this.updatePromptShown = false;
-            window.location.reload();
+            this.hideUpdateLoading();
+            
+            // 少し遅延してからリロード（確実にSWがアクティブになるまで待つ）
+            setTimeout(() => {
+                window.location.reload();
+            }, 100);
+        } else {
+            console.log('Controller changed but no update available');
         }
     }
 
     showUpdateNotification() {
         const notification = this.createNotification(
-            '🚀 システムアップデートが利用可能です',
-            'アプリの新しいバージョンが利用可能です。最新の機能と改善を体験するために、今すぐアップデートすることをお勧めします。',
+            'アップデートが利用可能です',
+            '最新の内容に更新できます。',
             [
-                {
-                    text: '今すぐアップデート',
-                    action: () => this.applyUpdate(),
-                    primary: true
-                },
-                {
-                    text: '詳細を確認',
-                    action: () => this.showUpdateDetails()
-                },
-                {
-                    text: '後で',
-                    action: () => this.dismissNotification()
-                }
+                { text: '今すぐ更新', action: () => this.applyUpdate(), primary: true },
+                { text: '後で', action: () => this.dismissNotification() }
             ]
         );
-
         this.showNotification(notification);
     }
 
@@ -123,131 +173,118 @@ class PWAUpdater {
 
     createNotification(title, message, buttons = []) {
         const notification = document.createElement('div');
-        notification.className = 'pwa-update-notification';
-        
-        const buttonsHTML = buttons.map(btn => 
-            `<button class="pwa-update-btn ${btn.primary ? 'pwa-update-btn-primary' : ''}" data-action="${btn.text}">
-                ${btn.text}
-            </button>`
-        ).join('');
-
+        notification.className = 'pwa-update-toast';
+        const buttonsHTML = buttons.map(btn => `
+            <button class="pwa-update-btn ${btn.primary ? 'pwa-update-btn-primary' : ''}" data-action="${btn.text}">${btn.text}</button>
+        `).join('');
         notification.innerHTML = `
-            <div class="pwa-update-content">
-                <div class="pwa-update-icon">
-                    <i class="fas fa-download"></i>
+            <div class="pwa-update-toast-inner" role="status" aria-live="polite">
+                <div class="pwa-update-toast-text">
+                    <strong>${title}</strong>
+                    <span>${message}</span>
                 </div>
-                <div class="pwa-update-text">
-                    <h3>${title}</h3>
-                    <p>${message}</p>
-                </div>
-                <div class="pwa-update-actions">
+                <div class="pwa-update-toast-actions">
                     ${buttonsHTML}
                 </div>
             </div>
         `;
-
-        // ボタンのイベントリスナーを設定
         buttons.forEach(btn => {
-            const buttonElement = notification.querySelector(`[data-action="${btn.text}"]`);
-            if (buttonElement && btn.action) {
-                buttonElement.addEventListener('click', btn.action);
-            }
+            const el = notification.querySelector(`[data-action="${btn.text}"]`);
+            if (el && btn.action) el.addEventListener('click', btn.action);
         });
-
         return notification;
     }
 
     showNotification(notification) {
-        // 既存の通知を削除
-        const existing = document.querySelector('.pwa-update-notification');
-        if (existing) {
-            existing.remove();
-        }
-
+        // 既存のトーストは上部でスタック表示にする（直近のみ残す運用が良ければ先に削除）
+        const existing = document.querySelectorAll('.pwa-update-toast');
+        if (existing.length > 1) existing[0].remove();
         document.body.appendChild(notification);
-
-        // アニメーション
-        setTimeout(() => {
-            notification.classList.add('pwa-update-notification-show');
-        }, 100);
+        requestAnimationFrame(() => notification.classList.add('show'));
     }
 
     dismissNotification() {
-        const notification = document.querySelector('.pwa-update-notification');
+        const notification = document.querySelector('.pwa-update-toast');
         if (notification) {
-            notification.classList.remove('pwa-update-notification-show');
-            setTimeout(() => {
-                notification.remove();
-            }, 300);
+            notification.classList.remove('show');
+            setTimeout(() => notification.remove(), 200);
         }
     }
 
     async applyUpdate() {
         if (this.isApplying) return;
         this.isApplying = true;
-        if (this.registration && this.registration.waiting) {
-            try {
-                // ローディング表示を開始
-                this.showUpdateLoading();
-                
-                // タイムアウト設定（30秒）
-                const timeoutId = setTimeout(() => {
-                    console.warn('Update timeout, forcing reload');
-                    this.hideUpdateLoading();
-                    this.forceReloadWithCacheClear();
-                }, 30000);
-                
-                // 新しいService Workerにskip waitingを送信
-                this.registration.waiting.postMessage({ type: 'SKIP_WAITING' });
-                
-                // アップデート完了を待つ
-                const stateChangeHandler = () => {
-                    if (this.registration.waiting.state === 'activated') {
-                        console.log('Update applied successfully');
-                        clearTimeout(timeoutId);
+        
+        try {
+            this.showUpdateLoading();
+            
+            if (this.registration) {
+                // 待機中のService Workerがある場合
+                if (this.registration.waiting) {
+                    console.log('Activating waiting Service Worker...');
+                    this.registration.waiting.postMessage({ type: 'SKIP_WAITING' });
+                    
+                    // 確実に更新を適用するため、少し待ってからリロード
+                    setTimeout(() => {
+                        if (this.updateAvailable) {
+                            window.location.reload();
+                        }
+                    }, 500);
+                    
+                } else if (this.registration.installing) {
+                    console.log('Waiting for Service Worker installation...');
+                    const installing = this.registration.installing;
+                    
+                    installing.addEventListener('statechange', () => {
+                        if (installing.state === 'installed' && this.registration.waiting) {
+                            console.log('Service Worker installed, activating...');
+                            this.registration.waiting.postMessage({ type: 'SKIP_WAITING' });
+                            
+                            setTimeout(() => {
+                                if (this.updateAvailable) {
+                                    window.location.reload();
+                                }
+                            }, 500);
+                        }
+                    });
+                    
+                } else {
+                    console.log('Checking for Service Worker updates...');
+                    // 最新のService Workerを取得
+                    await this.registration.update();
+                    
+                    if (this.registration.waiting) {
+                        console.log('New Service Worker found, activating...');
+                        this.registration.waiting.postMessage({ type: 'SKIP_WAITING' });
+                        
+                        setTimeout(() => {
+                            if (this.updateAvailable) {
+                                window.location.reload();
+                            }
+                        }, 500);
+                    } else {
+                        console.log('No Service Worker update available');
                         this.hideUpdateLoading();
-                        this.updateAvailable = false;
-                        this.updatePromptShown = false;
-                        // キャッシュを完全にクリアしてからリロード
-                        this.forceReloadWithCacheClear();
                     }
-                };
-                
-                this.registration.waiting.addEventListener('statechange', stateChangeHandler);
-                
-                // コントローラー変更も監視
-                const controllerChangeHandler = () => {
-                    console.log('Controller changed, update complete');
-                    clearTimeout(timeoutId);
-                    this.hideUpdateLoading();
-                    this.updateAvailable = false;
-                    this.updatePromptShown = false;
-                    this.forceReloadWithCacheClear();
-                };
-                
-                navigator.serviceWorker.addEventListener('controllerchange', controllerChangeHandler);
-                
-            } catch (error) {
-                console.error('Update failed:', error);
+                }
+            } else {
+                console.log('No Service Worker registration found');
                 this.hideUpdateLoading();
-                this.showUpdateError();
             }
-        } else {
-            console.warn('No waiting service worker found');
+            
+        } catch (error) {
+            console.error('Apply update failed:', error);
+            this.hideUpdateLoading();
             this.showUpdateError();
+        } finally {
+            this.isApplying = false;
         }
-        this.isApplying = false;
     }
 
     startPeriodicUpdateCheck() {
         // 30分ごとにアップデートをチェック（多重起動防止）
         if (this.updateIntervalId) clearInterval(this.updateIntervalId);
-        this.updateIntervalId = setInterval(() => {
-            if (this.registration) {
-                console.log('Checking for updates...');
-                this.registration.update();
-            }
-        }, 30 * 60 * 1000);
+        this.updateIntervalId = setInterval(() => this.throttledUpdateCheck(), 30 * 60 * 1000);
     }
 
     // 手動でアップデートをチェック
@@ -256,13 +293,25 @@ class PWAUpdater {
             try {
                 await this.registration.update();
                 console.log('Update check completed');
+                // SW にも明示チェックを依頼し、待機中の有無を通知してもらう
+                if (navigator.serviceWorker.controller) {
+                    try { navigator.serviceWorker.controller.postMessage({ type: 'CHECK_UPDATE' }); } catch {}
+                }
+                try { this.channel && this.channel.postMessage({ type: 'CHECK_UPDATE' }); } catch {}
             } catch (error) {
                 console.error('Update check failed:', error);
             }
         }
     }
 
-    // アップデートローディング表示
+    throttledUpdateCheck() {
+        if (!this.registration) return;
+        if (this._lastCheck && Date.now() - this._lastCheck < 60 * 1000) return; // 最低1分間隔
+        this._lastCheck = Date.now();
+        this.registration.update().catch(() => {});
+    }
+
+    // アップデートローディング表示（ディスプレイ中央）
     showUpdateLoading() {
         const loadingModal = document.createElement('div');
         loadingModal.className = 'pwa-update-loading';
@@ -277,6 +326,17 @@ class PWAUpdater {
                 </div>
             </div>
         `;
+        // テーマカラー適用
+        try {
+            const theme = this.getThemeColor();
+            const box = loadingModal.querySelector('.pwa-update-loading-content');
+            const spinner = loadingModal.querySelector('.spinner');
+            if (box) box.style.background = theme || '#4a7c59';
+            if (spinner) {
+                spinner.style.borderTopColor = '#fff';
+                spinner.style.borderColor = 'rgba(255,255,255,.35)';
+            }
+        } catch {}
         
         document.body.appendChild(loadingModal);
         
@@ -328,52 +388,31 @@ class PWAUpdater {
         }, 100);
     }
 
-    // キャッシュを完全にクリアしてリロード
-    async forceReloadWithCacheClear() {
+    // ソフトリロード（URLにバスター付与）
+    forceSoftReload() {
         try {
-            console.log('Clearing all caches and reloading...');
-            
-            // すべてのキャッシュをクリア
-            if ('caches' in window) {
-                const cacheNames = await caches.keys();
-                console.log('Found caches:', cacheNames);
-                
-                await Promise.all(
-                    cacheNames.map(cacheName => {
-                        console.log('Deleting cache:', cacheName);
-                        return caches.delete(cacheName);
-                    })
-                );
-                console.log('All caches cleared');
-            }
-            
-            // Service Workerを無効化
-            if (this.registration) {
-                await this.registration.unregister();
-                console.log('Service Worker unregistered');
-            }
-            
-            // ローカルストレージとセッションストレージをクリア
-            try {
-                localStorage.clear();
-                sessionStorage.clear();
-                console.log('Local storage cleared');
-            } catch (e) {
-                console.warn('Could not clear storage:', e);
-            }
-            
-            // 強制リロード（キャッシュを無視）
-            console.log('Forcing reload with cache bypass...');
-            // リロード前にオーバーレイ・スクロール制御を解除
+            const url = new URL(window.location.href);
+            url.searchParams.set('updated', String(Date.now()));
             this.cleanupOverlays();
-            window.location.reload(true);
-            
-        } catch (error) {
-            console.error('Error during cache clear and reload:', error);
-            // エラーが発生してもリロードは実行
+            window.location.replace(url.toString());
+        } catch (e) {
             this.cleanupOverlays();
-            window.location.reload(true);
+            window.location.reload();
         }
+    }
+
+    // 現在のキャッシュを全消去してリロード
+    async forceReloadWithCacheClearOnly() {
+        try {
+            if ('caches' in window) {
+                const names = await caches.keys();
+                await Promise.all(names.map(name => caches.delete(name)));
+            }
+        } catch (e) {
+            console.warn('Cache clear error:', e);
+        }
+        this.cleanupOverlays();
+        window.location.reload();
     }
 
     // 画面上に残りがちなオーバーレイやスクロール制御を除去
@@ -599,6 +638,50 @@ class PWAUpdater {
             scope: this.registration ? this.registration.scope : null
         };
     }
+
+    // 最小限のスタイルを注入して確実に表示
+    ensureStyles() {
+        const STYLE_ID = 'pwa-update-minimal-style';
+        if (document.getElementById(STYLE_ID)) return;
+        const style = document.createElement('style');
+        style.id = STYLE_ID;
+        style.textContent = `
+            .pwa-update-toast { position: fixed; top: 16px; right: 16px; z-index: 2147483647; display: block; transform: translateY(-12px); opacity: 0; transition: transform .16s ease-out, opacity .16s ease-out; }
+            .pwa-update-toast.show { transform: translateY(0); opacity: 1; }
+            .pwa-update-toast-inner { box-sizing: border-box; background: #1f2937; color: #fff; padding: 10px 12px; border-radius: 8px; box-shadow: 0 8px 24px rgba(0,0,0,.25); display: flex; gap: 10px; align-items: center; max-width: 360px; }
+            .pwa-update-toast-text { display: flex; flex-direction: column; gap: 2px; font-size: 13px; line-height: 1.35; }
+            .pwa-update-toast-text strong { font-size: 13px; }
+            .pwa-update-toast-actions { margin-left: auto; display: flex; gap: 8px; }
+            .pwa-update-btn { appearance: none; border: 1px solid rgba(255,255,255,.35); background: transparent; color: #fff; border-radius: 6px; padding: 6px 10px; font-size: 13px; cursor: pointer; }
+            .pwa-update-btn:hover { background: rgba(255,255,255,.08); }
+            .pwa-update-btn-primary { background: #10b981; border-color: #10b981; color: #0b2b22; }
+            .pwa-update-btn-primary:hover { filter: brightness(0.95); }
+            @media (max-width: 480px) { .pwa-update-toast { right: 8px; left: 8px; } .pwa-update-toast-inner { max-width: none; } }
+            /* Loading modal (viewport center) */
+            .pwa-update-loading { position: fixed; inset: 0; z-index: 2147483646; display: flex; align-items: flex-start; justify-content: center; padding-top: 28px; background: rgba(0,0,0,.35); backdrop-filter: blur(4px); opacity: 0; transition: opacity .16s ease-out; }
+            .pwa-update-loading-show { opacity: 1; }
+            .pwa-update-loading-content { background: #4a7c59; color: #fff; padding: 18px 20px; border-radius: 12px; width: min(92vw, 420px); box-shadow: 0 14px 40px rgba(0,0,0,.45); text-align: center; }
+            .pwa-update-loading-spinner { margin-bottom: 12px; display: grid; place-items: center; }
+            .pwa-update-loading-spinner .spinner { width: 32px; height: 32px; border: 4px solid rgba(255,255,255,.25); border-top-color: #10b981; border-radius: 50%; animation: pwa-spin 1s linear infinite; }
+            @keyframes pwa-spin { to { transform: rotate(360deg); } }
+            /* Details/Module (viewport centered) */
+            .pwa-update-details, .pwa-update-module { position: fixed; inset: 0; z-index: 2147483646; display: grid; place-items: center; background: rgba(0,0,0,.35); opacity: 0; transition: opacity .16s ease-out; }
+            .pwa-update-details-show, .pwa-update-module-show { opacity: 1; }
+            .pwa-update-details-content, .pwa-update-module-content { background: #111827; color:#fff; width: min(92vw, 560px); border-radius: 12px; box-shadow: 0 12px 36px rgba(0,0,0,.45); }
+            .pwa-update-details-header, .pwa-update-module-header { display:flex; align-items:center; justify-content: space-between; padding: 12px 16px; border-bottom: 1px solid rgba(255,255,255,.08); }
+            .pwa-update-details-body, .pwa-update-module-body { padding: 14px 16px; }
+        `;
+        document.head.appendChild(style);
+    }
+
+    getThemeColor() {
+        try {
+            const meta = document.querySelector('meta[name="theme-color"]');
+            return meta && meta.content ? meta.content : '#4a7c59';
+        } catch {
+            return '#4a7c59';
+        }
+    }
 }
 
 // PWAアップデーターを初期化
@@ -609,6 +692,7 @@ window.PWAUpdater = PWAUpdater;
 
 // 手動アップデートチェック用の関数をグローバルに公開
 window.checkForPWAUpdates = () => pwaUpdater.checkForUpdates();
+window.getPWAStatus = () => pwaUpdater.getPWAStatus();
 
 // 更新モジュールを手動で表示する関数
 window.showPWAUpdateModule = () => pwaUpdater.showUpdateModule();

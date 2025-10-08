@@ -1,2266 +1,726 @@
-// 管理画面用JavaScript
+/**
+ * Admin Panel - Nazuna Portal
+ * パスワードハッシュ化 + セッション管理対応
+ */
 
-// 管理者認証状態
+// =====================================
+// グローバル変数
+// =====================================
+
 let isAuthenticated = false;
 let currentUser = null;
+let apiClient = null;
 
-// DOM要素
-const loginScreen = document.getElementById('login-screen');
-const adminMain = document.getElementById('admin-main');
-const loginBtn = document.getElementById('login-btn');
-const logoutBtn = document.getElementById('logout-btn');
-const loginError = document.getElementById('login-error');
-const adminEmailInput = document.getElementById('admin-email');
-const adminPasswordInput = document.getElementById('admin-password');
-
-// モーダル要素
-const modalOverlay = document.getElementById('modal-overlay');
-const adminModal = document.getElementById('admin-modal');
-const modalTitle = document.getElementById('modal-title');
-const modalBody = document.getElementById('modal-body');
-const modalClose = document.getElementById('modal-close');
-const modalCancel = document.getElementById('modal-cancel');
-const modalSave = document.getElementById('modal-save');
-
-// セクション管理
-const menuItems = document.querySelectorAll('.menu-item');
-const adminSections = document.querySelectorAll('.admin-section');
-
-// Supabaseクライアントとクエリインスタンス
-let supabaseClient = null;
-let supabaseQueries = null;
-
-// GAS用 API クライアントのフォールバック（adminページ単体読み込み対策）
-if (typeof APIClient === 'undefined') {
-    class APIClient {
-        constructor() {
-            this.baseURL = CONFIG.GAS_URL;
-            this.cache = new Map();
-            this.requestQueue = [];
-            this.isOnline = navigator.onLine;
-            window.addEventListener('online', () => { this.isOnline = true; this.processQueue(); });
-            window.addEventListener('offline', () => { this.isOnline = false; });
-        }
-        sendRequest(action, params = {}, options = {}) {
-            return new Promise((resolve, reject) => {
-                if (!this.isOnline && !options.allowOffline) {
-                    this.requestQueue.push({ action, params, resolve, reject });
-                    return reject(new Error(CONFIG.MESSAGES.INFO.OFFLINE));
-                }
-                const cacheKey = `${action}_${JSON.stringify(params)}`;
-                if (options.useCache && this.cache.has(cacheKey)) {
-                    const cached = this.cache.get(cacheKey);
-                    if (Date.now() - cached.timestamp < CONFIG.APP.CACHE_DURATION) {
-                        return resolve(cached.data);
-                    }
-                }
-                const callbackName = 'callback_' + Date.now() + '_' + Math.random().toString(36).substr(2);
-                const timeout = setTimeout(() => { this.cleanup(callbackName); reject(new Error(CONFIG.MESSAGES.ERROR.NETWORK)); }, options.timeout || 10000);
-                window.gasCallbacks = window.gasCallbacks || {};
-                window.gasCallbacks[callbackName] = (data) => {
-                    clearTimeout(timeout);
-                    if (data && data.success && options.useCache) {
-                        this.cache.set(cacheKey, { data, timestamp: Date.now() });
-                    }
-                    if (data && data.success) resolve(data); else reject(new Error((data && data.error) || CONFIG.MESSAGES.ERROR.SERVER));
-                    this.cleanup(callbackName);
-                };
-                // オブジェクト型のパラメータはJSON文字列にシリアライズ（JSONPのため）
-                const serializedParams = { action, callback: 'gasCallbacks.' + callbackName, timestamp: Date.now() };
-                Object.keys(params || {}).forEach(key => {
-                    const val = params[key];
-                    if (val !== null && typeof val === 'object') {
-                        try {
-                            serializedParams[key] = JSON.stringify(val);
-                        } catch (e) {
-                            serializedParams[key] = String(val);
-                        }
-                    } else if (typeof val === 'undefined') {
-                        serializedParams[key] = '';
-                    } else {
-                        serializedParams[key] = val;
-                    }
-                });
-                const queryParams = new URLSearchParams(serializedParams);
-                const script = document.createElement('script');
-                script.id = 'jsonp_' + callbackName;
-                script.src = `${this.baseURL}?${queryParams}`;
-                console.log('GAS request:', action, script.src);
-                script.onerror = () => { clearTimeout(timeout); this.cleanup(callbackName); reject(new Error(CONFIG.MESSAGES.ERROR.NETWORK)); };
-                document.head.appendChild(script);
-            });
-        }
-        cleanup(callbackName) {
-            if (window.gasCallbacks) delete window.gasCallbacks[callbackName];
-            const el = document.getElementById('jsonp_' + callbackName);
-            if (el) el.remove();
-        }
-        processQueue() {
-            while (this.requestQueue.length > 0) {
-                const req = this.requestQueue.shift();
-                this.sendRequest(req.action, req.params).then(req.resolve).catch(req.reject);
-            }
-        }
-    }
-    window.APIClient = APIClient;
-}
-if (!window.apiClient && typeof APIClient !== 'undefined') {
-    window.apiClient = new APIClient();
-}
-
+// =====================================
 // 初期化
-document.addEventListener('DOMContentLoaded', function() {
+// =====================================
+
+document.addEventListener('DOMContentLoaded', async () => {
     console.log('Admin panel initializing...');
     
-    // Supabaseクライアントとクエリの初期化
-    initializeSupabase();
-    
-    // 認証状態をチェック
-    checkAuthStatus();
-    
-    // イベントリスナーを設定
-    setupEventListeners();
-    
-    // ハンバーガーメニューの初期化
-    initializeHamburgerMenu();
-    
-    // デバッグモード（自動ログイン無効化）
-    if (CONFIG.APP.DEBUG) {
-        console.log('Debug mode: Enabled but auto-login disabled for security');
-        // セキュリティのため自動ログインは無効化
+    // API Clientの初期化
+    if (typeof APIClient !== 'undefined') {
+        apiClient = new APIClient();
+    } else {
+        console.error('APIClient not found');
+        showError('システムエラー: APIクライアントが読み込まれていません');
+        return;
     }
+    
+    // セッションチェック
+    await checkExistingSession();
+    
+    // イベントリスナーの設定
+    setupEventListeners();
 });
 
-// Supabase初期化
-function initializeSupabase() {
-    try {
-        // Supabaseクライアントの初期化
-        if (typeof supabase !== 'undefined') {
-            supabaseClient = supabase.createClient(CONFIG.SUPABASE.URL, CONFIG.SUPABASE.ANON_KEY);
-            window.supabaseClient = supabaseClient;
-            console.log('Supabase client initialized');
-            
-            // SupabaseQueriesインスタンスの作成
-            if (typeof SupabaseQueries !== 'undefined') {
-                supabaseQueries = new SupabaseQueries(supabaseClient);
-                window.supabaseQueries = supabaseQueries;
-                console.log('SupabaseQueries initialized');
-            } else {
-                console.warn('SupabaseQueries class not found');
-            }
-        } else {
-            console.warn('Supabase SDK not loaded');
-        }
-    } catch (error) {
-        console.error('Error initializing Supabase:', error);
-    }
-}
+// =====================================
+// セッション管理
+// =====================================
 
-// 認証状態チェック（セキュリティ強化版）
-function checkAuthStatus() {
-    // セッションから認証情報を復元
-    const sessionData = sessionStorage.getItem('admin-session');
+/**
+ * 既存のセッションをチェック
+ */
+async function checkExistingSession() {
+    const adminToken = sessionStorage.getItem('admin_token');
+    const adminEmail = sessionStorage.getItem('admin_email');
     
-    if (sessionData) {
+    if (adminToken && adminEmail) {
+        console.log('Existing session found, verifying...');
+        
         try {
-            const userData = JSON.parse(sessionData);
+            const isValid = await verifyAdminSession(adminToken, adminEmail);
             
-            // セッションの有効性をチェック（24時間以内）
-            const loginTime = new Date(userData.loginTime);
-            const now = new Date();
-            const hoursDiff = (now - loginTime) / (1000 * 60 * 60);
-            
-            if (hoursDiff < 24) {
-                // 有効なセッション
-                currentUser = userData;
+            if (isValid) {
                 isAuthenticated = true;
-                
-                // セキュリティ監視を開始
-                startSecurityMonitoring();
-                
-                // 管理画面を表示
-                showAdminPanel();
-                console.log('Session restored:', userData);
-                return;
+                currentUser = { email: adminEmail };
+                showAdminPanel(currentUser);
+                console.log('Session verified successfully');
             } else {
-                // セッション期限切れ
-                console.log('Session expired, clearing data');
-                clearAuthData();
+                console.log('Session invalid or expired');
+                clearSession();
+                showLoginScreen();
             }
+            
         } catch (error) {
-            console.error('Error parsing session data:', error);
-            clearAuthData();
+            console.error('Session verification error:', error);
+            clearSession();
+            showLoginScreen();
         }
-    }
-    
-    // 認証されていない場合はログイン画面を表示
-    showLoginScreen();
-    
-    // セキュリティ強化：開発者ツールでの認証バイパスを防ぐ
-    Object.defineProperty(window, 'isAuthenticated', {
-        value: false,
-        writable: false,
-        configurable: false
-    });
-    
-    Object.defineProperty(window, 'currentUser', {
-        value: null,
-        writable: false,
-        configurable: false
-    });
-}
-
-// ログイン画面表示
-function showLoginScreen() {
-    if (loginScreen) {
-        loginScreen.style.display = 'flex';
-    }
-    if (adminMain) {
-        adminMain.style.display = 'none';
-    }
-    
-    // フォームをクリア
-    if (adminEmailInput) adminEmailInput.value = '';
-    if (adminPasswordInput) adminPasswordInput.value = '';
-    if (loginError) loginError.style.display = 'none';
-}
-
-// イベントリスナー設定
-function setupEventListeners() {
-    // ログインフォーム送信
-    const loginForm = document.getElementById('login-form');
-    if (loginForm) {
-        loginForm.addEventListener('submit', function(e) {
-            e.preventDefault();
-            handleLogin();
-        });
-    }
-    
-    // ログインボタン
-    loginBtn.addEventListener('click', function(e) {
-        e.preventDefault();
-        handleLogin();
-    });
-    
-    // Enterキー対応
-    adminEmailInput.addEventListener('keypress', (e) => {
-        if (e.key === 'Enter') {
-            e.preventDefault();
-            handleLogin();
-        }
-    });
-    adminPasswordInput.addEventListener('keypress', (e) => {
-        if (e.key === 'Enter') {
-            e.preventDefault();
-            handleLogin();
-        }
-    });
-    
-    // ログアウト
-    logoutBtn.addEventListener('click', handleLogout);
-    
-    // PWA更新ボタン
-    const pwaUpdateBtn = document.getElementById('pwa-update-btn');
-    if (pwaUpdateBtn) {
-        pwaUpdateBtn.addEventListener('click', () => {
-            if (window.showPWAUpdateModule) {
-                window.showPWAUpdateModule();
-            } else {
-                console.warn('PWA update module not available');
-                alert('PWA更新モジュールが利用できません。ページを再読み込みしてください。');
-            }
-        });
-    }
-    
-    // メニューナビゲーション
-    menuItems.forEach(item => {
-        item.addEventListener('click', (e) => {
-            e.preventDefault();
-            const section = item.dataset.section;
-            switchSection(section);
-        });
-    });
-    
-    // モーダル
-    modalClose.addEventListener('click', closeModal);
-    modalCancel.addEventListener('click', closeModal);
-    modalOverlay.addEventListener('click', (e) => {
-        if (e.target === modalOverlay) closeModal();
-    });
-    
-    // ESCキーでモーダルを閉じる
-    document.addEventListener('keydown', (e) => {
-        if (e.key === 'Escape' && modalOverlay.classList.contains('active')) {
-            closeModal();
-        }
-    });
-    
-    // 各セクションのボタン
-    setupSectionButtons();
-}
-
-// セクションボタンの設定
-function setupSectionButtons() {
-    // お知らせ
-    const addNewsBtn = document.getElementById('add-news-btn');
-    if (addNewsBtn) {
-        addNewsBtn.addEventListener('click', () => showNewsModal());
-    }
-    
-    // アンケート
-    const addSurveyBtn = document.getElementById('add-survey-btn');
-    if (addSurveyBtn) {
-        addSurveyBtn.addEventListener('click', () => showSurveyModal());
-    }
-    
-    // 部活動
-    const addClubBtn = document.getElementById('add-club-btn');
-    if (addClubBtn) {
-        addClubBtn.addEventListener('click', () => showClubModal());
-    }
-    
-    // 生徒会メンバー
-    const addMemberBtn = document.getElementById('add-member-btn');
-    if (addMemberBtn) {
-        addMemberBtn.addEventListener('click', () => showMemberModal());
-    }
-    
-    // 活動実績管理
-    const addAchievementBtn = document.getElementById('add-achievement-btn');
-    if (addAchievementBtn) {
-        addAchievementBtn.addEventListener('click', () => showAchievementModal());
-    }
-    
-    const clearFiltersBtn = document.getElementById('clear-filters-btn');
-    if (clearFiltersBtn) {
-        clearFiltersBtn.addEventListener('click', () => clearAchievementFilters());
-    }
-    
-    // 年度フィルター
-    const yearFilter = document.getElementById('achievement-year-filter');
-    if (yearFilter) {
-        yearFilter.addEventListener('change', () => loadAchievementsData());
-    }
-    
-    const monthFilter = document.getElementById('achievement-month-filter');
-    if (monthFilter) {
-        monthFilter.addEventListener('change', () => loadAchievementsData());
-    }
-    
-    const categoryFilter = document.getElementById('achievement-category-filter');
-    if (categoryFilter) {
-        categoryFilter.addEventListener('change', () => loadAchievementsData());
-    }
-    
-    const memberFilter = document.getElementById('member-filter');
-    if (memberFilter) {
-        memberFilter.addEventListener('change', () => loadAchievementsData());
-    }
-    
-    // 通知送信
-    const sendNotificationBtn = document.getElementById('send-notification-btn');
-    if (sendNotificationBtn) {
-        sendNotificationBtn.addEventListener('click', sendNotification);
-    }
-
-    // 通知テンプレート選択
-    const templateSelect = document.getElementById('notification-template');
-    if (templateSelect) {
-        templateSelect.addEventListener('change', onTemplateChange);
+    } else {
+        showLoginScreen();
     }
 }
 
-// ログイン処理
-async function handleLogin() {
-    const email = adminEmailInput.value.trim();
-    const password = adminPasswordInput.value.trim();
-    
-    if (!email || !password) {
-        showLoginError('メールアドレスとパスワードを入力してください。');
-        return;
-    }
-    
-    // 入力値の検証
-    if (email.length < 5 || !email.includes('@')) {
-        showLoginError('有効なメールアドレスを入力してください。');
-        return;
-    }
-    
-    if (password.length < 6) {
-        showLoginError('パスワードは6文字以上で入力してください。');
-        return;
-    }
-    
-    loginBtn.disabled = true;
-    loginBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> ログイン中...';
-    
+/**
+ * セッションを検証
+ */
+async function verifyAdminSession(token, email) {
     try {
-        const success = await performLogin(email, password);
-        if (success) {
-            showAdminPanel();
-            showSuccessMessage('ログインに成功しました。');
-        } else {
-            showLoginError('ログインに失敗しました。認証情報を確認してください。');
-        }
-    } catch (error) {
-        console.error('Login error:', error);
-        showLoginError('ログイン中にエラーが発生しました。しばらく待ってから再試行してください。');
-    } finally {
-        loginBtn.disabled = false;
-        loginBtn.innerHTML = '<i class="fas fa-sign-in-alt"></i> ログイン';
-    }
-}
-
-// 実際のログイン処理（セキュリティ強化版）
-async function performLogin(email, password) {
-    try {
-        // 入力値検証を強化
-        if (!email || !password || email.trim().length === 0 || password.trim().length === 0) {
-            return false;
-        }
-        
-        // メールアドレス形式チェック
-        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-        if (!emailRegex.test(email)) {
-            return false;
-        }
-        
-        // パスワード最小長チェック
-        if (password.length < 6) {
-            return false;
-        }
-        
-        // デバッグモードでの簡易認証
-        if (CONFIG.APP.DEBUG) {
-            console.log('Debug mode: Performing simplified authentication');
-            
-            // デバッグ用の認証情報（実際の運用では削除）
-            const debugAdmins = [
-                { email: 'admin@school.ac.jp', password: 'admin123', name: '管理者', role: 'admin' },
-                { email: 'council@school.ac.jp', password: 'council123', name: '生徒会', role: 'council' }
-            ];
-            
-            const admin = debugAdmins.find(a => a.email === email && a.password === password);
-            if (admin) {
-                const userData = {
-                    email: admin.email,
-                    name: admin.name,
-                    role: admin.role,
-                    permissions: ['read', 'write', 'admin'],
-                    loginTime: new Date().toISOString()
-                };
-                
-                // セッションのみに保存（ページ更新で消える）
-                sessionStorage.setItem('admin-session', JSON.stringify(userData));
-                
-                currentUser = userData;
-                isAuthenticated = true;
-                
-                // 追加のセキュリティチェック
-                startSecurityMonitoring();
-                
-                console.log('Debug authentication successful:', userData);
-                return true;
-            }
-            
-            console.log('Debug authentication failed: Invalid credentials');
-            return false;
-        }
-        
-        // 本番環境でのGAS認証（JSONP使用）
-        const result = await apiClient.sendRequest('adminLogin', {
-            email: email,
-            password: password
+        const result = await apiClient.sendRequest('verifyAdminSession', {
+            token: token,
+            email: email
         });
         
-        if (result.success && result.admin) {
-            const userData = {
-                email: result.admin.email,
-                name: result.admin.name,
-                role: result.admin.role,
-                permissions: result.admin.permissions,
-                loginTime: new Date().toISOString()
-            };
-            
-            // セッションのみに保存（ページ更新で消える）
-            sessionStorage.setItem('admin-session', JSON.stringify(userData));
-            
-            currentUser = userData;
-            isAuthenticated = true;
-            
-            // 追加のセキュリティチェック
-            startSecurityMonitoring();
-            
+        if (result.valid) {
+            currentUser = result.user;
             return true;
         }
         
         return false;
+        
     } catch (error) {
-        console.error('Authentication error:', error);
+        console.error('Session verification failed:', error);
         return false;
     }
 }
 
-// ログインエラー表示
-function showLoginError(message) {
-    loginError.innerHTML = `<i class="fas fa-exclamation-triangle"></i> <span>${message}</span>`;
-    loginError.style.display = 'flex';
-    
-    setTimeout(() => {
-        loginError.style.display = 'none';
-    }, 5000);
-}
-
-// 管理画面表示
-function showAdminPanel() {
-    loginScreen.style.display = 'none';
-    adminMain.style.display = 'grid';
-    
-    // ユーザー名を表示
-    const userNameEl = document.getElementById('admin-user-name');
-    if (userNameEl && currentUser) {
-        userNameEl.textContent = currentUser.name || '管理者';
-    }
-    
-    // ダッシュボードを初期化
-    initializeDashboard();
-    
-    // デフォルトでダッシュボードを表示
-    switchSection('dashboard');
-}
-
-// ログアウト処理（セキュリティ強化版）
-function handleLogout() {
-    if (confirm('ログアウトしますか？')) {
-        // すべての認証データを完全にクリア
-        clearAuthData();
-        sessionStorage.clear();
-        localStorage.clear();
-        
-        // 変数をリセット
-        currentUser = null;
-        isAuthenticated = false;
-        
-        // セキュリティ監視を停止
-        stopSecurityMonitoring();
-        
-        // ページを強制リロード（メモリ上のデータもクリア）
-        window.location.reload();
-    }
-}
-
-// 認証データクリア
-function clearAuthData() {
-    localStorage.removeItem('admin-auth-token');
-    localStorage.removeItem('admin-user-data');
+/**
+ * セッションをクリア
+ */
+function clearSession() {
+    sessionStorage.removeItem('admin_token');
+    sessionStorage.removeItem('admin_email');
     isAuthenticated = false;
     currentUser = null;
 }
 
-// セクション切り替え
-function switchSection(sectionName) {
-    // メニューのアクティブ状態を更新
-    menuItems.forEach(item => {
-        item.classList.remove('active');
-        if (item.dataset.section === sectionName) {
-            item.classList.add('active');
-        }
-    });
+// =====================================
+// 認証（パスワードハッシュ化対応）
+// =====================================
+
+/**
+ * パスワードをSHA-256でハッシュ化
+ */
+async function hashPassword(password) {
+    const encoder = new TextEncoder();
+    const data = encoder.encode(password);
+    const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+    const hashArray = Array.from(new Uint8Array(hashBuffer));
+    const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+    return hashHex;
+}
+
+/**
+ * ログイン処理
+ */
+async function performLogin(email, password) {
+    const loginButton = document.getElementById('login-button');
+    const loginError = document.getElementById('login-error');
     
-    // セクションの表示を切り替え
-    adminSections.forEach(section => {
-        section.classList.remove('active');
-        if (section.id === sectionName + '-section') {
-            section.classList.add('active');
-        }
-    });
+    // ボタンを無効化
+    loginButton.disabled = true;
+    loginButton.textContent = 'ログイン中...';
+    loginError.style.display = 'none';
     
-    // セクション固有の初期化
-    initializeSection(sectionName);
-}
-
-// セクション固有の初期化
-async function initializeSection(sectionName) {
-    switch (sectionName) {
-        case 'dashboard':
-            await loadDashboardData();
-            break;
-        case 'news':
-            await loadNewsData();
-            break;
-        case 'surveys':
-            await loadSurveysData();
-            break;
-        case 'clubs':
-            await loadClubsData();
-            break;
-        case 'council':
-            await loadCouncilData();
-            break;
-        case 'notifications':
-            await loadNotificationTemplates();
-            await loadNotificationHistory();
-            break;
-        case 'forum':
-            await loadForumData();
-            break;
-        case 'achievements':
-            await loadAchievementsData();
-            break;
-    }
-}
-
-// ダッシュボード初期化
-function initializeDashboard() {
-    console.log('Initializing dashboard...');
-}
-
-// ダッシュボードデータ読み込み
-async function loadDashboardData() {
     try {
-        // 統計データを読み込み
-        const stats = await loadStatistics();
-        updateDashboardStats(stats);
+        // パスワードをハッシュ化
+        console.log('Hashing password...');
+        const passwordHash = await hashPassword(password);
         
-        // 最近の活動を読み込み
-        const recentActivities = await loadRecentActivities();
-        updateRecentActivities(recentActivities);
-    } catch (error) {
-        console.error('Error loading dashboard data:', error);
-    }
-}
-
-// 統計データ読み込み
-async function loadStatistics() {
-    try {
-        // 実際のデータベースから統計を取得
-        const stats = {
-            news: 0,
-            surveys: 0,
-            clubs: 0,
-            forum: 0
-        };
+        console.log('Sending login request...');
         
-        if (supabaseQueries) {
-            // お知らせ数
-            const { count: newsCount } = await supabaseClient
-                .from('news')
-                .select('*', { count: 'exact', head: true });
-            stats.news = newsCount || 0;
-            
-            // アンケート数
-            const { count: surveyCount } = await supabaseClient
-                .from('surveys')
-                .select('*', { count: 'exact', head: true });
-            stats.surveys = surveyCount || 0;
-            
-            // 部活動数
-            const { count: clubCount } = await supabaseClient
-                .from('clubs')
-                .select('*', { count: 'exact', head: true });
-            stats.clubs = clubCount || 0;
-            
-            // フォーラム投稿数
-            const { count: forumCount } = await supabaseClient
-                .from('posts')
-                .select('*', { count: 'exact', head: true });
-            stats.forum = forumCount || 0;
-        }
-        
-        return stats;
-    } catch (error) {
-        console.error('Error loading statistics:', error);
-        return { news: 0, surveys: 0, clubs: 0, forum: 0 };
-    }
-}
-
-// ダッシュボード統計更新
-function updateDashboardStats(stats) {
-    document.getElementById('news-count').textContent = stats.news;
-    document.getElementById('survey-count').textContent = stats.surveys;
-    document.getElementById('club-count').textContent = stats.clubs;
-    document.getElementById('forum-count').textContent = stats.forum;
-}
-
-// 最近の活動データ読み込み
-async function loadRecentActivities() {
-    try {
-        const activities = [];
-        
-        if (supabaseQueries) {
-            // 最新のお知らせ
-            const { data: recentNews } = await supabaseClient
-                .from('news')
-                .select('title, created_at')
-                .order('created_at', { ascending: false })
-                .limit(3);
-            
-            if (recentNews && recentNews.length > 0) {
-                recentNews.forEach(news => {
-                    activities.push({
-                        type: 'news',
-                        title: '新しいお知らせが投稿されました',
-                        description: news.title,
-                        time: formatRelativeTime(news.created_at),
-                        icon: 'fas fa-newspaper'
-                    });
-                });
-            }
-            
-            // 最新のフォーラム投稿
-            const { data: recentPosts } = await supabaseClient
-                .from('posts')
-                .select('content, created_at')
-                .order('created_at', { ascending: false })
-                .limit(3);
-            
-            if (recentPosts && recentPosts.length > 0) {
-                recentPosts.forEach(post => {
-                    activities.push({
-                        type: 'forum',
-                        title: 'フォーラムに新しい投稿',
-                        description: post.content.substring(0, 50) + '...',
-                        time: formatRelativeTime(post.created_at),
-                        icon: 'fas fa-comments'
-                    });
-                });
-            }
-        }
-        
-        return activities;
-    } catch (error) {
-        console.error('Error loading recent activities:', error);
-        return [];
-    }
-}
-
-// 最近の活動更新
-function updateRecentActivities(activities) {
-    const container = document.getElementById('recent-activities');
-    if (!container) return;
-    
-    container.innerHTML = activities.map(activity => `
-        <div class="recent-item">
-            <div class="recent-icon">
-                <i class="${activity.icon}"></i>
-            </div>
-            <div class="recent-content">
-                <h4>${activity.title}</h4>
-                <p>${activity.description} • ${activity.time}</p>
-            </div>
-        </div>
-    `).join('');
-}
-
-// お知らせデータ読み込み
-async function loadNewsData() {
-    const tableBody = document.getElementById('news-table-body');
-    if (!tableBody) return;
-    
-    try {
-        if (supabaseQueries) {
-            const { data: newsData, error } = await supabaseClient
-                .from('news')
-                .select('*')
-                .order('created_at', { ascending: false });
-            
-            if (error) {
-                console.error('Error loading news:', error);
-                tableBody.innerHTML = '<tr><td colspan="4">データの読み込みに失敗しました</td></tr>';
-                return;
-            }
-            
-            if (newsData && newsData.length > 0) {
-                tableBody.innerHTML = newsData.map(item => `
-                    <tr>
-                        <td>${item.title}</td>
-                        <td><span class="status-badge status-${item.category}">${getCategoryLabel(item.category)}</span></td>
-                        <td>${formatDate(item.created_at)}</td>
-                        <td>
-                            <div class="action-buttons">
-                                <button class="btn btn-sm btn-outline" onclick="editNews(${item.id})">
-                                    <i class="fas fa-edit"></i>
-                                </button>
-                                <button class="btn btn-sm btn-outline" onclick="deleteNews(${item.id})">
-                                    <i class="fas fa-trash"></i>
-                                </button>
-                            </div>
-                        </td>
-                    </tr>
-                `).join('');
-            } else {
-                tableBody.innerHTML = '<tr><td colspan="4">お知らせがありません</td></tr>';
-            }
-        } else {
-            tableBody.innerHTML = '<tr><td colspan="4">データベースに接続できません</td></tr>';
-        }
-    } catch (error) {
-        console.error('Error loading news data:', error);
-        tableBody.innerHTML = '<tr><td colspan="4">データの読み込み中にエラーが発生しました</td></tr>';
-    }
-}
-
-// アンケートデータ読み込み
-async function loadSurveysData() {
-    const tableBody = document.getElementById('surveys-table-body');
-    if (!tableBody) return;
-    
-    try {
-        if (supabaseQueries) {
-            const { data: surveysData, error } = await supabaseClient
-                .from('surveys')
-                .select('*')
-                .order('created_at', { ascending: false });
-            
-            if (error) {
-                console.error('Error loading surveys:', error);
-                tableBody.innerHTML = '<tr><td colspan="5">データの読み込みに失敗しました</td></tr>';
-                return;
-            }
-            
-            if (surveysData && surveysData.length > 0) {
-                tableBody.innerHTML = surveysData.map(item => `
-                    <tr>
-                        <td>${item.title}</td>
-                        <td><span class="status-badge status-${item.status}">${getStatusLabel(item.status)}</span></td>
-                        <td>${item.responses || 0}件</td>
-                        <td>${formatDate(item.deadline)}</td>
-                        <td>
-                            <div class="action-buttons">
-                                <button class="btn btn-sm btn-outline" onclick="viewSurveyResults(${item.id})">
-                                    <i class="fas fa-chart-bar"></i>
-                                </button>
-                                <button class="btn btn-sm btn-outline" onclick="editSurvey(${item.id})">
-                                    <i class="fas fa-edit"></i>
-                                </button>
-                                <button class="btn btn-sm btn-outline" onclick="deleteSurvey(${item.id})">
-                                    <i class="fas fa-trash"></i>
-                                </button>
-                            </div>
-                        </td>
-                    </tr>
-                `).join('');
-            } else {
-                tableBody.innerHTML = '<tr><td colspan="5">アンケートがありません</td></tr>';
-            }
-        } else {
-            tableBody.innerHTML = '<tr><td colspan="5">データベースに接続できません</td></tr>';
-        }
-    } catch (error) {
-        console.error('Error loading surveys data:', error);
-        tableBody.innerHTML = '<tr><td colspan="5">データの読み込み中にエラーが発生しました</td></tr>';
-    }
-}
-
-// 部活動データ読み込み
-async function loadClubsData() {
-    const tableBody = document.getElementById('clubs-table-body');
-    if (!tableBody) return;
-    
-    try {
-        if (supabaseQueries) {
-            const { data: clubsData, error } = await supabaseClient
-                .from('clubs')
-                .select('*')
-                .order('name', { ascending: true });
-            
-            if (error) {
-                console.error('Error loading clubs:', error);
-                tableBody.innerHTML = '<tr><td colspan="5">データの読み込みに失敗しました</td></tr>';
-                return;
-            }
-            
-            if (clubsData && clubsData.length > 0) {
-                tableBody.innerHTML = clubsData.map(item => `
-                    <tr>
-                        <td>${item.name}</td>
-                        <td><span class="status-badge status-${item.category}">${getCategoryLabel(item.category)}</span></td>
-                        <td>${item.members || 0}名</td>
-                        <td>${item.schedule || '未設定'}</td>
-                        <td>
-                            <div class="action-buttons">
-                                <button class="btn btn-sm btn-outline" onclick="editClub(${item.id})">
-                                    <i class="fas fa-edit"></i>
-                                </button>
-                                <button class="btn btn-sm btn-outline" onclick="deleteClub(${item.id})">
-                                    <i class="fas fa-trash"></i>
-                                </button>
-                            </div>
-                        </td>
-                    </tr>
-                `).join('');
-            } else {
-                tableBody.innerHTML = '<tr><td colspan="5">部活動がありません</td></tr>';
-            }
-        } else {
-            tableBody.innerHTML = '<tr><td colspan="5">データベースに接続できません</td></tr>';
-        }
-    } catch (error) {
-        console.error('Error loading clubs data:', error);
-        tableBody.innerHTML = '<tr><td colspan="5">データの読み込み中にエラーが発生しました</td></tr>';
-    }
-}
-
-// 生徒会データ読み込み
-async function loadCouncilData() {
-    const membersGrid = document.getElementById('members-grid');
-    if (!membersGrid) return;
-    
-    try {
-        if (window.supabaseClient) {
-            const { data: membersData, error } = await window.supabaseClient
-                .from('council_members')
-                .select('*')
-                .order('display_order', { ascending: true });
-            
-            if (error) {
-                console.error('Error loading council members:', error);
-                membersGrid.innerHTML = '<div class="no-data-message">データの読み込みに失敗しました</div>';
-                return;
-            }
-            
-            if (membersData && membersData.length > 0) {
-                membersGrid.innerHTML = membersData.map(member => `
-                    <div class="member-admin-card">
-                        <div class="member-actions">
-                            <button class="btn btn-sm btn-icon btn-outline" onclick="editMember(${member.id})">
-                                <i class="fas fa-edit"></i>
-                            </button>
-                            <button class="btn btn-sm btn-icon btn-outline" onclick="deleteMember(${member.id})">
-                                <i class="fas fa-trash"></i>
-                            </button>
-                        </div>
-                        <div class="member-avatar">
-                            <i class="fas fa-user"></i>
-                        </div>
-                        <h3>${member.name}</h3>
-                        <p class="member-role">${member.role}</p>
-                        <p class="member-message">"${member.message || 'よろしくお願いします'}"</p>
-                    </div>
-                `).join('');
-            } else {
-                membersGrid.innerHTML = '<div class="no-data-message">生徒会メンバーが登録されていません</div>';
-            }
-        } else {
-            membersGrid.innerHTML = '<div class="no-data-message">データベースに接続できません</div>';
-        }
-    } catch (error) {
-        console.error('Error loading council data:', error);
-        membersGrid.innerHTML = '<div class="no-data-message">データの読み込み中にエラーが発生しました</div>';
-    }
-}
-
-// 通知履歴読み込み
-async function loadNotificationHistory() {
-    const historyContainer = document.getElementById('notification-history');
-    if (!historyContainer) return;
-    
-    try {
-        let historyData = [];
-        // GAS経由（必須ルート）
-        if (window.apiClient) {
-            try {
-                const resp = await window.apiClient.sendRequest('getNotificationHistory', { limit: 10 }, { timeout: 10000, useCache: true });
-                if (resp && resp.success && Array.isArray(resp.data)) historyData = resp.data;
-            } catch (e) {
-                console.warn('GAS history fetch failed, falling back to Supabase (read-only).', e);
-            }
-        }
-        // フォールバック: 直接Supabase（閲覧のみ）
-        if (!historyData.length && window.supabaseClient) {
-            const { data, error } = await window.supabaseClient
-                .from('notification_history')
-                .select('*')
-                .order('sent_at', { ascending: false })
-                .limit(10);
-            if (!error && data) historyData = data;
-        }
-        
-        if (historyData && historyData.length > 0) {
-            historyContainer.innerHTML = historyData.map(item => `
-                    <div class="history-item">
-                        <h4>${item.title}</h4>
-                        <p>${item.message}</p>
-                        <div class="history-meta">
-                            <span>${item.target} (${item.recipients || 0}名)</span>
-                            <span>${formatDateTime(item.sent_at)}</span>
-                        </div>
-                    </div>
-                `).join('');
-        } else {
-            historyContainer.innerHTML = '<div class="no-data-message">通知履歴がありません</div>';
-        }
-    } catch (error) {
-        console.error('Error loading notification history:', error);
-        historyContainer.innerHTML = '<div class="no-data-message">データの読み込み中にエラーが発生しました</div>';
-    }
-}
-
-// 通知テンプレートをロードしてセレクトに反映
-async function loadNotificationTemplates() {
-    try {
-        const select = document.getElementById('notification-template');
-        if (!select) return;
-        let templates = [];
-        // GAS 経由（必須ルート）
-        if (window.apiClient) {
-            try {
-                const resp = await window.apiClient.sendRequest('getNotificationTemplates', { active_only: true }, { timeout: 10000, useCache: true });
-                if (resp && resp.success && Array.isArray(resp.data)) templates = resp.data;
-            } catch (e) {
-                console.warn('GAS templates fetch failed, falling back to Supabase (read-only).', e);
-            }
-        }
-        // フォールバック: 直接Supabase（閲覧のみ）
-        if (!templates.length && window.supabaseClient) {
-            const { data, error } = await window.supabaseClient
-                .from('notification_templates')
-                .select('template_key,title_template,body_template,category,priority')
-                .eq('is_active', true)
-                .order('priority', { ascending: false });
-            if (!error && data) templates = data;
-        }
-        // セレクトに反映
-        select.innerHTML = '<option value="">（選択してください）</option>' +
-            templates.map(t => `<option value="${t.template_key}">${t.template_key}</option>`).join('');
-        // 既存の値があれば保持
-        const current = select.dataset.currentValue;
-        if (current) select.value = current;
-    } catch (e) {
-        console.warn('Failed to load notification templates', e);
-    }
-}
-
-// テンプレート選択変更時にタイトル/本文を下書き反映
-function onTemplateChange() {
-    const key = document.getElementById('notification-template')?.value || '';
-    if (!key) {
-        // テンプレート未選択時は何もしない（カスタム入力保持）
-        return;
-    }
-    // 簡易ルール: 既知キーで定型文を挿入（空のフィールドのみ）
-    const titleEl = document.getElementById('notification-title');
-    const bodyEl = document.getElementById('notification-message');
-    if (!titleEl || !bodyEl) return;
-    if (key === 'survey_created') {
-        if (!titleEl.value) titleEl.value = '新しいアンケートのお知らせ';
-        if (!bodyEl.value) bodyEl.value = 'アンケートにご協力ください。';
-    } else if (key === 'event_reminder') {
-        if (!titleEl.value) titleEl.value = 'イベントのお知らせ';
-        if (!bodyEl.value) bodyEl.value = 'イベントの詳細をご確認ください。';
-    } else if (key === 'news_published') {
-        if (!titleEl.value) titleEl.value = 'お知らせ公開';
-        if (!bodyEl.value) bodyEl.value = '最新のお知らせを公開しました。';
-    }
-}
-
-// 通知フォームをクリア
-function clearNotificationForm() {
-    document.getElementById('notification-template').value = '';
-    document.getElementById('notification-title').value = '';
-    document.getElementById('notification-message').value = '';
-    document.getElementById('notification-target').value = 'all';
-}
-
-// フォーラムデータ読み込み
-async function loadForumData() {
-    const tableBody = document.getElementById('forum-table-body');
-    if (!tableBody) return;
-    
-    let forumData = [];
-    let nameMap = {};
-    try {
-        if (window.supabaseQueries) {
-            const { data: posts, error } = await window.supabaseQueries.getPostsForAdmin({ limit: 200 });
-            if (!error && posts) {
-                forumData = posts;
-                const numbers = Array.from(new Set(posts.map(p => p.student_number).filter(Boolean)));
-                if (numbers.length > 0) {
-                    const { data: students, error: sErr } = await window.supabaseQueries.getStudentsByNumbers(numbers);
-                    if (!sErr && students) {
-                        students.forEach(s => { nameMap[s.student_number] = s.name; });
-                    }
-                }
-            }
-        }
-    } catch (e) {
-        console.warn('Admin posts load fallback:', e);
-    }
-
-    tableBody.innerHTML = forumData.map(item => `
-        <tr>
-            <td>${item.id}</td>
-            <td>${truncateText(item.content, 50)}<div class="small" style="opacity:.7;">投稿者: ${nameMap[item.student_number] || '匿名'}</div></td>
-            <td><span class="status-badge status-${item.status}">${getStatusLabel(item.status)}</span></td>
-            <td>${formatDateTime(item.created_at)}</td>
-            <td>
-                <div class="action-buttons">
-                    <button class="btn btn-sm btn-outline" onclick="viewForumPost('${item.id}')">
-                        <i class="fas fa-eye"></i>
-                    </button>
-                    <button class="btn btn-sm btn-outline" onclick="replyToPost('${item.id}')">
-                        <i class="fas fa-reply"></i>
-                    </button>
-                </div>
-            </td>
-        </tr>
-    `).join('');
-}
-
-// モーダル表示
-function showModal(title, content, saveCallback = null) {
-    modalTitle.textContent = title;
-    modalBody.innerHTML = content;
-    modalOverlay.classList.add('active');
-    
-    // 保存ボタンのコールバック設定
-    modalSave.onclick = saveCallback || closeModal;
-}
-
-// モーダル閉じる
-function closeModal() {
-    modalOverlay.classList.remove('active');
-    modalSave.onclick = null;
-}
-
-// お知らせモーダル表示
-function showNewsModal(newsId = null) {
-    const isEdit = newsId !== null;
-    const title = isEdit ? 'お知らせを編集' : '新しいお知らせを作成';
-    
-    const content = `
-        <div class="form-group">
-            <label for="news-title">タイトル *</label>
-            <input type="text" id="news-title" class="form-control" placeholder="お知らせのタイトルを入力">
-        </div>
-        <div class="form-group">
-            <label for="news-category">カテゴリ *</label>
-            <select id="news-category" class="form-control">
-                <option value="general">一般</option>
-                <option value="event">イベント</option>
-                <option value="important">重要</option>
-                <option value="newsletter">生徒会だより</option>
-                <option value="recruitment">募集</option>
-            </select>
-        </div>
-        <div class="form-group">
-            <label for="news-content">内容 *</label>
-            <textarea id="news-content" class="form-control" rows="6" placeholder="お知らせの内容を入力"></textarea>
-        </div>
-        <div class="form-group">
-            <label>
-                <input type="checkbox" id="news-notification"> プッシュ通知を送信
-            </label>
-        </div>
-    `;
-    
-    showModal(title, content, () => saveNews(newsId));
-}
-
-// お知らせ保存
-async function saveNews(newsId = null) {
-    const title = document.getElementById('news-title').value.trim();
-    const category = document.getElementById('news-category').value;
-    const content = document.getElementById('news-content').value.trim();
-    const sendNotification = document.getElementById('news-notification').checked;
-    
-    if (!title || !content) {
-        alert('タイトルと内容は必須です。');
-        return;
-    }
-    
-    try {
-        // 保存処理（GAS経由）
-        const action = newsId ? 'updateNews' : 'createNews';
-        const payload = { id: newsId, title, category, content, is_published: true };
-        const result = await (window.apiClient ? window.apiClient.sendRequest(action, payload, { timeout: 15000 }) : Promise.resolve({ success: false, error: 'API client unavailable' }));
-        
-        if (result.success) {
-            showSuccessMessage('お知らせを保存しました。');
-            closeModal();
-            loadNewsData(); // テーブルを再読み込み
-            
-            if (sendNotification) {
-                // 通知送信
-                await sendNewsNotification(title, content);
-            }
-        } else {
-            throw new Error(result.error || '保存に失敗しました。');
-        }
-    } catch (error) {
-        console.error('Error saving news:', error);
-        showErrorMessage('保存中にエラーが発生しました。');
-    }
-}
-
-// 通知送信
-async function sendNotification() {
-    const title = document.getElementById('notification-title').value.trim();
-    const message = document.getElementById('notification-message').value.trim();
-    const target = document.getElementById('notification-target').value;
-    const templateKey = (document.getElementById('notification-template')?.value || '').trim();
-    
-    if (!title || !message) {
-        alert('タイトルとメッセージを入力してください。');
-        return;
-    }
-    
-    const sendBtn = document.getElementById('send-notification-btn');
-    sendBtn.disabled = true;
-    sendBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 送信中...';
-    
-    try {
-        const result = await sendPushNotification({
-            title,
-            message,
-            target,
-            templateKey
+        // GAS APIでログイン
+        const result = await apiClient.sendRequest('adminLogin', {
+            email: email,
+            passwordHash: passwordHash
         });
         
         if (result.success) {
-            showSuccessMessage('通知を送信しました。');
+            // セッション情報を保存
+            sessionStorage.setItem('admin_token', result.token);
+            sessionStorage.setItem('admin_email', email);
             
-            // フォームをクリア
-            document.getElementById('notification-title').value = '';
-            document.getElementById('notification-message').value = '';
-            document.getElementById('notification-target').value = 'all';
+            isAuthenticated = true;
+            currentUser = result.user;
             
-            // 履歴を再読み込み
-            loadNotificationHistory();
+            console.log('Login successful');
+            
+            // 管理画面を表示
+            showAdminPanel(currentUser);
+            
         } else {
-            throw new Error(result.error || '送信に失敗しました。');
+            throw new Error(result.error || 'ログインに失敗しました');
         }
-    } catch (error) {
-        console.error('Error sending notification:', error);
-        showErrorMessage('通知送信中にエラーが発生しました。');
-    } finally {
-        sendBtn.disabled = false;
-        sendBtn.innerHTML = '<i class="fas fa-paper-plane"></i> 通知を送信';
-    }
-}
-
-// 実際の通知送信処理（GAS + FCM）- カスタムメッセージ対応版
-async function sendPushNotification(data) {
-    try {
-        // カスタムメッセージを直接送信するためのデータ準備
-        const notificationData = {
-            templateKey: '', // テンプレートを使用しない
-            templateData: {
-                title: data.title,
-                message: data.message,
-                url: getNotificationUrl(data),
-                category: getCategoryFromTitle(data.title),
-                priority: getPriorityFromTitle(data.title),
-                icon: 'https://raw.githubusercontent.com/J105588/nazuna-portal/main/images/icon-192x192.png',
-                badge: '/images/badge-72x72.png',
-                requireInteraction: data.title.includes('緊急') || data.title.includes('重要'),
-                actions: [
-                    { action: 'view', title: '詳細を見る' },
-                    { action: 'dismiss', title: '閉じる' }
-                ]
-            },
-            targetType: data.target || 'all',
-            targetCriteria: getTargetCriteria(data.target),
-            adminEmail: currentUser?.email || 'admin@school.ac.jp',
-            adminPassword: 'admin' // TODO: 実運用の認証に置換
-        };
-        
-        // 通知送信の再試行ロジック
-        let retries = 3;
-        let result = null;
-        
-        while (retries > 0) {
-            try {
-                // GASに通知送信要求（JSONP使用）
-                result = await apiClient.sendRequest('sendNotification', notificationData, {
-                    timeout: 15000 // タイムアウトを15秒に設定
-                });
-                
-                if (result.success) {
-                    break; // 成功したらループを抜ける
-                } else {
-                    console.warn(`Notification sending failed (${retries} retries left):`, result.error);
-                    // テンプレート未登録エラー時はテンプレートなしで再試行
-                    const msg = String(result.error || '').toLowerCase();
-                    if (msg.includes('template not found')) {
-                        console.warn('Template not found. Retrying without templateKey...');
-                        const fallbackData = { ...notificationData, templateKey: '' };
-                        try {
-                            const fallback = await apiClient.sendRequest('sendNotification', fallbackData, { timeout: 15000 });
-                            if (fallback && fallback.success) {
-                                result = fallback;
-                                break;
-                            }
-                        } catch (e) {
-                            // 続行して通常のリトライへ
-                        }
-                    }
-                    retries--;
-                    if (retries > 0) {
-                        await new Promise(resolve => setTimeout(resolve, 1000)); // 1秒待機
-                    }
-                }
-            } catch (err) {
-                console.warn(`Notification request error (${retries} retries left):`, err);
-                // テンプレート未登録が明確な場合もフォールバックを試す
-                const emsg = String(err && (err.message || err)).toLowerCase();
-                if (emsg.includes('template not found')) {
-                    console.warn('Template not found (exception). Retrying without templateKey...');
-                    const fallbackData = { ...notificationData, templateKey: '' };
-                    try {
-                        const fallback = await apiClient.sendRequest('sendNotification', fallbackData, { timeout: 15000 });
-                        if (fallback && fallback.success) {
-                            result = fallback;
-                            break;
-                        }
-                    } catch (e2) {
-                        // fall through to retry countdown
-                    }
-                }
-                retries--;
-                if (retries > 0) {
-                    await new Promise(resolve => setTimeout(resolve, 1000)); // 1秒待機
-                }
-            }
-        }
-        
-        if (!result || !result.success) {
-            throw new Error((result?.error) || 'Notification sending failed after retries');
-        }
-        
-        console.log('Notification sent successfully:', result.data);
-        return result;
         
     } catch (error) {
-        console.error('Error sending push notification:', error);
-        throw error;
+        console.error('Login error:', error);
+        
+        loginError.textContent = error.message || 'ログインに失敗しました';
+        loginError.style.display = 'block';
+        
+        // ボタンを再有効化
+        loginButton.disabled = false;
+        loginButton.textContent = 'ログイン';
     }
 }
 
-// 通知タイプからテンプレートキーを取得（後方互換性のため残す）
-function getTemplateKeyFromData(data) {
-    // 明示指定があればそれを優先
-    if (data && data.templateKey) return data.templateKey;
-    const title = (data.title || '').toLowerCase();
-    if (title.includes('アンケート')) return 'survey_created';
-    if (title.includes('イベント') || title.includes('行事')) return 'event_reminder';
-    if (title.includes('緊急') || title.includes('重要')) return 'news_published';
-    return 'news_published';
-}
-
-// タイトルからカテゴリを判定
-function getCategoryFromTitle(title) {
-    const lowerTitle = (title || '').toLowerCase();
-    if (lowerTitle.includes('緊急') || lowerTitle.includes('重要')) return 'urgent';
-    if (lowerTitle.includes('アンケート')) return 'survey';
-    if (lowerTitle.includes('イベント') || lowerTitle.includes('行事')) return 'event';
-    if (lowerTitle.includes('お知らせ') || lowerTitle.includes('ニュース')) return 'news';
-    return 'general';
-}
-
-// タイトルから優先度を判定
-function getPriorityFromTitle(title) {
-    const lowerTitle = (title || '').toLowerCase();
-    if (lowerTitle.includes('緊急')) return 3; // 最高優先度
-    if (lowerTitle.includes('重要')) return 2; // 高優先度
-    return 1; // 通常優先度
-}
-
-// 通知URLを生成
-function getNotificationUrl(data) {
-    const type = getTemplateKeyFromData(data);
-    switch (type) {
-        case 'survey_created':
-            return './survey.html';
-        case 'event_reminder':
-            return './news.html#events';
-        case 'emergency_alert':
-            // 重要なお知らせセクションが削除されたため、通常のニュースページに遷移
-            return './news.html';
-        default:
-            return './news.html';
-    }
-}
-
-// ターゲット条件を生成
-function getTargetCriteria(target) {
-    switch (target) {
-        case 'students':
-            return { platform: 'web' }; // 実際の運用では学生識別子を使用
-        case 'teachers':
-            return { platform: 'web' }; // 実際の運用では教職員識別子を使用
-        case 'all':
-        default:
-            return {};
-    }
-}
-
-// ニュース通知送信
-async function sendNewsNotification(title, content) {
-    const shortContent = content.length > 100 ? content.substring(0, 100) + '...' : content;
+/**
+ * ログアウト処理
+ */
+function performLogout() {
+    console.log('Logging out...');
     
-    return await sendPushNotification({
-        title: `📢 ${title}`,
-        message: shortContent,
-        target: 'all'
+    // セッションをクリア
+    clearSession();
+    
+    // ログイン画面を表示
+    showLoginScreen();
+}
+
+// =====================================
+// UI表示制御
+// =====================================
+
+/**
+ * ログイン画面を表示
+ */
+function showLoginScreen() {
+    const loginContainer = document.getElementById('login-container');
+    const adminContainer = document.getElementById('admin-container');
+    
+    if (loginContainer && adminContainer) {
+        loginContainer.style.display = 'flex';
+        adminContainer.style.display = 'none';
+    }
+}
+
+/**
+ * 管理画面を表示
+ */
+function showAdminPanel(user) {
+    const loginContainer = document.getElementById('login-container');
+    const adminContainer = document.getElementById('admin-container');
+    const adminUserName = document.getElementById('admin-user-name');
+    
+    if (loginContainer && adminContainer) {
+        loginContainer.style.display = 'none';
+        adminContainer.style.display = 'block';
+    }
+    
+    if (adminUserName && user) {
+        adminUserName.textContent = user.email;
+    }
+    
+    // データを読み込み
+    loadAdminData();
+}
+
+/**
+ * エラーメッセージを表示
+ */
+function showError(message) {
+    const errorDiv = document.createElement('div');
+    errorDiv.className = 'error-message';
+    errorDiv.textContent = message;
+    errorDiv.style.cssText = `
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        background: #ff4444;
+        color: white;
+        padding: 15px 20px;
+        border-radius: 8px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+        z-index: 10000;
+        animation: slideIn 0.3s ease;
+    `;
+    
+    document.body.appendChild(errorDiv);
+    
+    setTimeout(() => {
+        errorDiv.style.animation = 'slideOut 0.3s ease';
+        setTimeout(() => errorDiv.remove(), 300);
+    }, 3000);
+}
+
+/**
+ * 成功メッセージを表示
+ */
+function showSuccess(message) {
+    const successDiv = document.createElement('div');
+    successDiv.className = 'success-message';
+    successDiv.textContent = message;
+    successDiv.style.cssText = `
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        background: #00c853;
+        color: white;
+        padding: 15px 20px;
+        border-radius: 8px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+        z-index: 10000;
+        animation: slideIn 0.3s ease;
+    `;
+    
+    document.body.appendChild(successDiv);
+    
+    setTimeout(() => {
+        successDiv.style.animation = 'slideOut 0.3s ease';
+        setTimeout(() => successDiv.remove(), 300);
+    }, 3000);
+}
+
+// =====================================
+// イベントリスナー
+// =====================================
+
+function setupEventListeners() {
+    // ログインフォーム
+    const loginForm = document.getElementById('login-form');
+    if (loginForm) {
+        loginForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const email = document.getElementById('admin-email').value.trim();
+            const password = document.getElementById('admin-password').value;
+            
+            if (!email || !password) {
+                showError('メールアドレスとパスワードを入力してください');
+                return;
+            }
+            
+            await performLogin(email, password);
+        });
+    }
+    
+    // ログアウトボタン
+    const logoutButton = document.getElementById('logout-button');
+    if (logoutButton) {
+        logoutButton.addEventListener('click', (e) => {
+            e.preventDefault();
+            
+            if (confirm('ログアウトしますか？')) {
+                performLogout();
+            }
+        });
+    }
+    
+    // 通知送信フォーム
+    const notificationForm = document.getElementById('notification-form');
+    if (notificationForm) {
+        notificationForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            await sendNotification();
+        });
+    }
+    
+    // タブ切り替え
+    const tabButtons = document.querySelectorAll('.tab-button');
+    tabButtons.forEach(button => {
+        button.addEventListener('click', () => {
+            const tabName = button.getAttribute('data-tab');
+            switchTab(tabName);
+        });
     });
 }
 
-// データ保存処理（デモ）
-async function saveNewsData(data) {
-    try {
-        if (!window.supabaseClient) {
-            throw new Error('Supabase client not initialized');
-        }
-        const isEdit = !!data.id;
-        const payload = {
-            title: data.title,
-            category: data.category,
-            content: data.content,
-            is_published: true,
-            date: new Date().toISOString()
-        };
-        let result;
-        if (isEdit) {
-            result = await window.supabaseClient
-                .from('news')
-                .update(payload)
-                .eq('id', data.id)
-                .select();
-        } else {
-            result = await window.supabaseClient
-                .from('news')
-                .insert([payload])
-                .select();
-        }
-        if (result.error) {
-            console.error('Supabase news save error:', result.error);
-            return { success: false, error: result.error.message };
-        }
-        return { success: true, data: result.data?.[0] || null };
-    } catch (e) {
-        console.error('saveNewsData error:', e);
-        return { success: false, error: e.message };
+// =====================================
+// タブ切り替え
+// =====================================
+
+function switchTab(tabName) {
+    // 全てのタブコンテンツを非表示
+    const tabContents = document.querySelectorAll('.tab-content');
+    tabContents.forEach(content => {
+        content.style.display = 'none';
+    });
+    
+    // 全てのタブボタンを非アクティブ
+    const tabButtons = document.querySelectorAll('.tab-button');
+    tabButtons.forEach(button => {
+        button.classList.remove('active');
+    });
+    
+    // 選択されたタブを表示
+    const selectedTab = document.getElementById(tabName + '-tab');
+    if (selectedTab) {
+        selectedTab.style.display = 'block';
+    }
+    
+    // 選択されたボタンをアクティブ
+    const selectedButton = document.querySelector(`[data-tab="${tabName}"]`);
+    if (selectedButton) {
+        selectedButton.classList.add('active');
+    }
+    
+    // タブに応じてデータを読み込み
+    loadTabData(tabName);
+}
+
+// =====================================
+// データ読み込み
+// =====================================
+
+async function loadAdminData() {
+    // デフォルトで通知タブを表示
+    switchTab('notifications');
+}
+
+async function loadTabData(tabName) {
+    if (!isAuthenticated) {
+        return;
+    }
+    
+    switch (tabName) {
+        case 'notifications':
+            await loadNotificationHistory();
+            break;
+        case 'devices':
+            await loadDeviceList();
+            break;
+        case 'posts':
+            await loadPostList();
+            break;
+        case 'settings':
+            loadSettings();
+            break;
     }
 }
 
+// =====================================
+// 通知送信
+// =====================================
+
+async function sendNotification() {
+    const title = document.getElementById('notification-title').value.trim();
+    const body = document.getElementById('notification-body').value.trim();
+    const url = document.getElementById('notification-url').value.trim() || '/';
+    const category = document.getElementById('notification-category').value;
+    const sendButton = document.getElementById('send-notification-button');
+    
+    if (!title || !body) {
+        showError('タイトルと本文を入力してください');
+        return;
+    }
+    
+    sendButton.disabled = true;
+    sendButton.textContent = '送信中...';
+    
+    try {
+        // 全デバイスに送信
+        const result = await apiClient.sendRequest('sendBulkNotifications', {
+            title: title,
+            body: body,
+            url: url,
+            category: category
+        });
+        
+        if (result.success) {
+            showSuccess(`通知を送信しました（成功: ${result.results.success}, 失敗: ${result.results.failed}）`);
+            
+            // フォームをリセット
+            document.getElementById('notification-form').reset();
+            
+            // 通知履歴を再読み込み
+            await loadNotificationHistory();
+            
+        } else {
+            throw new Error(result.error || '通知の送信に失敗しました');
+        }
+        
+    } catch (error) {
+        console.error('Notification send error:', error);
+        showError(error.message || '通知の送信に失敗しました');
+        
+    } finally {
+        sendButton.disabled = false;
+        sendButton.textContent = '通知を送信';
+    }
+}
+
+// =====================================
+// 通知履歴読み込み
+// =====================================
+
+async function loadNotificationHistory() {
+    const historyContainer = document.getElementById('notification-history');
+    
+    if (!historyContainer) {
+        return;
+    }
+    
+    historyContainer.innerHTML = '<p class="loading">読み込み中...</p>';
+    
+    try {
+        // Supabaseから通知履歴を取得
+        const { data, error } = await window.supabaseClient
+            .from('notification_logs')
+            .select('*')
+            .order('created_at', { ascending: false })
+            .limit(50);
+        
+        if (error) throw error;
+        
+        if (!data || data.length === 0) {
+            historyContainer.innerHTML = '<p class="no-data">通知履歴がありません</p>';
+            return;
+        }
+        
+        // 履歴を表示
+        const html = data.map(log => `
+            <div class="notification-log-item">
+                <div class="log-title">${escapeHtml(log.title)}</div>
+                <div class="log-body">${escapeHtml(log.body)}</div>
+                <div class="log-meta">
+                    <span class="log-time">${formatDateTime(log.created_at)}</span>
+                    <span class="log-category">${escapeHtml(log.category)}</span>
+                </div>
+            </div>
+        `).join('');
+        
+        historyContainer.innerHTML = html;
+        
+    } catch (error) {
+        console.error('Failed to load notification history:', error);
+        historyContainer.innerHTML = '<p class="error">履歴の読み込みに失敗しました</p>';
+    }
+}
+
+// =====================================
+// デバイスリスト読み込み
+// =====================================
+
+async function loadDeviceList() {
+    const deviceContainer = document.getElementById('device-list');
+    
+    if (!deviceContainer) {
+        return;
+    }
+    
+    deviceContainer.innerHTML = '<p class="loading">読み込み中...</p>';
+    
+    try {
+        // Supabaseからデバイス情報を取得
+        const { data, error } = await window.supabaseClient
+            .from('notification_devices')
+            .select('*')
+            .order('last_used', { ascending: false });
+        
+        if (error) throw error;
+        
+        if (!data || data.length === 0) {
+            deviceContainer.innerHTML = '<p class="no-data">登録されたデバイスがありません</p>';
+            return;
+        }
+        
+        // デバイス情報を表示
+        const html = data.map(device => `
+            <div class="device-item">
+                <div class="device-info">
+                    <div class="device-platform">${escapeHtml(device.platform)} / ${escapeHtml(device.browser)}</div>
+                    <div class="device-details">${escapeHtml(device.device_info)}</div>
+                    <div class="device-time">最終使用: ${formatDateTime(device.last_used)}</div>
+                </div>
+                <button class="remove-device-button" data-token="${escapeHtml(device.fcm_token)}">削除</button>
+            </div>
+        `).join('');
+        
+        deviceContainer.innerHTML = html;
+        
+        // 削除ボタンのイベントリスナー
+        const removeButtons = deviceContainer.querySelectorAll('.remove-device-button');
+        removeButtons.forEach(button => {
+            button.addEventListener('click', async () => {
+                const token = button.getAttribute('data-token');
+                await removeDevice(token);
+            });
+        });
+        
+    } catch (error) {
+        console.error('Failed to load device list:', error);
+        deviceContainer.innerHTML = '<p class="error">デバイス情報の読み込みに失敗しました</p>';
+    }
+}
+
+// =====================================
+// デバイス削除
+// =====================================
+
+async function removeDevice(fcmToken) {
+    if (!confirm('このデバイスを削除しますか？')) {
+        return;
+    }
+    
+    try {
+        const { error } = await window.supabaseClient
+            .from('notification_devices')
+            .delete()
+            .eq('fcm_token', fcmToken);
+        
+        if (error) throw error;
+        
+        showSuccess('デバイスを削除しました');
+        await loadDeviceList();
+        
+    } catch (error) {
+        console.error('Failed to remove device:', error);
+        showError('デバイスの削除に失敗しました');
+    }
+}
+
+// =====================================
+// 投稿リスト読み込み
+// =====================================
+
+async function loadPostList() {
+    const postContainer = document.getElementById('post-list');
+    
+    if (!postContainer) {
+        return;
+    }
+    
+    postContainer.innerHTML = '<p class="loading">読み込み中...</p>';
+    
+    try {
+        const { data, error } = await window.supabaseClient
+            .from('posts')
+            .select('*')
+            .order('created_at', { ascending: false })
+            .limit(100);
+        
+        if (error) throw error;
+        
+        if (!data || data.length === 0) {
+            postContainer.innerHTML = '<p class="no-data">投稿がありません</p>';
+            return;
+        }
+        
+        const html = data.map(post => `
+            <div class="post-item">
+                <div class="post-header">
+                    <span class="post-author">${escapeHtml(post.author_name || '匿名')}</span>
+                    <span class="post-time">${formatDateTime(post.created_at)}</span>
+                </div>
+                <div class="post-content">${escapeHtml(post.content)}</div>
+                <div class="post-actions">
+                    <button class="delete-post-button" data-id="${post.id}">削除</button>
+                </div>
+            </div>
+        `).join('');
+        
+        postContainer.innerHTML = html;
+        
+        // 削除ボタンのイベントリスナー
+        const deleteButtons = postContainer.querySelectorAll('.delete-post-button');
+        deleteButtons.forEach(button => {
+            button.addEventListener('click', async () => {
+                const postId = button.getAttribute('data-id');
+                await deletePost(postId);
+            });
+        });
+        
+    } catch (error) {
+        console.error('Failed to load post list:', error);
+        postContainer.innerHTML = '<p class="error">投稿の読み込みに失敗しました</p>';
+    }
+}
+
+// =====================================
+// 投稿削除
+// =====================================
+
+async function deletePost(postId) {
+    if (!confirm('この投稿を削除しますか？')) {
+        return;
+    }
+    
+    try {
+        const { error } = await window.supabaseClient
+            .from('posts')
+            .delete()
+            .eq('id', postId);
+        
+        if (error) throw error;
+        
+        showSuccess('投稿を削除しました');
+        await loadPostList();
+        
+    } catch (error) {
+        console.error('Failed to delete post:', error);
+        showError('投稿の削除に失敗しました');
+    }
+}
+
+// =====================================
+// 設定読み込み
+// =====================================
+
+function loadSettings() {
+    console.log('Loading settings...');
+    // 設定UIの実装
+}
+
+// =====================================
 // ユーティリティ関数
-function formatDate(dateString) {
-    const date = new Date(dateString);
-    return `${date.getFullYear()}/${(date.getMonth() + 1).toString().padStart(2, '0')}/${date.getDate().toString().padStart(2, '0')}`;
+// =====================================
+
+function escapeHtml(text) {
+    if (!text) return '';
+    
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
 }
 
 function formatDateTime(dateString) {
+    if (!dateString) return '';
+    
     const date = new Date(dateString);
-    return `${formatDate(dateString)} ${date.getHours().toString().padStart(2, '0')}:${date.getMinutes().toString().padStart(2, '0')}`;
-}
-
-function formatRelativeTime(dateString) {
-    const date = new Date(dateString);
-    const now = new Date();
-    const diffInSeconds = Math.floor((now - date) / 1000);
     
-    if (diffInSeconds < 60) {
-        return 'たった今';
-    } else if (diffInSeconds < 3600) {
-        const minutes = Math.floor(diffInSeconds / 60);
-        return `${minutes}分前`;
-    } else if (diffInSeconds < 86400) {
-        const hours = Math.floor(diffInSeconds / 3600);
-        return `${hours}時間前`;
-    } else {
-        const days = Math.floor(diffInSeconds / 86400);
-        return `${days}日前`;
-    }
-}
-
-function truncateText(text, maxLength) {
-    return text.length > maxLength ? text.substring(0, maxLength) + '...' : text;
-}
-
-function getCategoryLabel(category) {
-    const labels = {
-        general: '一般',
-        event: 'イベント',
-        important: '重要',
-        newsletter: '生徒会だより',
-        recruitment: '募集',
-        sports: '運動部',
-        music: '音楽部',
-        culture: '文化部',
-        academic: '学術部'
-    };
-    return labels[category] || category;
-}
-
-function getStatusLabel(status) {
-    const labels = {
-        active: '実施中',
-        closed: '終了',
-        draft: '下書き',
-        pending: '確認中',
-        resolved: '対応済み',
-        published: '公開中'
-    };
-    return labels[status] || status;
-}
-
-// 活動実績カテゴリ表示名
-function getAchievementCategoryLabel(category) {
-    const labels = {
-        general: '一般',
-        academic: '学習',
-        cultural: '文化',
-        sports: 'スポーツ',
-        leadership: 'リーダーシップ',
-        volunteer: 'ボランティア',
-        event: 'イベント'
-    };
-    return labels[category] || category;
-}
-
-// 成功・エラーメッセージ表示
-function showSuccessMessage(message) {
-    showMessage(message, 'success');
-}
-
-function showErrorMessage(message) {
-    showMessage(message, 'error');
-}
-
-function showInfoMessage(message) {
-    showMessage(message, 'info');
-}
-
-function showMessage(message, type) {
-    const messageEl = document.createElement('div');
-    messageEl.className = `message-toast message-${type}`;
-    messageEl.innerHTML = `
-        <div class="message-content">
-            <i class="fas fa-${type === 'success' ? 'check-circle' : type === 'error' ? 'exclamation-triangle' : 'info-circle'}"></i>
-            <span>${message}</span>
-        </div>
-    `;
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    const hours = String(date.getHours()).padStart(2, '0');
+    const minutes = String(date.getMinutes()).padStart(2, '0');
     
-    document.body.appendChild(messageEl);
-    
-    // アニメーション表示
-    setTimeout(() => {
-        messageEl.classList.add('show');
-    }, 100);
-    
-    // 5秒後に自動で消す
-    setTimeout(() => {
-        messageEl.classList.remove('show');
-        setTimeout(() => {
-            if (messageEl.parentNode) {
-                messageEl.remove();
-            }
-        }, 300);
-    }, 5000);
+    return `${year}/${month}/${day} ${hours}:${minutes}`;
 }
 
-// 編集・削除関数（プレースホルダー）
-function editNews(id) {
-    showNewsModal(id);
-}
-
-function deleteNews(id) {
-    if (confirm('このお知らせを削除しますか？')) {
-        console.log('Delete news:', id);
-        loadNewsData();
-    }
-}
-
-function showSurveyModal(id = null) {
-    const title = id ? 'アンケートを編集' : '新しいアンケートを作成';
-    const content = `
-        <div class="form-group">
-            <label for="survey-title">タイトル *</label>
-            <input type="text" id="survey-title" class="form-control" placeholder="アンケートのタイトルを入力">
-        </div>
-        <div class="form-group">
-            <label for="survey-description">説明</label>
-            <textarea id="survey-description" class="form-control" rows="3" placeholder="アンケートの説明を入力"></textarea>
-        </div>
-        <div class="form-group">
-            <label for="survey-deadline">締切日</label>
-            <input type="date" id="survey-deadline" class="form-control">
-        </div>
-        <div class="form-group">
-            <label>質問項目</label>
-            <div id="survey-questions">
-                <div class="question-item">
-                    <input type="text" class="form-control" placeholder="質問を入力">
-                    <button type="button" class="btn btn-sm btn-outline" onclick="removeQuestion(this)">
-                        <i class="fas fa-trash"></i>
-                    </button>
-                </div>
-            </div>
-            <button type="button" class="btn btn-sm btn-secondary" onclick="addQuestion()">
-                <i class="fas fa-plus"></i> 質問を追加
-            </button>
-        </div>
-    `;
-    
-    showModal(title, content, () => saveSurvey(id));
-}
-
-function editSurvey(id) {
-    showSurveyModal(id);
-}
-
-function deleteSurvey(id) {
-    if (confirm('このアンケートを削除しますか？')) {
-        console.log('Delete survey:', id);
-        loadSurveysData();
-    }
-}
-
-function viewSurveyResults(id) {
-    console.log('View survey results:', id);
-}
-
-function saveSurvey(id = null) {
-    console.log('Save survey:', id);
-    closeModal();
-    loadSurveysData();
-}
-
-function showClubModal(id = null) {
-    const title = id ? '部活動を編集' : '新しい部活動を追加';
-    const content = `
-        <div class="form-group">
-            <label for="club-name">部活動名 *</label>
-            <input type="text" id="club-name" class="form-control" placeholder="部活動名を入力">
-        </div>
-        <div class="form-group">
-            <label for="club-category">カテゴリ *</label>
-            <select id="club-category" class="form-control">
-                <option value="sports">運動部</option>
-                <option value="culture">文化部</option>
-                <option value="music">音楽部</option>
-                <option value="academic">学術部</option>
-            </select>
-        </div>
-        <div class="form-group">
-            <label for="club-description">説明</label>
-            <textarea id="club-description" class="form-control" rows="3" placeholder="部活動の説明を入力"></textarea>
-        </div>
-        <div class="form-row">
-            <div class="form-group">
-                <label for="club-members">部員数</label>
-                <input type="number" id="club-members" class="form-control" placeholder="0">
-            </div>
-            <div class="form-group">
-                <label for="club-schedule">活動日</label>
-                <input type="text" id="club-schedule" class="form-control" placeholder="例: 月・水・金">
-            </div>
-        </div>
-    `;
-    
-    showModal(title, content, () => saveClub(id));
-}
-
-function editClub(id) {
-    showClubModal(id);
-}
-
-function deleteClub(id) {
-    if (confirm('この部活動を削除しますか？')) {
-        console.log('Delete club:', id);
-        loadClubsData();
-    }
-}
-
-function saveClub(id = null) {
-    console.log('Save club:', id);
-    closeModal();
-    loadClubsData();
-}
-
-function showMemberModal(id = null) {
-    const title = id ? 'メンバーを編集' : '新しいメンバーを追加';
-    const content = `
-        <div class="form-group">
-            <label for="member-name">名前 *</label>
-            <input type="text" id="member-name" class="form-control" placeholder="例: 会長 山田太郎">
-        </div>
-        <div class="form-group">
-            <label for="member-role">役職 *</label>
-            <input type="text" id="member-role" class="form-control" placeholder="例: 全体統括">
-        </div>
-        <div class="form-group">
-            <label for="member-message">メッセージ</label>
-            <textarea id="member-message" class="form-control" rows="3" placeholder="メンバーからのメッセージを入力"></textarea>
-        </div>
-        <div class="form-group">
-            <label for="member-image">プロフィール画像</label>
-            <input type="file" id="member-image" class="form-control" accept="image/*">
-        </div>
-    `;
-    
-    showModal(title, content, () => saveMember(id));
-}
-
-function editMember(id) {
-    showMemberModal(id);
-    // 既存データを取得してフォームへ反映
-    setTimeout(async () => {
-        try {
-            if (!window.supabaseClient) return;
-            const { data, error } = await window.supabaseClient
-                .from('council_members')
-                .select('*')
-                .eq('id', id)
-                .maybeSingle();
-            if (error || !data) return;
-            const nameEl = document.getElementById('member-name');
-            const roleEl = document.getElementById('member-role');
-            const msgEl = document.getElementById('member-message');
-            if (nameEl) nameEl.value = data.name || '';
-            if (roleEl) roleEl.value = data.role || '';
-            if (msgEl) msgEl.value = data.message || '';
-        } catch (e) {
-            console.warn('Failed to prefill member form', e);
+// CSSアニメーション
+const style = document.createElement('style');
+style.textContent = `
+    @keyframes slideIn {
+        from {
+            transform: translateX(100%);
+            opacity: 0;
         }
-    }, 0);
-}
-
-function deleteMember(id) {
-    if (!confirm('このメンバーを削除しますか？')) return;
-    (async () => {
-        try {
-            if (!window.supabaseClient) throw new Error('Supabase client not initialized');
-            const { error } = await window.supabaseClient
-                .from('council_members')
-                .delete()
-                .eq('id', id);
-            if (error) {
-                showErrorMessage('削除に失敗しました: ' + (error.message || '')); return;
-            }
-            showInfoMessage('メンバーを削除しました');
-            loadCouncilData();
-        } catch (e) {
-            console.error('Delete member error:', e);
-            showErrorMessage('削除中にエラーが発生しました');
-        }
-    })();
-}
-
-function saveMember(id = null) {
-    const nameEl = document.getElementById('member-name');
-    const roleEl = document.getElementById('member-role');
-    const msgEl = document.getElementById('member-message');
-    const imgEl = document.getElementById('member-image');
-    const name = nameEl ? nameEl.value.trim() : '';
-    const role = roleEl ? roleEl.value.trim() : '';
-    const message = msgEl ? msgEl.value.trim() : '';
-    if (!name || !role) { alert('名前と役職は必須です。'); return; }
-    (async () => {
-        try {
-            if (!window.supabaseClient) throw new Error('Supabase client not initialized');
-            const payload = { name, role, message, is_active: true };
-            let result;
-            if (id) {
-                result = await window.supabaseClient
-                    .from('council_members')
-                    .update(payload)
-                    .eq('id', id)
-                    .select();
-            } else {
-                result = await window.supabaseClient
-                    .from('council_members')
-                    .insert([payload])
-                    .select();
-            }
-            if (result.error) { throw result.error; }
-            showSuccessMessage('メンバー情報を保存しました');
-            closeModal();
-            loadCouncilData();
-        } catch (e) {
-            console.error('Save member error:', e);
-            showErrorMessage('保存に失敗しました');
-        }
-    })();
-}
-
-function viewForumPost(id) {
-    console.log('View forum post:', id);
-}
-
-function replyToPost(id) {
-    console.log('Reply to post:', id);
-}
-
-// 質問項目の追加・削除（アンケート用）
-function addQuestion() {
-    const questionsContainer = document.getElementById('survey-questions');
-    const questionItem = document.createElement('div');
-    questionItem.className = 'question-item';
-    questionItem.innerHTML = `
-        <input type="text" class="form-control" placeholder="質問を入力">
-        <button type="button" class="btn btn-sm btn-outline" onclick="removeQuestion(this)">
-            <i class="fas fa-trash"></i>
-        </button>
-    `;
-    questionsContainer.appendChild(questionItem);
-}
-
-function removeQuestion(button) {
-    button.parentElement.remove();
-}
-
-// ハンバーガーメニューの初期化
-function initializeHamburgerMenu() {
-    const hamburgerMenu = document.getElementById('hamburger-menu');
-    const adminSidebar = document.getElementById('admin-sidebar');
-    const adminSidebarClose = document.getElementById('admin-sidebar-close');
-    const mainOverlay = document.getElementById('main-overlay');
-    
-    if (hamburgerMenu) {
-        hamburgerMenu.addEventListener('click', function() {
-            toggleAdminSidebar();
-        });
-    }
-    
-    if (adminSidebarClose) {
-        adminSidebarClose.addEventListener('click', function() {
-            closeAdminSidebar();
-        });
-    }
-    
-    if (mainOverlay) {
-        mainOverlay.addEventListener('click', function() {
-            closeAdminSidebar();
-        });
-    }
-    
-    // ESCキーでサイドバーを閉じる
-    document.addEventListener('keydown', function(e) {
-        if (e.key === 'Escape') {
-            closeAdminSidebar();
-        }
-    });
-}
-
-// 管理画面サイドバーの開閉
-function toggleAdminSidebar() {
-    const adminSidebar = document.getElementById('admin-sidebar');
-    const hamburgerMenu = document.getElementById('hamburger-menu');
-    const mainOverlay = document.getElementById('main-overlay');
-    
-    if (adminSidebar && hamburgerMenu) {
-        const isOpen = adminSidebar.classList.contains('active');
-        
-        if (isOpen) {
-            closeAdminSidebar();
-        } else {
-            openAdminSidebar();
+        to {
+            transform: translateX(0);
+            opacity: 1;
         }
     }
-}
-
-function openAdminSidebar() {
-    const adminSidebar = document.getElementById('admin-sidebar');
-    const hamburgerMenu = document.getElementById('hamburger-menu');
-    const mainOverlay = document.getElementById('main-overlay');
     
-    if (adminSidebar) adminSidebar.classList.add('active');
-    if (hamburgerMenu) hamburgerMenu.classList.add('active');
-    if (mainOverlay) mainOverlay.classList.add('active');
-    
-    document.body.style.overflow = 'hidden';
-}
-
-function closeAdminSidebar() {
-    const adminSidebar = document.getElementById('admin-sidebar');
-    const hamburgerMenu = document.getElementById('hamburger-menu');
-    const mainOverlay = document.getElementById('main-overlay');
-    
-    if (adminSidebar) adminSidebar.classList.remove('active');
-    if (hamburgerMenu) hamburgerMenu.classList.remove('active');
-    if (mainOverlay) mainOverlay.classList.remove('active');
-    
-    document.body.style.overflow = '';
-}
-
-// セキュリティ監視システム
-let securityInterval = null;
-let inactivityTimer = null;
-const INACTIVITY_TIMEOUT = 30 * 60 * 1000; // 30分
-
-function startSecurityMonitoring() {
-    // 非アクティブタイマー開始
-    resetInactivityTimer();
-    
-    // 開発者ツール検知
-    securityInterval = setInterval(() => {
-        // 開発者ツールが開かれているかチェック（デバッグモードでは無効化）
-        if (!CONFIG.APP.DEBUG) {
-            const threshold = 200; // しきい値を上げて誤検知を減らす
-            if (window.outerHeight - window.innerHeight > threshold || 
-                window.outerWidth - window.innerWidth > threshold) {
-                console.warn('Developer tools detected - logging out for security');
-                handleLogout();
-            }
+    @keyframes slideOut {
+        from {
+            transform: translateX(0);
+            opacity: 1;
         }
-    }, 2000); // チェック間隔を長くして負荷を軽減
-    
-    // ユーザーアクティビティ監視
-    ['mousedown', 'mousemove', 'keypress', 'scroll', 'touchstart', 'click'].forEach(event => {
-        document.addEventListener(event, resetInactivityTimer, true);
-    });
-}
-
-function stopSecurityMonitoring() {
-    if (securityInterval) {
-        clearInterval(securityInterval);
-        securityInterval = null;
-    }
-    
-    if (inactivityTimer) {
-        clearTimeout(inactivityTimer);
-        inactivityTimer = null;
-    }
-}
-
-function resetInactivityTimer() {
-    if (inactivityTimer) {
-        clearTimeout(inactivityTimer);
-    }
-    
-    inactivityTimer = setTimeout(() => {
-        alert('セキュリティのため、非アクティブによりログアウトします。');
-        handleLogout();
-    }, INACTIVITY_TIMEOUT);
-}
-
-// セキュリティ強化：重要な関数を保護（performLoginは内部関数のため除外）
-// Object.defineProperty(window, 'performLogin', {
-//     value: undefined,
-//     writable: false,
-//     configurable: false
-// });
-
-// showAdminPanelは内部関数のため、セキュリティ保護から除外
-// Object.defineProperty(window, 'showAdminPanel', {
-//     value: undefined,
-//     writable: false,
-//     configurable: false
-// });
-
-// デバッグ用関数（セキュリティ強化版）
-if (CONFIG.APP.DEBUG) {
-    // デバッグモードでも認証バイパス機能は提供しない
-    window.adminDebug = {
-        logout: handleLogout,
-        switchSection: switchSection,
-        clearAuth: clearAuthData,
-        toggleSidebar: toggleSidebar,
-        openSidebar: openSidebar,
-        closeSidebar: closeSidebar,
-        // login機能は削除（セキュリティのため）
-        // 活動実績管理機能
-        loadAchievementsData,
-        showAchievementModal,
-        clearAchievementFilters,
-        // サイドバー管理機能
-        toggleAdminSidebar,
-        openAdminSidebar,
-        closeAdminSidebar
-    };
-    console.log('Admin debug functions available (login disabled for security)');
-}
-
-// ========================================
-// 活動実績管理機能
-// ========================================
-
-// 活動実績データ読み込み
-async function loadAchievementsData() {
-    const tableBody = document.getElementById('achievements-table-body');
-    if (!tableBody) return;
-    
-    try {
-        // 活動実績を取得
-        const membersResult = await supabaseQueries.getCouncilMembers();
-        const members = membersResult.data || [];
-        
-        // 全てのメンバーの活動実績を取得
-        let achievements = [];
-
-        for (const member of members) {
-            try {
-                const achievementsResult = await supabaseQueries.getMemberAchievements(member.id, {
-                    includePublicOnly: false // 管理者は全ての実績を表示
-                });
-                
-                if (achievementsResult.data && achievementsResult.data.length > 0) {
-                    achievements = achievements.concat(achievementsResult.data.map(achievement => ({
-                        ...achievement,
-                        memberName: member.name,
-                        memberRole: member.role
-                    })));
-                }
-            } catch (error) {
-                console.warn(`Failed to load achievements for member ${member.id}:`, error);
-                // テーブルが存在しない場合は空の配列で続行
-            }
+        to {
+            transform: translateX(100%);
+            opacity: 0;
         }
-
-        // フィルター適用
-        const filteredAchievements = applyAchievementFilters(achievements);
-        
-        // UI更新
-        updateAchievementsTable(filteredAchievements);
-        updateMemberFilter(members);
-        
-    } catch (error) {
-        console.error('活動実績データの読み込みエラー:', error);
-        tableBody.innerHTML = '<tr><td colspan="7">データの読み込みに失敗しました。member_achievementsテーブルが存在しない可能性があります。</td></tr>';
     }
-}
-
-// 活動実績テーブル更新
-function updateAchievementsTable(achievements) {
-    const tableBody = document.getElementById('achievements-table-body');
-    if (!tableBody) return;
-    
-    if (!achievements || achievements.length === 0) {
-        tableBody.innerHTML = '<tr><td colspan="7">活動実績がありません</td></tr>';
-        return;
-    }
-    
-    tableBody.innerHTML = achievements.map(achievement => `
-        <tr>
-            <td>
-                <div class="member-name">${achievement.memberName}</div>
-                <div class="member-role">${achievement.memberRole}</div>
-            </td>
-            <td>
-                <span class="date-badge">${achievement.year}年${achievement.month}月</span>
-            </td>
-            <td>
-                <div class="achievement-title">${achievement.title}</div>
-            </td>
-            <td>
-                <span class="achievement-category category-${achievement.category}">
-                    ${getAchievementCategoryLabel(achievement.category)}
-                </span>
-            </td>
-            <td>
-                <div class="achievement-description">${achievement.description || ''}</div>
-            </td>
-            <td>
-                <span class="public-status ${achievement.isPublic ? 'public' : 'private'}">
-                    <i class="fas fa-${achievement.isPublic ? 'eye' : 'eye-slash'}"></i>
-                    ${achievement.isPublic ? '公開' : '非公開'}
-                </span>
-            </td>
-            <td>
-                <div class="action-buttons">
-                    <button class="btn btn-sm btn-outline" onclick="editAchievement(${achievement.id})">
-                        <i class="fas fa-edit"></i>
-                    </button>
-                    <button class="btn btn-sm btn-danger" onclick="deleteAchievement(${achievement.id})">
-                        <i class="fas fa-trash"></i>
-                    </button>
-                </div>
-            </td>
-        </tr>
-    `).join('');
-}
-
-// メンバーフィルター更新
-function updateMemberFilter(members) {
-    const memberFilter = document.getElementById('member-filter');
-    if (!memberFilter) return;
-    
-    memberFilter.innerHTML = `
-        <option value="">すべてのメンバー</option>
-        ${members.map(member => `
-            <option value="${member.id}">${member.name} (${member.role})</option>
-        `).join('')}
-    `;
-}
-
-// フィルター適用
-function applyAchievementFilters(achievements) {
-    const yearFilter = document.getElementById('achievement-year-filter')?.value;
-    const monthFilter = document.getElementById('achievement-month-filter')?.value;
-    const categoryFilter = document.getElementById('achievement-category-filter')?.value;
-    const memberFilter = document.getElementById('member-filter')?.value;
-    
-    return achievements.filter(achievement => {
-        if (yearFilter && achievement.year != yearFilter) return false;
-        if (monthFilter && achievement.month != monthFilter) return false;
-        if (categoryFilter && achievement.category !== categoryFilter) return false;
-        if (memberFilter && achievement.memberId != memberFilter) return false;
-        return true;
-    });
-}
-
-// 活動実績編集モーダル表示
-function showAchievementModal(achievementId = null) {
-    const modalTitle = document.getElementById('modal-title');
-    const modalBody = document.getElementById('modal-body');
-    
-    modalTitle.textContent = achievementId ? '活動実績編集' : '活動実績追加';
-    
-    modalBody.innerHTML = `
-        <form id="achievement-form">
-            <div class="form-group">
-                <label for="achievement-member">メンバー <span class="required">*</span></label>
-                <select id="achievement-member" class="form-control" required>
-                    <option value="">メンバーを選択</option>
-                </select>
-            </div>
-            
-            <div class="form-row">
-                <div class="form-group">
-                    <label for="achievement-year">年 <span class="required">*</span></label>
-                    <select id="achievement-year" class="form-control" required>
-                        <option value="">年を選択</option>
-                        <option value="2024">2024年</option>
-                        <option value="2025">2025年</option>
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label for="achievement-month">月 <span class="required">*</span></label>
-                    <select id="achievement-month" class="form-control" required>
-                        <option value="">月を選択</option>
-                        <option value="1">1月</option>
-                        <option value="2">2月</option>
-                        <option value="3">3月</option>
-                        <option value="4">4月</option>
-                        <option value="5">5月</option>
-                        <option value="6">6月</option>
-                        <option value="7">7月</option>
-                        <option value="8">8月</option>
-                        <option value="9">9月</option>
-                        <option value="10">10月</option>
-                        <option value="11">11月</option>
-                        <option value="12">12月</option>
-                    </select>
-                </div>
-            </div>
-            
-            <div class="form-group">
-                <label for="achievement-title">タイトル <span class="required">*</span></label>
-                <input type="text" id="achievement-title" class="form-control" required maxlength="200">
-            </div>
-            
-            <div class="form-group">
-                <label for="achievement-description">詳細</label>
-                <textarea id="achievement-description" class="form-control" rows="3" maxlength="1000"></textarea>
-            </div>
-            
-            <div class="form-group">
-                <label for="achievement-category">カテゴリ</label>
-                <select id="achievement-category" class="form-control">
-                    <option value="general">一般</option>
-                    <option value="academic">学習</option>
-                    <option value="cultural">文化</option>
-                    <option value="sports">スポーツ</option>
-                    <option value="leadership">リーダーシップ</option>
-                    <option value="volunteer">ボランティア</option>
-                    <option value="event">イベント</option>
-                </select>
-            </div>
-            
-            <div class="form-group">
-                <label for="achievement-priority">表示優先度</label>
-                <input type="number" id="achievement-priority" class="form-control" min="0" max="100" value="0">
-            </div>
-            
-            <div class="form-group">
-                <label class="checkbox-label">
-                    <input type="checkbox" id="achievement-public">
-                    <span class="checkmark"></span>
-                    公開する
-                </label>
-            </div>
-        </form>
-    `;
-    
-    // メンバー選択肢を設定
-    populateMemberSelect();
-    
-    // 編集の場合、データを設定
-    if (achievementId) {
-        setAchievementFormData(achievementId);
-    } else {
-        // 公開をデフォルトでON
-        document.getElementById('achievement-public').checked = true;
-    }
-    
-    showModal();
-}
-
-// メンバー選択肢設定
-async function populateMemberSelect() {
-    const memberSelect = document.getElementById('achievement-member');
-    if (!memberSelect) return;
-    
-    try {
-        const result = await supabaseQueries.getCouncilMembers();
-        const members = result.data || [];
-        
-        memberSelect.innerHTML = '<option value="">メンバーを選択</option>' +
-            members.map(member => `
-                <option value="${member.id}">${member.name} (${member.role})</option>
-            `).join('');
-    } catch (error) {
-        console.error('メンバー一覧の取得エラー:', error);
-    }
-}
-
-// 実績フォームデータ設定（編集時）
-async function setAchievementFormData(achievementId) {
-    try {
-        // 実績データを取得してフォームに設定
-        // 注意: SupabaseQueriesには単一実績取得メソッドがないため、全データから検索
-        // 実際の実装では、getMemberAchievement(id) メソッドを追加することが推奨
-        
-        document.getElementById('form-mode').value = 'edit';
-        document.getElementById('form-id').value = achievementId;
-    } catch (error) {
-        console.error('実績データの取得エラー:', error);
-    }
-}
-
-// フィルタークリア
-function clearAchievementFilters() {
-    document.getElementById('achievement-year-filter').value = '';
-    document.getElementById('achievement-month-filter').value = '';
-    document.getElementById('achievement-category-filter').value = '';
-    document.getElementById('member-filter').value = '';
-    
-    // データ再読み込み
-    loadAchievementsData();
-}
-
-// 活動実績編集
-function editAchievement(achievementId) {
-    showAchievementModal(achievementId);
-}
-
-// 活動実績削除
-async function deleteAchievement(achievementId) {
-    if (!confirm('この活動実績を削除してもよろしいですか？')) return;
-    
-    try {
-        const result = await supabaseQueries.deleteMemberAchievement(achievementId);
-        
-        if (result.error) {
-            showErrorMessage('削除に失敗しました: ' + result.error.message);
-        } else {
-            showInfoMessage('活動実績を削除しました');
-            loadAchievementsData();
-        }
-    } catch (error) {
-        console.error('実績削除エラー:', error);
-        showErrorMessage('削除中にエラーが発生しました');
-    }
-}
+`;
+document.head.appendChild(style);

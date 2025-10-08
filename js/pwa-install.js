@@ -4,6 +4,8 @@ class PWAInstaller {
     constructor() {
         this.deferredPrompt = null;
         this.installButton = null;
+        this.banner = null;
+        this.dismissKey = 'pwa-install-dismissed';
         this.init();
     }
 
@@ -22,9 +24,10 @@ class PWAInstaller {
         // beforeinstallpromptイベントをリッスン
         window.addEventListener('beforeinstallprompt', (e) => {
             console.log('PWA install prompt available');
-            e.preventDefault();
+            // preventDefault()を呼ばずに、プロンプトを保持
             this.deferredPrompt = e;
             this.showInstallButton();
+            this.maybeShowSmartBanner();
         });
 
         // インストールボタンのクリックイベント
@@ -37,10 +40,13 @@ class PWAInstaller {
             console.log('PWA installed successfully');
             this.hideInstallButton();
             this.showInstallSuccessMessage();
+            this.removeSmartBanner();
+            try { localStorage.setItem(this.dismissKey, 'installed'); } catch {}
         });
 
         // 既にインストール済みかチェック
         this.checkIfInstalled();
+        this.maybeShowSmartBanner();
     }
 
     showInstallButton() {
@@ -105,6 +111,48 @@ class PWAInstaller {
             return true;
         }
         return false;
+    }
+
+    // スマートバナーの表示（一定条件で表示、ユーザーが閉じたら抑制）
+    maybeShowSmartBanner() {
+        try {
+            const dismissed = localStorage.getItem(this.dismissKey);
+            if (dismissed) return;
+        } catch {}
+        if (this.checkIfInstalled()) return;
+        if (this.banner) return;
+        this.banner = document.createElement('div');
+        this.banner.className = 'pwa-smart-banner';
+        this.banner.innerHTML = `
+            <div class="pwa-smart-banner-content">
+                <div class="pwa-smart-banner-icon"><i class="fas fa-download"></i></div>
+                <div class="pwa-smart-banner-text">
+                    <strong>アプリとしてインストール</strong>
+                    <span>ホーム画面から素早くアクセスできます</span>
+                </div>
+                <div class="pwa-smart-banner-actions">
+                    <button class="btn btn-primary" id="pwa-smart-install">インストール</button>
+                    <button class="btn btn-outline" id="pwa-smart-dismiss" aria-label="閉じる">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(this.banner);
+        setTimeout(() => this.banner.classList.add('show'), 50);
+        const onInstall = () => this.installPWA();
+        const onDismiss = () => {
+            this.removeSmartBanner();
+            try { localStorage.setItem(this.dismissKey, String(Date.now())); } catch {}
+        };
+        this.banner.querySelector('#pwa-smart-install').addEventListener('click', onInstall);
+        this.banner.querySelector('#pwa-smart-dismiss').addEventListener('click', onDismiss);
+    }
+
+    removeSmartBanner() {
+        if (!this.banner) return;
+        this.banner.classList.remove('show');
+        setTimeout(() => { this.banner && this.banner.remove(); this.banner = null; }, 200);
     }
 
     showInstallSuccessMessage() {
