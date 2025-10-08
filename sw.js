@@ -7,21 +7,35 @@
 // キャッシュ設定
 // =====================================
 
-const CACHE_VERSION = 18;
+const CACHE_VERSION = 22;
 const CACHE_NAME = `nazuna-portal-v${CACHE_VERSION}`;
 const CACHE_PREFIX = 'nazuna-portal-v';
 
-// キャッシュするリソース（存在確認済み）
+// キャッシュするリソース（主要ページ・共通アセット）
 const STATIC_CACHE_FILES = [
   '/',
   '/index.html',
-  '/forum.html',
   '/admin.html',
+  '/admin-simple.html',
+  '/clubs.html',
+  '/council.html',
+  '/forum.html',
+  '/member-detail.html',
+  '/news.html',
+  '/survey.html',
   '/css/style.css',
+  '/css/admin.css',
   '/js/app.js',
   '/js/config.js',
+  '/js/firebase-config.js',
+  '/js/admin.js',
+  '/js/simple-notification-manager.js',
   '/js/notification-manager.js',
-  '/js/admin.js'
+  '/js/pwa-update.js',
+  '/images/icon.png',
+  '/images/icon-192x192.png',
+  '/images/icon-512x512.png',
+  '/images/badge-72x72.png'
 ];
 
 // オプションのリソース（存在しない場合はスキップ）
@@ -154,6 +168,9 @@ self.addEventListener('activate', (event) => {
         await self.clients.claim();
         
         console.log('[SW] Service Worker activated and claimed clients');
+        
+        // クライアントへの強制リロードは行わない
+        // 更新通知は BroadcastChannel と UI 側の制御に任せる
         
       } catch (error) {
         console.error('[SW] Activation failed:', error);
@@ -316,6 +333,7 @@ self.addEventListener('push', (event) => {
         notificationData.url = payload.data.url || notificationData.url;
         notificationData.icon = payload.data.icon || notificationData.icon;
         notificationData.badge = payload.data.badge || notificationData.badge;
+        notificationData.tag = payload.data.tag || payload.data.historyId || 'general';
       }
       
       // notification フィールドがある場合も対応（フォールバック）
@@ -351,7 +369,7 @@ self.addEventListener('push', (event) => {
       }
     ],
     requireInteraction: false,
-    tag: 'nazuna-notification-' + Date.now()
+    tag: notificationData.tag || 'nazuna-notification'
   };
   
   // 通知を表示
@@ -478,3 +496,25 @@ self.addEventListener('unhandledrejection', (event) => {
 });
 
 console.log('[SW] Service Worker loaded, version:', CACHE_VERSION);
+
+// ===============================
+// Update communication to page
+// ===============================
+try {
+  const channel = new BroadcastChannel('pwa-updates');
+  // 通知: 現在のキャッシュ名
+  const postCacheName = () => {
+    try { channel.postMessage({ type: 'CACHE_NAME', cacheName: CACHE_NAME }); } catch (e) {}
+  };
+  // 起動時に送信
+  postCacheName();
+  // activate時にも送信
+  self.addEventListener('activate', () => { postCacheName(); });
+  // ページからのCHECK_UPDATE要求に応答
+  self.addEventListener('message', (event) => {
+    const data = event.data || {};
+    if (data && data.type === 'CHECK_UPDATE') {
+      postCacheName();
+    }
+  });
+} catch (e) {}

@@ -72,7 +72,7 @@ const SHEETS = {
 
 // GET リクエスト処理（JSONP対応）
 function doGet(e) {
-  const action = e.parameter.action;
+  const action = e.parameter.action || e.parameter.function;
   const callback = e.parameter.callback;
   
   let result = { success: false, error: 'Unknown action' };
@@ -140,6 +140,16 @@ function doGet(e) {
       case 'registerFCMToken':
         result = registerFCMToken(e.parameter);
         break;
+      // シンプル通知システム用のアクション
+      case 'registerDeviceSimple':
+        result = registerDeviceSimple(e.parameter);
+        break;
+      case 'sendNotificationSimple':
+        result = sendNotificationSimple(e.parameter);
+        break;
+      case 'getDevicesSimple':
+        result = getDevicesSimple(e.parameter);
+        break;
       default:
         result = { success: false, error: 'Invalid action: ' + action };
     }
@@ -148,11 +158,17 @@ function doGet(e) {
     result = { success: false, error: error.toString() };
   }
   
-  // JSONP形式で返す
-  const jsonpResponse = callback + '(' + JSON.stringify(result) + ');';
-  return ContentService
-    .createTextOutput(jsonpResponse)
-    .setMimeType(ContentService.MimeType.JAVASCRIPT);
+  // JSONP or pure JSON
+  if (callback) {
+    const jsonpResponse = callback + '(' + JSON.stringify(result) + ');';
+    return ContentService
+      .createTextOutput(jsonpResponse)
+      .setMimeType(ContentService.MimeType.JAVASCRIPT);
+  }
+  return createResponse(result, {
+    'Access-Control-Allow-Origin': '*',
+    'Content-Type': 'application/json'
+  });
 }
 
 // POST リクエスト処理（通知システム用）
@@ -263,7 +279,8 @@ function doOptions(e) {
 // 部活動データを取得
 function getClubs(params) {
   try {
-    const sheet = SpreadsheetApp.openById(SPREADSHEET_ID).getSheetByName(SHEETS.CLUBS);
+    const config = getConfig();
+    const sheet = SpreadsheetApp.openById(config.SPREADSHEET_ID).getSheetByName(SHEETS.CLUBS);
     const data = sheet.getDataRange().getValues();
     
     if (data.length <= 1) {
@@ -289,7 +306,8 @@ function getClubs(params) {
 // 投稿データを取得
 function getPosts(params) {
   try {
-    const sheet = SpreadsheetApp.openById(SPREADSHEET_ID).getSheetByName(SHEETS.POSTS);
+    const config = getConfig();
+    const sheet = SpreadsheetApp.openById(config.SPREADSHEET_ID).getSheetByName(SHEETS.POSTS);
     const data = sheet.getDataRange().getValues();
     
     if (data.length <= 1) {
@@ -326,7 +344,8 @@ function submitPost(params) {
       return { success: false, error: '投稿内容が長すぎます（1000文字以内）' };
     }
     
-    const sheet = SpreadsheetApp.openById(SPREADSHEET_ID).getSheetByName(SHEETS.POSTS);
+    const config = getConfig();
+    const sheet = SpreadsheetApp.openById(config.SPREADSHEET_ID).getSheetByName(SHEETS.POSTS);
     const postId = 'POST_' + Date.now();
     const timestamp = new Date();
     
@@ -358,7 +377,8 @@ function submitPost(params) {
 // お知らせデータを取得
 function getNews(params) {
   try {
-    const sheet = SpreadsheetApp.openById(SPREADSHEET_ID).getSheetByName(SHEETS.NEWS);
+    const config = getConfig();
+    const sheet = SpreadsheetApp.openById(config.SPREADSHEET_ID).getSheetByName(SHEETS.NEWS);
     const data = sheet.getDataRange().getValues();
     
     if (data.length <= 1) {
@@ -384,7 +404,8 @@ function getNews(params) {
 // アンケートデータを取得
 function getSurveys(params) {
   try {
-    const sheet = SpreadsheetApp.openById(SPREADSHEET_ID).getSheetByName(SHEETS.SURVEYS);
+    const config = getConfig();
+    const sheet = SpreadsheetApp.openById(config.SPREADSHEET_ID).getSheetByName(SHEETS.SURVEYS);
     const data = sheet.getDataRange().getValues();
     
     if (data.length <= 1) {
@@ -410,7 +431,8 @@ function getSurveys(params) {
 // メンバーデータを取得
 function getMembers(params) {
   try {
-    const sheet = SpreadsheetApp.openById(SPREADSHEET_ID).getSheetByName(SHEETS.MEMBERS);
+    const config = getConfig();
+    const sheet = SpreadsheetApp.openById(config.SPREADSHEET_ID).getSheetByName(SHEETS.MEMBERS);
     const data = sheet.getDataRange().getValues();
     
     if (data.length <= 1) {
@@ -1010,26 +1032,36 @@ function sendFCMMessage(message) {
     const endpoint = `https://fcm.googleapis.com/v1/projects/${config.FIREBASE_PROJECT_ID}/messages:send`;
     
     // ブラウザ標準描画を有効化（互換性確保）：notification も送信
+    // 入力は sendFCMNotifications からの fcmMessage を想定し、
+    // top-level または notification フィールドのいずれからでも値を拾う
+    var notifTitle = (message.notification && message.notification.title) || message.title;
+    var notifBody = (message.notification && message.notification.body) || message.body;
+    var notifIcon = (message.notification && message.notification.icon) || message.icon;
+    var notifBadge = (message.notification && message.notification.badge) || message.badge;
+    var actionUrl = (message.data && message.data.url) || message.action_url || '/';
+    var notifCategory = (message.data && message.data.category) || message.category || 'general';
+    var notifTag = (message.data && (message.data.tag || message.data.historyId)) || message.history_id || notifCategory;
+
     const notification = {
-      title: message.title,
-      body: message.body,
-      image: message.image || message.icon,
-      icon: message.icon || 'https://raw.githubusercontent.com/J105588/nazuna-portal/main/images/icon-192x192.png',
-      badge: message.badge || '/images/badge-72x72.png',
-      click_action: message.action_url || '/',
-      tag: message.category || 'general'
+      title: notifTitle,
+      body: notifBody,
+      image: message.image || notifIcon,
+      icon: notifIcon || 'https://raw.githubusercontent.com/J105588/nazuna-portal/main/images/icon-192x192.png',
+      badge: notifBadge || '/images/badge-72x72.png',
+      click_action: actionUrl,
+      tag: notifTag
     };
     
     // カスタムデータをFCMに渡すための設定
     const customData = {
-      title: message.title,
-      body: message.body,
+      title: notifTitle,
+      body: notifBody,
       message: message.body,
-      icon: message.icon,
-      badge: message.badge,
-      url: message.action_url,
-      category: message.category,
-      tag: message.category,
+      icon: notifIcon || message.icon,
+      badge: notifBadge || message.badge,
+      url: actionUrl,
+      category: notifCategory,
+      tag: notifTag,
       requireInteraction: message.requireInteraction,
       actions: JSON.stringify(message.actions || []),
       vibrate: JSON.stringify(message.vibrate || [200, 100, 200]),
@@ -1047,18 +1079,18 @@ function sendFCMMessage(message) {
       },
       // iOS Web Push/Safari等がそのまま表示できるよう notification を明示
       notification: {
-        title: message.title,
-        body: message.body,
-        icon: message.icon || 'https://raw.githubusercontent.com/J105588/nazuna-portal/main/images/icon-192x192.png',
-        badge: message.badge || '/images/badge-72x72.png',
+        title: notifTitle,
+        body: notifBody,
+        icon: notifIcon || 'https://raw.githubusercontent.com/J105588/nazuna-portal/main/images/icon-192x192.png',
+        badge: notifBadge || '/images/badge-72x72.png',
         actions: message.actions || [
           { action: 'view', title: '詳細を見る' },
           { action: 'dismiss', title: '閉じる' }
         ],
-        tag: (message.data && message.data.category) || message.category || 'general',
+        tag: notifTag,
       },
       fcm_options: {
-        link: (message.action_url || (message.data && message.data.url)) || '/'
+        link: actionUrl
       }
     };
     
@@ -1110,11 +1142,11 @@ function sendFCMMessage(message) {
       priority: message.priority === 'high' ? 'HIGH' : 'NORMAL',
       ttl: `${message.time_to_live || 86400}s`,
       notification: {
-        icon: message.icon || 'ic_notification',
+        icon: notifIcon || 'ic_notification',
         color: message.color || '#4285F4',
         sound: message.sound || 'default',
-        clickAction: message.data?.url || '/',
-        tag: message.data?.category || 'general',
+        clickAction: (message.data && message.data.url) || '/',
+        tag: notifTag,
         channelId: message.channelId || 'default'
       }
     };
@@ -1125,9 +1157,9 @@ function sendFCMMessage(message) {
         token: message.to,
         // カスタムタイトル・内容を確実に送信するためnotificationフィールドを必須に
         notification: {
-          title: message.title,
-          body: message.body,
-          image: message.image || message.icon
+          title: notifTitle,
+          body: notifBody,
+          image: message.image || notifIcon
         },
         // カスタムデータも併用して送信
         data: customData,
@@ -1749,4 +1781,92 @@ function initializeGASProperties() {
   
   console.log('GAS properties initialized');
   return { success: true, message: 'Properties initialized' };
+}
+
+// =====================================
+// シンプル通知システム用の関数
+// =====================================
+
+// デバイス登録（シンプル版）
+function registerDeviceSimple(data) {
+  try {
+    const { fcmToken, userAgent, timestamp } = data;
+    
+    if (!fcmToken) {
+      return { success: false, error: 'FCM token is required' };
+    }
+    
+    // 既存のregisterFCMToken関数を活用
+    const result = registerFCMToken({
+      fcmToken: fcmToken,
+      deviceInfo: {
+        userAgent: userAgent,
+        timestamp: timestamp,
+        platform: getPlatformFromUserAgent(userAgent)
+      }
+    });
+    
+    return result;
+    
+  } catch (error) {
+    console.error('[Simple] Error registering device:', error);
+    return { success: false, error: error.toString() };
+  }
+}
+
+// 通知送信（シンプル版）
+function sendNotificationSimple(data) {
+  try {
+    const { title, message, target, timestamp } = data;
+    
+    if (!title || !message) {
+      return { success: false, error: 'Title and message are required' };
+    }
+    
+    // 既存のsendNotification関数を活用（シンプルモード）
+    const notificationData = {
+      preferCustom: true,
+      templateData: {
+        title: title,
+        message: message,
+        url: '/',
+        category: 'general',
+        priority: 1,
+        icon: 'https://raw.githubusercontent.com/J105588/nazuna-portal/main/images/icon-192x192.png',
+        badge: '/images/badge-72x72.png'
+      },
+      targetType: target || 'all',
+      targetCriteria: {},
+      adminEmail: 'simple-notification@nazuna-portal.com'
+    };
+    
+    const result = sendNotification(notificationData);
+    return result;
+    
+  } catch (error) {
+    console.error('[Simple] Error sending notification:', error);
+    return { success: false, error: error.toString() };
+  }
+}
+
+// デバイス取得（シンプル版）
+function getDevicesSimple(data) {
+  try {
+    const { target = 'all' } = data;
+    return getTargetDevices(target);
+  } catch (error) {
+    console.error('[Simple] Error getting devices:', error);
+    return { success: false, error: error.toString() };
+  }
+}
+
+// プラットフォーム判定（ユーティリティ）
+function getPlatformFromUserAgent(userAgent) {
+  if (userAgent.includes('iPhone') || userAgent.includes('iPad')) {
+    return 'ios';
+  } else if (userAgent.includes('Android')) {
+    return 'android';
+  } else {
+    return 'web';
+  }
 }

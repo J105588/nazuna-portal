@@ -9,7 +9,7 @@
 
 let isAuthenticated = false;
 let currentUser = null;
-let apiClient = null;
+// APIクライアントは window.apiClient を使用
 
 // =====================================
 // 初期化
@@ -18,13 +18,15 @@ let apiClient = null;
 document.addEventListener('DOMContentLoaded', async () => {
     console.log('Admin panel initializing...');
     
-    // API Clientの初期化
-    if (typeof APIClient !== 'undefined') {
-        apiClient = new APIClient();
-    } else {
-        console.error('APIClient not found');
-        showError('システムエラー: APIクライアントが読み込まれていません');
-        return;
+    // API Clientの初期化（重複作成を避ける）
+    if (!window.apiClient) {
+        if (typeof APIClient !== 'undefined') {
+            window.apiClient = new APIClient();
+        } else {
+            console.error('APIClient not found');
+            showError('システムエラー: APIクライアントが読み込まれていません');
+            return;
+        }
     }
     
     // セッションチェック
@@ -77,7 +79,7 @@ async function checkExistingSession() {
  */
 async function verifyAdminSession(token, email) {
     try {
-        const result = await apiClient.sendRequest('verifyAdminSession', {
+        const result = await window.apiClient.sendRequest('verifyAdminSession', {
             token: token,
             email: email
         });
@@ -141,7 +143,7 @@ async function performLogin(email, password) {
         console.log('Sending login request...');
         
         // GAS APIでログイン
-        const result = await apiClient.sendRequest('adminLogin', {
+        const result = await window.apiClient.sendRequest('adminLogin', {
             email: email,
             passwordHash: passwordHash
         });
@@ -420,7 +422,7 @@ async function sendNotification() {
     
     try {
         // 全デバイスに送信
-        const result = await apiClient.sendRequest('sendBulkNotifications', {
+        const result = await window.apiClient.sendRequest('sendBulkNotifications', {
             title: title,
             body: body,
             url: url,

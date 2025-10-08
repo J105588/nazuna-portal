@@ -8,6 +8,7 @@ class PWAUpdater {
         this.isApplying = false;
         this.updateIntervalId = null;
         this.channel = null;
+        this.lastSeenCacheName = localStorage.getItem('pwa_last_cache_name') || '';
         if (!window.__pwaUpdaterInitialized) {
             window.__pwaUpdaterInitialized = true;
             this.ensureStyles();
@@ -38,7 +39,18 @@ class PWAUpdater {
                         }
                         break;
                     case 'RELOAD':
+                        // 次回以降のループを防ぐため、リロード前にキャッシュ名を確定保存
+                        if (this._pendingCacheName) {
+                            this.lastSeenCacheName = this._pendingCacheName;
+                            try { localStorage.setItem('pwa_last_cache_name', this.lastSeenCacheName); } catch {}
+                        }
+                        this.cleanupOverlays();
                         window.location.reload();
+                        break;
+                    case 'CACHE_NAME':
+                        if (typeof data.cacheName === 'string') {
+                            this.handleCacheName(data.cacheName);
+                        }
                         break;
                     default:
                         break;
@@ -58,6 +70,11 @@ class PWAUpdater {
                                 if (!this.updatePromptShown) {
                                     this.updatePromptShown = true;
                                     this.showUpdateNotification();
+                                }
+                                break;
+                            case 'CACHE_NAME':
+                                if (typeof data.cacheName === 'string') {
+                                    this.handleCacheName(data.cacheName);
                                 }
                                 break;
                             case 'INSTALLED':
@@ -137,6 +154,11 @@ class PWAUpdater {
             
             // 少し遅延してからリロード（確実にSWがアクティブになるまで待つ）
             setTimeout(() => {
+                // ページ再読み込み前にキャッシュ名を保存して再通知ループを防止
+                if (this._pendingCacheName) {
+                    this.lastSeenCacheName = this._pendingCacheName;
+                    try { localStorage.setItem('pwa_last_cache_name', this.lastSeenCacheName); } catch {}
+                }
                 window.location.reload();
             }, 100);
         } else {
@@ -145,30 +167,53 @@ class PWAUpdater {
     }
 
     showUpdateNotification() {
-        const notification = this.createNotification(
-            'アップデートが利用可能です',
-            '最新の内容に更新できます。',
-            [
-                { text: '今すぐ更新', action: () => this.applyUpdate(), primary: true },
-                { text: '後で', action: () => this.dismissNotification() }
-            ]
-        );
-        this.showNotification(notification);
+        // キャッシュ名が変わっていなければ通知を出さない
+        if (this._pendingCacheName && this._pendingCacheName === this.lastSeenCacheName) return;
+        // フルスクリーンの豪華な告知を表示
+        this.showFullScreenUpdateAnnouncement();
+    }
+
+    showFullScreenUpdateAnnouncement() {
+        // 既に表示中なら再表示しない
+        if (document.querySelector('.pwa-update-announcement')) return;
+        const overlay = document.createElement('div');
+        overlay.className = 'pwa-update-announcement';
+        overlay.innerHTML = `
+            <div class="pwa-update-announcement-content">
+                <div class="pwa-update-hero">
+                    <div class="pwa-update-glow"></div>
+                    <div class="pwa-update-icon">
+                        <i class="fas fa-rocket"></i>
+                    </div>
+                    <h2>システムアップデート</h2>
+                    <p>最新の改善と最適化を一括適用します</p>
+                </div>
+                <div class="pwa-update-actions">
+                    <button class="pwa-update-primary" id="pwa-update-apply-all">
+                        <i class="fas fa-download"></i> 全体を今すぐ更新
+                    </button>
+                    <button class="pwa-update-secondary" id="pwa-update-later">
+                        後で
+                    </button>
+                </div>
+            </div>`;
+        document.body.appendChild(overlay);
+        // スクロール固定
+        try { this._prevOverflow = document.body.style.overflow; document.body.style.overflow = 'hidden'; } catch {}
+        setTimeout(() => overlay.classList.add('show'), 0);
+        const applyBtn = overlay.querySelector('#pwa-update-apply-all');
+        const laterBtn = overlay.querySelector('#pwa-update-later');
+        applyBtn && applyBtn.addEventListener('click', () => {
+            this.applyUpdate();
+            this.showUpdateLoading();
+            try { overlay.remove(); document.body.style.overflow = this._prevOverflow || ''; } catch {}
+        });
+        laterBtn && laterBtn.addEventListener('click', () => { try { overlay.remove(); document.body.style.overflow = this._prevOverflow || ''; } catch {} });
     }
 
     showCachedNotification() {
-        const notification = this.createNotification(
-            'オフライン対応完了',
-            'アプリがオフラインで利用可能になりました。',
-            [
-                {
-                    text: 'OK',
-                    action: () => this.dismissNotification()
-                }
-            ]
-        );
-
-        this.showNotification(notification);
+        // オフライン完了の通知は表示しない
+        return;
     }
 
     createNotification(title, message, buttons = []) {
@@ -326,12 +371,12 @@ class PWAUpdater {
                 </div>
             </div>
         `;
-        // テーマカラー適用
+        // テーマカラー適用（グラデーション）
         try {
             const theme = this.getThemeColor();
             const box = loadingModal.querySelector('.pwa-update-loading-content');
             const spinner = loadingModal.querySelector('.spinner');
-            if (box) box.style.background = theme || '#4a7c59';
+            if (box) box.style.background = `linear-gradient(135deg, ${theme} 0%, #6b9b7a 100%)`;
             if (spinner) {
                 spinner.style.borderTopColor = '#fff';
                 spinner.style.borderColor = 'rgba(255,255,255,.35)';
@@ -658,9 +703,9 @@ class PWAUpdater {
             .pwa-update-btn-primary:hover { filter: brightness(0.95); }
             @media (max-width: 480px) { .pwa-update-toast { right: 8px; left: 8px; } .pwa-update-toast-inner { max-width: none; } }
             /* Loading modal (viewport center) */
-            .pwa-update-loading { position: fixed; inset: 0; z-index: 2147483646; display: flex; align-items: flex-start; justify-content: center; padding-top: 28px; background: rgba(0,0,0,.35); backdrop-filter: blur(4px); opacity: 0; transition: opacity .16s ease-out; }
+            .pwa-update-loading { position: fixed; inset: 0; z-index: 2147483646; display: grid; place-items: center; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); opacity: 0; transition: opacity .16s ease-out; }
             .pwa-update-loading-show { opacity: 1; }
-            .pwa-update-loading-content { background: #4a7c59; color: #fff; padding: 18px 20px; border-radius: 12px; width: min(92vw, 420px); box-shadow: 0 14px 40px rgba(0,0,0,.45); text-align: center; }
+            .pwa-update-loading-content { background: rgba(17,24,39,.82); color: #fff; padding: 22px 24px; border-radius: 14px; width: min(92vw, 460px); box-shadow: 0 18px 48px rgba(0,0,0,.5); text-align: center; backdrop-filter: blur(10px); }
             .pwa-update-loading-spinner { margin-bottom: 12px; display: grid; place-items: center; }
             .pwa-update-loading-spinner .spinner { width: 32px; height: 32px; border: 4px solid rgba(255,255,255,.25); border-top-color: #10b981; border-radius: 50%; animation: pwa-spin 1s linear infinite; }
             @keyframes pwa-spin { to { transform: rotate(360deg); } }
@@ -670,8 +715,34 @@ class PWAUpdater {
             .pwa-update-details-content, .pwa-update-module-content { background: #111827; color:#fff; width: min(92vw, 560px); border-radius: 12px; box-shadow: 0 12px 36px rgba(0,0,0,.45); }
             .pwa-update-details-header, .pwa-update-module-header { display:flex; align-items:center; justify-content: space-between; padding: 12px 16px; border-bottom: 1px solid rgba(255,255,255,.08); }
             .pwa-update-details-body, .pwa-update-module-body { padding: 14px 16px; }
+            /* Full-screen glamorous announcement (opening theme) */
+            .pwa-update-announcement { position: fixed; inset:0; z-index:2147483647; display:grid; place-items:center; 
+                background:
+                  radial-gradient(1200px 600px at 20% -20%, rgba(255,255,255,.10), transparent),
+                  linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                opacity:0; transition: opacity .18s ease-out; }
+            .pwa-update-announcement.show { opacity:1; }
+            .pwa-update-announcement-content { width:min(92vw,740px); padding:28px; border-radius:18px; background: rgba(17,24,39,.72); color:#fff; box-shadow: 0 24px 72px rgba(0,0,0,.55); backdrop-filter: blur(12px); text-align:center; }
+            .pwa-update-hero { position:relative; padding:12px 0 18px; }
+            .pwa-update-glow { position:absolute; inset:-24px -24px auto -24px; height:120px; filter: blur(28px); background: conic-gradient(from 0deg at 50% 50%, rgba(102,126,234,.45), rgba(118,75,162,.35), rgba(102,126,234,.45)); opacity:.8; border-radius:24px; }
+            .pwa-update-icon { position:relative; z-index:1; width:72px; height:72px; margin:0 auto 10px; border-radius:50%; display:grid; place-items:center; background: linear-gradient(135deg, rgba(255,255,255,.16), rgba(255,255,255,.06)); box-shadow: inset 0 0 0 1px rgba(255,255,255,.12); font-size:28px; }
+            .pwa-update-hero h2 { position:relative; z-index:1; margin:8px 0 6px; font-size:28px; letter-spacing:.02em; }
+            .pwa-update-hero p { position:relative; z-index:1; margin:0; opacity:.9; }
+            .pwa-update-actions { display:flex; gap:12px; justify-content:center; margin-top:16px; }
+            .pwa-update-primary { appearance:none; border:none; padding:12px 18px; border-radius:12px; color:#0b1220; background: linear-gradient(135deg, #34d399, #10b981); font-weight:700; cursor:pointer; box-shadow: 0 10px 28px rgba(16,185,129,.35); }
+            .pwa-update-primary:hover { filter:brightness(.98); }
+            .pwa-update-secondary { appearance:none; border:1px solid rgba(255,255,255,.28); background: transparent; color:#fff; padding:12px 18px; border-radius:12px; cursor:pointer; }
         `;
         document.head.appendChild(style);
+    }
+
+    // SWからの cacheName を受け取り、通知制御に使用
+    handleCacheName(name) {
+        this._pendingCacheName = name;
+        if (!this.lastSeenCacheName) {
+            this.lastSeenCacheName = name;
+            localStorage.setItem('pwa_last_cache_name', name);
+        }
     }
 
     getThemeColor() {

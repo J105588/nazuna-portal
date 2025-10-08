@@ -19,41 +19,17 @@ firebase.initializeApp(firebaseConfig);
 // Firebase Messaging初期化
 const messaging = firebase.messaging();
 
-// iOS対応: 通知許可の確認（カスタムメッセージ対応版）
+// 注意: FCMのHTTP v1でnotificationを含む場合、ブラウザ側が自動表示します。
+// ここでのpushハンドラで再度showNotificationすると重複表示になるため、
+// 明示的な表示は行いません（ログのみ）。
 self.addEventListener('push', function(event) {
-    console.log('Push event received:', event);
-    
-    if (event.data) {
-        const data = event.data.json();
-        console.log('Push data:', data);
-        
-        // カスタムメッセージのデータを優先使用
-        const options = {
-            body: data.body || data.message || 'お知らせがあります',
-            icon: data.icon || 'https://raw.githubusercontent.com/J105588/nazuna-portal/main/images/icon-192x192.png',
-            badge: data.badge || '/images/badge-72x72.png',
-            tag: data.tag || data.category || 'general',
-            data: {
-                url: data.url || data.action_url || '/',
-                category: data.category || 'general',
-                timestamp: data.timestamp || Date.now(),
-                originalData: data
-            },
-            actions: data.actions || [
-                { action: 'view', title: '詳細を見る' },
-                { action: 'dismiss', title: '閉じる' }
-            ],
-            requireInteraction: data.requireInteraction || false,
-            silent: data.silent || false,
-            vibrate: data.vibrate || [200, 100, 200],
-            renotify: data.renotify || false,
-            timestamp: data.timestamp || Date.now()
-        };
-        
-        event.waitUntil(
-            self.registration.showNotification(data.title || 'お知らせ', options)
-        );
-    }
+    try {
+        console.log('Push event received (no-op to avoid duplicate display).');
+        if (event.data) {
+            const data = event.data.json();
+            console.log('Push data:', data);
+        }
+    } catch (e) {}
 });
 
 // バックグラウンドメッセージ処理
@@ -62,16 +38,16 @@ messaging.onBackgroundMessage(function(payload) {
     
     const { notification, data } = payload;
     
-    const notificationTitle = notification?.title || 'お知らせ';
+    const notificationTitle = (data && (data.title || data.message)) || notification?.title || 'お知らせ';
     const notificationOptions = {
-        body: notification?.body || 'お知らせがあります',
+        body: (data && (data.body || data.message)) || notification?.body || 'お知らせがあります',
         icon: notification?.icon || 'https://raw.githubusercontent.com/J105588/nazuna-portal/main/images/icon-192x192.png',
         badge: '/images/badge-72x72.png',
-        tag: data?.category || 'general',
+        tag: (data && (data.tag || data.historyId || data.category)) || 'general',
         requireInteraction: data?.priority === '2',
         data: {
-            url: data?.url || '/',
-            category: data?.category || 'general',
+            url: (data && data.url) || '/',
+            category: (data && data.category) || 'general',
             timestamp: Date.now()
         },
         actions: notification?.actions || [
