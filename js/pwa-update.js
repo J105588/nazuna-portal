@@ -178,8 +178,17 @@ class PWAUpdater {
         if (document.querySelector('.pwa-update-announcement')) return;
         const overlay = document.createElement('div');
         overlay.className = 'pwa-update-announcement';
+
+        overlay.style.position = 'fixed';
+        overlay.style.top = '0';
+        overlay.style.left = '50%';
+        overlay.style.transform = 'translateX(-50%)';
+        overlay.style.width = '100%';
+        overlay.style.zIndex = '1000'; // 他の要素より手前に表示
+        
         overlay.innerHTML = `
             <div class="pwa-update-announcement-content">
+                <div class="pwa-ripples"></div>
                 <div class="pwa-update-hero">
                     <div class="pwa-update-glow"></div>
                     <div class="pwa-update-icon">
@@ -370,6 +379,7 @@ class PWAUpdater {
                     <p>しばらくお待ちください</p>
                 </div>
             </div>
+            <div class="pwa-ripples"></div>
         `;
         // テーマカラー適用（グラデーション）
         try {
@@ -703,7 +713,10 @@ class PWAUpdater {
             .pwa-update-btn-primary:hover { filter: brightness(0.95); }
             @media (max-width: 480px) { .pwa-update-toast { right: 8px; left: 8px; } .pwa-update-toast-inner { max-width: none; } }
             /* Loading modal (viewport center) */
-            .pwa-update-loading { position: fixed; inset: 0; z-index: 2147483646; display: grid; place-items: center; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); opacity: 0; transition: opacity .16s ease-out; }
+            .pwa-update-loading { position: fixed; inset: 0; z-index: 2147483646; display: grid; place-items: center; background:
+                radial-gradient(1200px 600px at 20% -20%, rgba(255,255,255,.10), transparent),
+                linear-gradient(135deg, #4a7c59 0%, #6b9b7a 100%);
+                opacity: 0; transition: opacity .16s ease-out; overflow:hidden; }
             .pwa-update-loading-show { opacity: 1; }
             .pwa-update-loading-content { background: rgba(17,24,39,.82); color: #fff; padding: 22px 24px; border-radius: 14px; width: min(92vw, 460px); box-shadow: 0 18px 48px rgba(0,0,0,.5); text-align: center; backdrop-filter: blur(10px); }
             .pwa-update-loading-spinner { margin-bottom: 12px; display: grid; place-items: center; }
@@ -719,13 +732,18 @@ class PWAUpdater {
             .pwa-update-announcement { position: fixed; inset:0; z-index:2147483647; display:grid; place-items:center; 
                 background:
                   radial-gradient(1200px 600px at 20% -20%, rgba(255,255,255,.10), transparent),
-                  linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-                opacity:0; transition: opacity .18s ease-out; }
+                  linear-gradient(135deg, #4a7c59 0%, #6b9b7a 100%);
+                opacity:0; transition: opacity .18s ease-out; overflow:hidden; }
             .pwa-update-announcement.show { opacity:1; }
             .pwa-update-announcement-content { width:min(92vw,740px); padding:28px; border-radius:18px; background: rgba(17,24,39,.72); color:#fff; box-shadow: 0 24px 72px rgba(0,0,0,.55); backdrop-filter: blur(12px); text-align:center; }
             .pwa-update-hero { position:relative; padding:12px 0 18px; }
             .pwa-update-glow { position:absolute; inset:-24px -24px auto -24px; height:120px; filter: blur(28px); background: conic-gradient(from 0deg at 50% 50%, rgba(102,126,234,.45), rgba(118,75,162,.35), rgba(102,126,234,.45)); opacity:.8; border-radius:24px; }
             .pwa-update-icon { position:relative; z-index:1; width:72px; height:72px; margin:0 auto 10px; border-radius:50%; display:grid; place-items:center; background: linear-gradient(135deg, rgba(255,255,255,.16), rgba(255,255,255,.06)); box-shadow: inset 0 0 0 1px rgba(255,255,255,.12); font-size:28px; }
+            /* Ripple animation */
+            .pwa-ripples { position:absolute; inset:0; pointer-events:none; overflow:hidden; }
+            .pwa-ripples::before, .pwa-ripples::after { content:''; position:absolute; top:50%; left:50%; width:20vmin; height:20vmin; border-radius:50%; transform:translate(-50%, -50%); background: radial-gradient(circle, rgba(255,255,255,.25) 0%, rgba(255,255,255,0) 60%); animation: pwa-ripple 3.2s ease-out infinite; }
+            .pwa-ripples::after { width:28vmin; height:28vmin; animation-delay: 1.2s; background: radial-gradient(circle, rgba(255,255,255,.18) 0%, rgba(255,255,255,0) 60%); }
+            @keyframes pwa-ripple { 0% { transform: translate(-50%, -50%) scale(0.6); opacity:.35; } 70% { opacity:.12; } 100% { transform: translate(-50%, -50%) scale(2.2); opacity:0; } }
             .pwa-update-hero h2 { position:relative; z-index:1; margin:8px 0 6px; font-size:28px; letter-spacing:.02em; }
             .pwa-update-hero p { position:relative; z-index:1; margin:0; opacity:.9; }
             .pwa-update-actions { display:flex; gap:12px; justify-content:center; margin-top:16px; }

@@ -51,13 +51,22 @@ class SimpleNotificationManager {
                 this.messaging = null;
             }
             
-            // 既存のトークンをチェック
-            const savedToken = localStorage.getItem('fcm_token');
+            // 既存のトークンをチェック（両方のキーに対応）
+            const savedToken = localStorage.getItem('fcm_token') || localStorage.getItem('fcmToken');
             const isRegistered = localStorage.getItem('device_registered') === 'true';
-            
+            if (savedToken) this.fcmToken = savedToken;
             if (savedToken && isRegistered) {
-                this.fcmToken = savedToken;
                 console.log('[SimpleNotificationManager] Using saved FCM token');
+            } else if (this.permission === 'granted') {
+                // 権限が許可済みで未登録なら登録を試行
+                try {
+                    const token = await this.getFCMToken();
+                    if (token) {
+                        await this.registerDevice();
+                    }
+                } catch (e) {
+                    console.warn('[SimpleNotificationManager] Auto registration skipped:', e && (e.message || e));
+                }
             }
             
             this.isInitialized = true;
@@ -116,12 +125,14 @@ class SimpleNotificationManager {
             }
             
             const token = await this.messaging.getToken({
-                vapidKey: vapidKey
+                vapidKey: vapidKey,
+                serviceWorkerRegistration: await navigator.serviceWorker.ready
             });
             
             if (token) {
                 this.fcmToken = token;
                 localStorage.setItem('fcm_token', token);
+                localStorage.setItem('fcmToken', token);
                 console.log('[SimpleNotificationManager] FCM token obtained');
                 return token;
             } else {
@@ -149,6 +160,11 @@ class SimpleNotificationManager {
             const response = await this.sendToGAS('registerDevice', {
                 fcmToken: token,
                 userAgent: navigator.userAgent,
+                deviceInfo: JSON.stringify({
+                    platform: navigator.platform,
+                    language: navigator.language,
+                    screen: `${window.screen.width}x${window.screen.height}`
+                }),
                 timestamp: Date.now()
             });
             
@@ -171,7 +187,7 @@ class SimpleNotificationManager {
     // 通知送信（管理者用）
     // =====================================
     
-    async sendNotification(title, message, target = 'all') {
+    async sendNotification(title, message, target = 'all', url = '/') {
         if (!this.isInitialized) {
             throw new Error('Notification manager not initialized');
         }
@@ -181,6 +197,7 @@ class SimpleNotificationManager {
                 title: title,
                 message: message,
                 target: target,
+                url: url,
                 timestamp: Date.now()
             });
             

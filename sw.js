@@ -7,7 +7,7 @@
 // キャッシュ設定
 // =====================================
 
-const CACHE_VERSION = 23;
+const CACHE_VERSION = 27;
 const CACHE_NAME = `nazuna-portal-v${CACHE_VERSION}`;
 const CACHE_PREFIX = 'nazuna-portal-v';
 
@@ -16,7 +16,6 @@ const STATIC_CACHE_FILES = [
   '/',
   '/index.html',
   '/admin.html',
-  '/admin-simple.html',
   '/clubs.html',
   '/council.html',
   '/forum.html',
@@ -392,8 +391,19 @@ self.addEventListener('notificationclick', (event) => {
     return;
   }
   
-  // URLを取得
-  const urlToOpen = event.notification.data?.url || '/';
+  // URLを取得し正規化
+  let urlToOpen = event.notification.data?.url || '/';
+  try {
+    // 空や不正な値をフォールバック
+    if (typeof urlToOpen !== 'string' || urlToOpen.trim() === '') {
+      urlToOpen = '/';
+    }
+    // 相対パスを絶対URLへ
+    const targetUrl = new URL(urlToOpen, self.location.origin).toString();
+    urlToOpen = targetUrl;
+  } catch (e) {
+    urlToOpen = self.location.origin + '/';
+  }
   
   // クライアントを開く
   event.waitUntil(
@@ -408,15 +418,23 @@ self.addEventListener('notificationclick', (event) => {
         // 同じURLのウィンドウが既に開いている場合はフォーカス
         for (const client of allClients) {
           const clientUrl = new URL(client.url);
-          const targetUrl = new URL(urlToOpen, self.location.origin);
+          const targetUrl = new URL(urlToOpen);
           
           if (clientUrl.pathname === targetUrl.pathname) {
             return client.focus();
           }
         }
         
-        // 新しいウィンドウを開く
-        return clients.openWindow(urlToOpen);
+        // 新しいウィンドウ/タブを開く（失敗時はフォールバック）
+        const opened = await clients.openWindow(urlToOpen);
+        if (opened && 'focus' in opened) {
+          return opened.focus();
+        }
+        // フォールバック: 既存クライアントにnavigate試行
+        if (allClients && allClients[0] && 'navigate' in allClients[0]) {
+          return allClients[0].navigate(urlToOpen);
+        }
+        return null;
         
       } catch (error) {
         console.error('[SW] Failed to open window:', error);

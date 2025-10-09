@@ -30,9 +30,6 @@
     <meta name="msapplication-square150x150logo" content="https://raw.githubusercontent.com/J105588/nazuna-portal/main/images/icon-144x144.png">
     <meta name="msapplication-wide310x150logo" content="https://raw.githubusercontent.com/J105588/nazuna-portal/main/images/icon-192x192.png">
     <meta name="msapplication-square310x310logo" content="https://raw.githubusercontent.com/J105588/nazuna-portal/main/images/icon-512x512.png">
-    <!-- Supabase CDN -->
-    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
-    
     <!-- Firebase SDK -->
     <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-messaging-compat.js"></script>
@@ -120,22 +117,83 @@
         <section class="news-filter">
             <div class="container">
                 <div class="filter-controls">
-                    <h3>カテゴリで絞り込み</h3>
-                    <div class="filter-buttons">
-                        <button class="filter-btn active" data-category="all">
-                            <i class="fas fa-th"></i> すべて
-                        </button>
-                        <button class="filter-btn" data-category="event">
-                            <i class="fas fa-calendar-alt"></i> イベント
-                        </button>
-                        <button class="filter-btn" data-category="newsletter">
-                            <i class="fas fa-newspaper"></i> 生徒会だより
-                        </button>
-                        <button class="filter-btn" data-category="recruitment">
-                            <i class="fas fa-users"></i> 募集
-                        </button>
-                        <button class="filter-btn" data-category="important">
-                            <i class="fas fa-exclamation-triangle"></i> 重要
+                    <h3>お知らせを検索・絞り込み</h3>
+                    
+                    <!-- 検索ボックス -->
+                    <div class="search-controls">
+                        <div class="search-box">
+                            <i class="fas fa-search"></i>
+                            <input type="text" id="news-search" placeholder="タイトルや内容で検索...">
+                            <button id="clear-search" class="clear-btn" style="display: none;">
+                                <i class="fas fa-times"></i>
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <!-- カテゴリフィルター -->
+                    <div class="category-controls">
+                        <h4><i class="fas fa-filter"></i> カテゴリで絞り込み</h4>
+                        <div class="filter-tabs">
+                            <button class="filter-tab active" data-category="all">
+                                <i class="fas fa-th"></i>
+                                <span>すべて</span>
+                                <span class="filter-count" id="count-all">0</span>
+                            </button>
+                            <button class="filter-tab" data-category="event">
+                                <i class="fas fa-calendar-alt"></i>
+                                <span>イベント</span>
+                                <span class="filter-count" id="count-event">0</span>
+                            </button>
+                            <button class="filter-tab" data-category="newsletter">
+                                <i class="fas fa-newspaper"></i>
+                                <span>生徒会だより</span>
+                                <span class="filter-count" id="count-newsletter">0</span>
+                            </button>
+                            <button class="filter-tab" data-category="recruitment">
+                                <i class="fas fa-users"></i>
+                                <span>募集</span>
+                                <span class="filter-count" id="count-recruitment">0</span>
+                            </button>
+                            <button class="filter-tab" data-category="important">
+                                <i class="fas fa-exclamation-triangle"></i>
+                                <span>重要</span>
+                                <span class="filter-count" id="count-important">0</span>
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <!-- 日付フィルター -->
+                    <div class="date-controls">
+                        <h4><i class="fas fa-clock"></i> 期間で絞り込み</h4>
+                        <div class="filter-tabs">
+                            <button class="filter-tab active" data-period="all">
+                                <i class="fas fa-calendar"></i>
+                                <span>すべて</span>
+                                <span class="filter-count" id="count-period-all">0</span>
+                            </button>
+                            <button class="filter-tab" data-period="week">
+                                <i class="fas fa-calendar-week"></i>
+                                <span>今週</span>
+                                <span class="filter-count" id="count-period-week">0</span>
+                            </button>
+                            <button class="filter-tab" data-period="month">
+                                <i class="fas fa-calendar-alt"></i>
+                                <span>今月</span>
+                                <span class="filter-count" id="count-period-month">0</span>
+                            </button>
+                            <button class="filter-tab" data-period="year">
+                                <i class="fas fa-calendar"></i>
+                                <span>今年</span>
+                                <span class="filter-count" id="count-period-year">0</span>
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <!-- 結果表示 -->
+                    <div class="filter-results">
+                        <span id="news-count">0件のお知らせ</span>
+                        <button id="reset-filters" class="reset-btn" style="display: none;">
+                            <i class="fas fa-undo"></i> フィルターをリセット
                         </button>
                     </div>
                 </div>
@@ -276,7 +334,7 @@
     </footer>
 
     <script src="js/config.js"></script>
-    <script src="js/supabase-queries.js"></script>
+    <script src="js/news-loader.js"></script>
     <script src="js/app.js"></script>
     <!-- Features -->
     <script src="js/pwa-install.js"></script>

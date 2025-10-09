@@ -7,7 +7,8 @@
     <link rel="stylesheet" href="css/style.css">
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#4a7c59">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <style>
         /* カスタムスタイル */
         :root {
@@ -33,12 +34,27 @@
         }
 
         body {
-            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            font-family: 'Noto Sans JP', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background:
+              radial-gradient(1200px 600px at 20% -20%, rgba(255,255,255,.10), transparent),
+              linear-gradient(135deg, #4a7c59 0%, #6b9b7a 100%);
             min-height: 100vh;
             margin: 0;
             padding: 20px;
             color: var(--text-primary);
+            position: relative;
+            overflow-x: hidden;
+        }
+
+        body::before {
+            content: '';
+            position: absolute;
+            inset: -40px -40px auto -40px;
+            height: 180px;
+            background: conic-gradient(from 0deg at 50% 50%, rgba(255,255,255,.12), rgba(255,255,255,.06), rgba(255,255,255,.12));
+            filter: blur(28px);
+            opacity: .5;
+            pointer-events: none;
         }
 
         .admin-container {
@@ -64,7 +80,9 @@
         }
 
         .admin-header {
-            background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-light) 100%);
+            background:
+              radial-gradient(1200px 600px at 20% -40%, rgba(255,255,255,.12), transparent),
+              linear-gradient(135deg, var(--primary-color) 0%, var(--primary-light) 100%);
             color: white;
             padding: 30px;
             display: flex;
@@ -140,8 +158,8 @@
         }
 
         .btn-primary {
-            background: linear-gradient(135deg, var(--success-color) 0%, #2ecc71 100%);
-            color: white;
+            background: linear-gradient(135deg, #34d399 0%, #10b981 100%);
+            color: #0b2b22;
             box-shadow: var(--shadow-light);
         }
 
@@ -273,7 +291,9 @@
         .status-icon {
             width: 60px;
             height: 60px;
-            background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-light) 100%);
+            background:
+              radial-gradient(100px 60px at 30% 20%, rgba(255,255,255,.18), transparent),
+              linear-gradient(135deg, var(--primary-color) 0%, var(--primary-light) 100%);
             border-radius: 50%;
             display: flex;
             align-items: center;
@@ -522,6 +542,35 @@
         .history-list::-webkit-scrollbar-thumb:hover {
             background: var(--primary-dark);
         }
+
+        /* 追加のレスポンシブ最適化 */
+        @media (max-width: 1024px) {
+            .admin-header h1 { font-size: 2.1rem; }
+            .notification-section, .status-section, .history-section { padding: 28px; }
+            .status-grid { grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); }
+            .admin-container { border-radius: 10px; }
+        }
+
+        @media (max-width: 640px) {
+            body { padding: 12px; }
+            .admin-header { padding: 22px; }
+            .admin-header h1 { font-size: 1.8rem; }
+            .admin-actions { flex-direction: column; gap: 10px; width: 100%; }
+            .btn { width: 100%; justify-content: center; }
+            .notification-section, .status-section, .history-section { padding: 20px; }
+            .form-actions { margin-top: 20px; }
+            .status-card { padding: 18px; }
+            .status-icon { width: 52px; height: 52px; font-size: 20px; }
+        }
+
+        @media (max-width: 480px) {
+            body { padding: 10px; }
+            body::before { height: 120px; filter: blur(24px); }
+            .admin-container { border-radius: 8px; }
+            .section-header h2 { font-size: 1.5rem; }
+            .form-control { padding: 12px 14px; font-size: 15px; }
+            .history-list { max-height: 300px; }
+        }
     </style>
 </head>
 <body>
@@ -566,6 +615,16 @@
                         placeholder="通知メッセージを入力"
                         required
                     ></textarea>
+                </div>
+                
+                <div class="form-group">
+                    <label for="notification-url">リンク先URL（例: /news.html または https://...）</label>
+                    <input 
+                        type="text"
+                        id="notification-url"
+                        class="form-control"
+                        placeholder="クリック時に開くURL（省略可、既定: /）"
+                    >
                 </div>
                 
                 <div class="form-group">
@@ -650,6 +709,9 @@
 
     <!-- スクリプト -->
     <script src="js/config.js"></script>
+    <!-- Firebase SDK (compat) must load before firebase-config.js -->
+    <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-messaging-compat.js"></script>
     <script src="js/firebase-config.js"></script>
     <script src="js/simple-notification-manager.js"></script>
     <script>
@@ -723,6 +785,7 @@
                 const title = document.getElementById('notification-title').value.trim();
                 const message = document.getElementById('notification-message').value.trim();
                 const target = document.getElementById('notification-target').value;
+                const url = (document.getElementById('notification-url') && document.getElementById('notification-url').value.trim()) || '/';
                 
                 if (!title || !message) {
                     this.showMessage('タイトルとメッセージを入力してください。', 'error');
@@ -740,26 +803,20 @@
                     // 送信アニメーション
                     this.animateButton(sendBtn);
                     
-                    const result = await this.notificationManager.sendNotification(title, message, target);
+                    await this.notificationManager.sendNotification(title, message, target, url);
+                    this.showMessage('通知を送信しました。', 'success');
                     
-                    if (result.success) {
-                        this.showMessage('通知を送信しました。', 'success');
-                        
-                        // 成功アニメーション
-                        this.animateSuccess(sendBtn);
-                        
-                        // フォームをクリア
-                        document.getElementById('notification-form').reset();
-                        
-                        // 履歴を更新
-                        await this.loadHistory();
-                        
-                        // 状態を更新
-                        await this.updateStatus();
-                        
-                    } else {
-                        throw new Error(result.error || '送信に失敗しました。');
-                    }
+                    // 成功アニメーション
+                    this.animateSuccess(sendBtn);
+                    
+                    // フォームをクリア
+                    document.getElementById('notification-form').reset();
+                    
+                    // 履歴を更新
+                    await this.loadHistory();
+                    
+                    // 状態を更新
+                    await this.updateStatus();
                     
                 } catch (error) {
                     console.error('Error sending notification:', error);
@@ -800,14 +857,10 @@
                     const result = await this.notificationManager.sendNotification(
                         'テスト通知',
                         'これは管理者によるテスト通知です。',
-                        'all'
+                        'all',
+                        '/news.html'
                     );
-                    
-                    if (result.success) {
-                        this.showMessage('テスト通知を送信しました。', 'success');
-                    } else {
-                        throw new Error(result.error || 'テスト通知の送信に失敗しました。');
-                    }
+                    this.showMessage('テスト通知を送信しました。', 'success');
                     
                 } catch (error) {
                     console.error('Error sending test notification:', error);

@@ -929,26 +929,26 @@ async function loadNews() {
     const newsContainer = document.querySelector('.news-container');
     if (!newsContainer) return;
     
-    // フォールバックデータ（DB接続失敗時のみ使用）
-    const fallbackNews = [];
-    
-    const renderNews = (item) => `
-        <div class="news-item" data-category="${item.category || 'general'}">
-            <div class="news-date">${formatDate(item.date || item.created_at)}</div>
-            <div class="news-content">
-                <h3>${item.title}</h3>
-                <p>${item.content}</p>
+    // 新しいNewsLoaderを使用
+    if (typeof NewsLoader !== 'undefined') {
+        const newsLoader = new NewsLoader();
+        await newsLoader.init();
+    } else {
+        // フォールバック：エラーメッセージを表示
+        newsContainer.innerHTML = `
+            <div class="no-data-message">
+                <div class="no-data-icon">
+                    <i class="fas fa-exclamation-triangle"></i>
+                </div>
+                <h3>読み込みエラー</h3>
+                <p>ニュースローダーが読み込まれていません。ページを再読み込みしてください。</p>
+                <button class="btn btn-primary" onclick="location.reload()">
+                    <i class="fas fa-refresh"></i>
+                    再読み込み
+                </button>
             </div>
-            <span class="news-type ${item.category || 'general'}">${getNewsTypeLabel(item.category || 'general')}</span>
-        </div>
-    `;
-    
-    // ラッパーdivを作成
-    const wrapper = document.createElement('div');
-    wrapper.className = 'news-list';
-    newsContainer.appendChild(wrapper);
-    
-    await loadFromSupabase('news', wrapper, renderNews, fallbackNews);
+        `;
+    }
 }
 
 function getNewsTypeLabel(type) {
@@ -1643,26 +1643,9 @@ function initClubsFilter() {
 
 // ニュースフィルター初期化
 function initNewsFilter() {
-    const filterBtns = document.querySelectorAll('.filter-btn');
-    const newsItems = document.querySelectorAll('.news-item');
-    
-    filterBtns.forEach(btn => {
-        btn.addEventListener('click', () => {
-            // アクティブ状態の切り替え
-            filterBtns.forEach(b => b.classList.remove('active'));
-            btn.classList.add('active');
-            
-            const category = btn.dataset.category;
-            
-            newsItems.forEach(item => {
-                if (category === 'all' || item.dataset.category === category) {
-                    item.style.display = 'flex';
-                } else {
-                    item.style.display = 'none';
-                }
-            });
-        });
-    });
+    // NewsLoaderが初期化された後に実行されるため、
+    // ここでは何もしない（NewsLoader内で処理される）
+    console.log('News filter initialization delegated to NewsLoader');
 }
 
 // 通知機能初期化

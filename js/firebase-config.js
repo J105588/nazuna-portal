@@ -231,32 +231,42 @@ async function registerFCMToken(token) {
         let retries = 3;
         let result = null;
         
+        const hasApiClient = !!window.apiClient;
         while (retries > 0) {
             try {
-                // GASにトークンを登録
-                result = await (window.apiClient ? window.apiClient.sendRequest('registerFCMToken', {
-                    fcmToken: token,
-                    deviceInfo: deviceInfo,
-                    timestamp: new Date().toISOString()
-                }, {
-                    timeout: 10000 // タイムアウトを10秒に設定
-                }) : Promise.resolve({ success: false, error: 'API client unavailable' }));
-                
-                if (result.success) {
-                    break; // 成功したらループを抜ける
+                if (hasApiClient) {
+                    // APIクライアント経由
+                    result = await window.apiClient.sendRequest('registerFCMToken', {
+                        fcmToken: token,
+                        deviceInfo: deviceInfo,
+                        timestamp: new Date().toISOString()
+                    }, {
+                        timeout: 10000
+                    });
                 } else {
-                    const msg = String(result.error || '').toLowerCase();
-                    // 重複（409/23505）は成功扱い
-                    if (msg.includes('duplicate key value') || msg.includes('23505') || msg.includes('409')) {
-                        console.log('FCM token already registered. Treating as success.');
-                        result = { success: true };
-                        break;
-                    }
-                    console.warn(`FCM token registration failed (${retries} retries left):`, result.error);
-                    retries--;
-                    if (retries > 0) {
-                        await new Promise(resolve => setTimeout(resolve, 1000)); // 1秒待機
-                    }
+                    // JSONPフォールバック（CORS回避）
+                    result = await jsonpRegisterFCMToken(token, deviceInfo);
+                }
+                
+                if (result && result.success) {
+                    break; // 成功
+                }
+                const msg = String(result && result.error || '').toLowerCase();
+                // 重複（409/23505）は成功扱い
+                if (msg.includes('duplicate key value') || msg.includes('23505') || msg.includes('409')) {
+                    console.log('FCM token already registered. Treating as success.');
+                    result = { success: true };
+                    break;
+                }
+                console.warn(`FCM token registration failed (${retries} retries left):`, result && result.error);
+                if (!hasApiClient) {
+                    // フォールバックはリトライ不要
+                    retries = 0;
+                    break;
+                }
+                retries--;
+                if (retries > 0) {
+                    await new Promise(resolve => setTimeout(resolve, 1000));
                 }
             } catch (err) {
                 const emsg = String(err && (err.message || err)).toLowerCase();
@@ -266,9 +276,13 @@ async function registerFCMToken(token) {
                     break;
                 }
                 console.warn(`FCM token registration error (${retries} retries left):`, err);
+                if (!hasApiClient) {
+                    retries = 0;
+                    break;
+                }
                 retries--;
                 if (retries > 0) {
-                    await new Promise(resolve => setTimeout(resolve, 1000)); // 1秒待機
+                    await new Promise(resolve => setTimeout(resolve, 1000));
                 }
             }
         }
@@ -290,6 +304,46 @@ async function registerFCMToken(token) {
         localStorage.setItem('fcmToken', token);
         localStorage.setItem('fcmTokenTimestamp', new Date().toISOString());
     }
+}
+
+// JSONPフォールバックでFCMトークンを登録
+function jsonpRegisterFCMToken(token, deviceInfo) {
+    return new Promise((resolve, reject) => {
+        try {
+            const gasUrl = window.CONFIG && window.CONFIG.GAS_URL;
+            if (!gasUrl) {
+                return resolve({ success: false, error: 'GAS URL not configured' });
+            }
+            const callbackName = 'jsonp_cb_' + Date.now() + '_' + Math.floor(Math.random() * 100000);
+            const params = new URLSearchParams();
+            params.set('action', 'registerFCMToken');
+            params.set('fcmToken', token);
+            params.set('deviceInfo', JSON.stringify(deviceInfo || {}));
+            params.set('timestamp', new Date().toISOString());
+            params.set('callback', callbackName);
+            const script = document.createElement('script');
+            script.src = `${gasUrl}?${params.toString()}`;
+            window[callbackName] = (result) => {
+                try {
+                    resolve(result);
+                } finally {
+                    delete window[callbackName];
+                    if (script && script.parentNode) script.parentNode.removeChild(script);
+                }
+            };
+            script.onerror = () => {
+                try {
+                    resolve({ success: false, error: 'JSONP request failed' });
+                } finally {
+                    delete window[callbackName];
+                    if (script && script.parentNode) script.parentNode.removeChild(script);
+                }
+            };
+            document.body.appendChild(script);
+        } catch (e) {
+            resolve({ success: false, error: e && (e.message || String(e)) });
+        }
+    });
 }
 
 // プラットフォーム検出（詳細版）
