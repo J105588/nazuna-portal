@@ -419,6 +419,16 @@ self.addEventListener('notificationclick', (event) => {
   } catch (e) {
     urlToOpen = self.location.origin + '/';
   }
+
+  // プロトコル検証（http/https のみ許可）
+  try {
+    const parsed = new URL(urlToOpen);
+    if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
+      urlToOpen = self.location.origin + '/';
+    }
+  } catch (_e) {
+    urlToOpen = self.location.origin + '/';
+  }
   
   // クライアントを開く
   event.waitUntil(
@@ -441,13 +451,28 @@ self.addEventListener('notificationclick', (event) => {
         }
         
         // 新しいウィンドウ/タブを開く（失敗時はフォールバック）
-        const opened = await clients.openWindow(urlToOpen);
+        let opened = null;
+        try {
+          opened = await clients.openWindow(urlToOpen);
+        } catch (openErr) {
+          // 握りつぶさずログのみ、後段でフォールバック
+          console.warn('[SW] openWindow threw, falling back to origin:', openErr);
+        }
         if (opened && 'focus' in opened) {
           return opened.focus();
         }
         // フォールバック: 既存クライアントにnavigate試行
         if (allClients && allClients[0] && 'navigate' in allClients[0]) {
           return allClients[0].navigate(urlToOpen);
+        }
+        // 最終フォールバック: ルートを開く
+        try {
+          const rootOpened = await clients.openWindow(self.location.origin + '/');
+          if (rootOpened && 'focus' in rootOpened) {
+            return rootOpened.focus();
+          }
+        } catch (_) {
+          // 何もできない
         }
         return null;
         

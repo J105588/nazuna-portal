@@ -1817,19 +1817,22 @@ function registerDeviceSimple(data) {
 // 通知送信（シンプル版）
 function sendNotificationSimple(data) {
   try {
-    const { title, message, target, timestamp } = data;
+    const { title, message, target, url = '/', timestamp } = data;
     
     if (!title || !message) {
       return { success: false, error: 'Title and message are required' };
     }
     
     // 既存のsendNotification関数を活用（シンプルモード）
+    const normalizedUrl = (typeof url === 'string' && url.trim()) ? url.trim() : '/';
+
     const notificationData = {
       preferCustom: true,
+      url: normalizedUrl,
       templateData: {
         title: title,
         message: message,
-        url: '/',
+        url: normalizedUrl,
         category: 'general',
         priority: 1,
         icon: 'https://raw.githubusercontent.com/J105588/nazuna-portal/main/images/icon-192x192.png',

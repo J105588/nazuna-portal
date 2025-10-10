@@ -415,6 +415,18 @@ html {
     }
 }
 
+@media (min-width: 768px) {
+    .news-container {
+        grid-template-columns: 1fr 1fr;
+    }
+}
+
+@media (min-width: 1200px) {
+    .news-container {
+        grid-template-columns: 1fr 1fr 1fr;
+    }
+}
+
 .login-error {
     display: none;
     padding: 10px 12px;
@@ -3117,8 +3129,8 @@ textarea.form-control {
 }
 
 .news-container {
-    display: flex;
-    flex-direction: column;
+    display: grid;
+    grid-template-columns: 1fr;
     gap: 1.5rem;
 }
 
@@ -5590,21 +5602,22 @@ textarea.form-control {
 
 /* タブボタンのスタイル */
 .filter-tab {
-    display: flex;
+    display: inline-flex;
     align-items: center;
     gap: 0.5rem;
-    padding: 0.75rem 1rem;
-    border: none;
-    background: transparent;
+    padding: 0.625rem 0.9rem;
+    border: 1px solid var(--border-color);
+    background: var(--surface-elevated);
     color: var(--text-light);
-    border-radius: 8px;
+    border-radius: 999px;
     cursor: pointer;
-    transition: all 0.3s ease;
+    transition: all 0.2s ease;
     font-size: 0.9rem;
     font-weight: 500;
     position: relative;
     white-space: nowrap;
     flex-shrink: 0;
+    min-height: 40px;
 }
 
 .filter-tab:hover {
@@ -5614,8 +5627,13 @@ textarea.form-control {
 
 .filter-tab.active {
     background: var(--primary-color);
+    border-color: var(--primary-color);
     color: white;
-    box-shadow: var(--shadow-sm);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+}
+.filter-tab:focus-visible {
+    outline: 2px solid var(--primary-color);
+    outline-offset: 2px;
 }
 
 .filter-tab.active:hover {
