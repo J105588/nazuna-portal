@@ -221,6 +221,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 case 'news':
                     await loadNews();
                     initNewsFilter();
+                    initNewsletterDownloads();
                     initNotifications();
                     break;
                 case 'survey':
@@ -1646,6 +1647,26 @@ function initNewsFilter() {
     // NewsLoaderが初期化された後に実行されるため、
     // ここでは何もしない（NewsLoader内で処理される）
     console.log('News filter initialization delegated to NewsLoader');
+}
+
+// 月刊ぺんぺん草のダウンロードボタン初期化
+function initNewsletterDownloads() {
+    const container = document.querySelector('.newsletter-section');
+    if (!container) return;
+
+    container.addEventListener('click', (e) => {
+        const btn = e.target.closest('.btn.btn-outline');
+        if (!btn) return;
+        // ダウンロード用のURLを data-download-url から取得
+        const url = btn.getAttribute('data-download-url') || btn.href;
+        if (!url || url === '#' || url.trim() === '') {
+            // リンク未設定時は何もしない
+            e.preventDefault();
+            return;
+        }
+        e.preventDefault();
+        window.open(url, '_blank', 'noopener');
+    });
 }
 
 // 通知機能初期化

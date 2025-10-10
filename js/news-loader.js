@@ -21,19 +21,32 @@ class NewsLoader {
     // ニュース一覧を取得
     async loadNewsList() {
         try {
-            // newsフォルダ内のHTMLファイル一覧を取得
-            const response = await fetch(this.newsFolder);
-            if (!response.ok) {
-                throw new Error('ニュースフォルダにアクセスできません');
+            // まずは manifest (news/index.json) を試す
+            let newsFiles = [];
+            try {
+                const manifestResponse = await fetch(this.newsFolder + 'index.json', { cache: 'no-cache' });
+                if (manifestResponse.ok) {
+                    const list = await manifestResponse.json();
+                    if (Array.isArray(list) && list.length) {
+                        newsFiles = list.map(file => `${this.newsFolder}${file}`);
+                    }
+                }
+            } catch (e) {
+                // manifest が無い場合は後続のフォールバックへ
             }
-            
-            const html = await response.text();
-            const parser = new DOMParser();
-            const doc = parser.parseFromString(html, 'text/html');
-            
-            // リンク要素からHTMLファイルを抽出
-            const links = doc.querySelectorAll('a[href$=".html"]');
-            const newsFiles = Array.from(links).map(link => link.href);
+
+            // フォールバック: ディレクトリ一覧のパース（サーバ設定に依存）
+            if (newsFiles.length === 0) {
+                const response = await fetch(this.newsFolder);
+                if (!response.ok) {
+                    throw new Error('ニュースフォルダにアクセスできません');
+                }
+                const html = await response.text();
+                const parser = new DOMParser();
+                const doc = parser.parseFromString(html, 'text/html');
+                const links = doc.querySelectorAll('a[href$=".html"]');
+                newsFiles = Array.from(links).map(link => link.href);
+            }
             
             // 各ニュースファイルのメタデータを取得
             const newsPromises = newsFiles.map(file => this.getNewsMetadata(file));

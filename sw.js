@@ -7,43 +7,43 @@
 // キャッシュ設定
 // =====================================
 
-const CACHE_VERSION = 27;
+const CACHE_VERSION = 29;
 const CACHE_NAME = `nazuna-portal-v${CACHE_VERSION}`;
 const CACHE_PREFIX = 'nazuna-portal-v';
 
 // キャッシュするリソース（主要ページ・共通アセット）
 const STATIC_CACHE_FILES = [
   '/',
-  '/index.html',
-  '/admin.html',
-  '/clubs.html',
-  '/council.html',
-  '/forum.html',
-  '/member-detail.html',
-  '/news.html',
-  '/survey.html',
-  '/css/style.css',
-  '/css/admin.css',
-  '/js/app.js',
-  '/js/config.js',
-  '/js/firebase-config.js',
-  '/js/admin.js',
-  '/js/simple-notification-manager.js',
-  '/js/notification-manager.js',
-  '/js/pwa-update.js',
-  '/images/icon.png',
-  '/images/icon-192x192.png',
-  '/images/icon-512x512.png',
-  '/images/badge-72x72.png'
+  'index.html',
+  'admin.html',
+  'clubs.html',
+  'council.html',
+  'forum.html',
+  'member-detail.html',
+  'news.html',
+  'survey.html',
+  'css/style.css',
+  'css/admin.css',
+  'js/app.js',
+  'js/config.js',
+  'js/firebase-config.js',
+  'js/admin.js',
+  'js/simple-notification-manager.js',
+  'js/notification-manager.js',
+  'js/pwa-update.js',
+  'images/icon.png',
+  'images/icon-192x192.png',
+  'images/icon-512x512.png',
+  'images/badge-72x72.png'
 ];
 
 // オプションのリソース（存在しない場合はスキップ）
 const OPTIONAL_CACHE_FILES = [
-  '/schedule.html',
-  '/js/api-client.js',
-  '/images/icon-192x192.png',
-  '/images/icon-512x512.png',
-  '/images/badge-72x72.png'
+  'schedule.html',
+  'js/api-client.js',
+  'images/icon-192x192.png',
+  'images/icon-512x512.png',
+  'images/badge-72x72.png'
 ];
 
 // 動的にキャッシュするパターン
@@ -71,17 +71,24 @@ self.addEventListener('install', (event) => {
     (async () => {
       try {
         const cache = await caches.open(CACHE_NAME);
+
+        const toAbsolute = (url) => {
+          // GitHub Pages配下でも動くよう、SWスコープ相対で解決
+          const normalized = url.startsWith('/') ? url.slice(1) : url;
+          return new URL(normalized, self.registration.scope).toString();
+        };
         
         // 必須リソースをキャッシュ
         const requiredFiles = STATIC_CACHE_FILES.map(async (url) => {
           try {
-            const response = await fetch(url);
+            const absUrl = toAbsolute(url);
+            const response = await fetch(absUrl);
             if (response.ok) {
-              await cache.put(url, response);
-              console.log(`[SW] Cached (required): ${url}`);
+              await cache.put(absUrl, response);
+              console.log(`[SW] Cached (required): ${absUrl}`);
               return true;
             } else {
-              console.warn(`[SW] Failed to cache required file ${url}: ${response.status}`);
+              console.warn(`[SW] Failed to cache required file ${absUrl}: ${response.status}`);
               return false;
             }
           } catch (error) {
@@ -93,13 +100,14 @@ self.addEventListener('install', (event) => {
         // オプションリソースをキャッシュ
         const optionalFiles = OPTIONAL_CACHE_FILES.map(async (url) => {
           try {
-            const response = await fetch(url);
+            const absUrl = toAbsolute(url);
+            const response = await fetch(absUrl);
             if (response.ok) {
-              await cache.put(url, response);
-              console.log(`[SW] Cached (optional): ${url}`);
+              await cache.put(absUrl, response);
+              console.log(`[SW] Cached (optional): ${absUrl}`);
               return true;
             } else {
-              console.log(`[SW] Skipped optional file ${url}: ${response.status}`);
+              console.log(`[SW] Skipped optional file ${absUrl}: ${response.status}`);
               return false;
             }
           } catch (error) {
@@ -186,6 +194,12 @@ self.addEventListener('fetch', (event) => {
   const { request } = event;
   const url = new URL(request.url);
   
+  // GitHub Pages: manifest.json と favicon.ico はそのままネットワークへ
+  if (url.pathname.endsWith('/manifest.json') || url.pathname.endsWith('/favicon.ico')) {
+    event.respondWith(fetch(request));
+    return;
+  }
+
   // キャッシュしないパターンをチェック
   const shouldNotCache = NO_CACHE_PATTERNS.some(pattern => pattern.test(request.url));
   
@@ -238,8 +252,9 @@ async function handleNavigationRequest(request) {
       return cachedResponse;
     }
     
-    // キャッシュにもない場合はオフラインページ
-    return caches.match('/index.html');
+    // キャッシュにもない場合はスコープ相対の index.html
+    const fallbackUrl = new URL('index.html', self.registration.scope).toString();
+    return caches.match(fallbackUrl);
   }
 }
 
