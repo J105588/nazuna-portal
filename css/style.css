@@ -5375,6 +5375,15 @@ textarea.form-control {
     border-color: var(--primary-color);
 }
 
+.news-item {
+    cursor: pointer;
+}
+
+.news-item:focus {
+    outline: 2px solid var(--primary-color);
+    outline-offset: 2px;
+}
+
 .news-item .news-content {
     flex: 1;
 }

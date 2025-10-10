@@ -11,7 +11,7 @@ class NewsLoader {
         };
         this.categories = {
             'event': 'イベント',
-            'newsletter': '生徒会だより',
+            'newsletter': '月刊ぺんぺん草',
             'recruitment': '募集',
             'important': '重要',
             'general': 'お知らせ'
@@ -83,7 +83,7 @@ class NewsLoader {
                     // フォールバック：テキスト内容からカテゴリを推測
                     const categoryText = categoryElement.textContent?.trim();
                     if (categoryText === 'イベント') category = 'event';
-                    else if (categoryText === '生徒会だより') category = 'newsletter';
+                    else if (categoryText === '生徒会だより' || categoryText === '月刊ぺんぺん草') category = 'newsletter';
                     else if (categoryText === '重要') category = 'important';
                     else if (categoryText === '募集') category = 'recruitment';
                 }
@@ -158,10 +158,15 @@ class NewsLoader {
     // 期間内かどうかをチェック
     isWithinPeriod(newsDate, now, period) {
         if (isNaN(newsDate.getTime())) return false;
-        
-        const diffTime = now - newsDate;
-        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-        
+
+        // 未来日付は除外
+        if (newsDate > now) return false;
+
+        // 日単位での差分（時刻起点のブレを排除）
+        const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        const startOfNews = new Date(newsDate.getFullYear(), newsDate.getMonth(), newsDate.getDate());
+        const diffDays = Math.floor((startOfToday - startOfNews) / (1000 * 60 * 60 * 24));
+
         switch (period) {
             case 'week':
                 return diffDays <= 7;
@@ -195,6 +200,7 @@ class NewsLoader {
         }
         
         container.innerHTML = this.filteredNews.map(news => this.renderNewsItem(news)).join('');
+        this.bindCardNavigation(container);
         this.updateNewsCount(this.filteredNews.length);
     }
 
@@ -204,7 +210,7 @@ class NewsLoader {
         const formattedDate = this.formatDate(news.date);
         
         return `
-            <div class="news-item" data-category="${news.category}">
+            <div class="news-item" data-category="${news.category}" data-href="${news.filePath}" tabindex="0" role="link" aria-label="${news.title}">
                 <div class="news-date">${formattedDate}</div>
                 <div class="news-content">
                     <h3><a href="${news.filePath}">${news.title}</a></h3>
@@ -213,6 +219,37 @@ class NewsLoader {
                 <span class="news-type ${news.category}">${categoryLabel}</span>
             </div>
         `;
+    }
+
+    // ニュースカードのクリック/キーボード操作での遷移を有効化
+    bindCardNavigation(container) {
+        if (!container) return;
+        if (container.dataset.boundNav === 'true') return;
+
+        container.addEventListener('click', (e) => {
+            const item = e.target.closest('.news-item');
+            if (!item) return;
+            // aタグ自体のクリックは既存ナビに任せる
+            if (e.target.closest('a')) return;
+            const href = item.getAttribute('data-href');
+            if (href) {
+                window.location.href = href;
+            }
+        });
+
+        container.addEventListener('keydown', (e) => {
+            const item = e.target.closest('.news-item');
+            if (!item) return;
+            if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                const href = item.getAttribute('data-href');
+                if (href) {
+                    window.location.href = href;
+                }
+            }
+        });
+
+        container.dataset.boundNav = 'true';
     }
 
     // 日付を解析してDateオブジェクトを返す
@@ -408,14 +445,14 @@ class NewsLoader {
             });
         }
         
-        // カテゴリフィルター
-        const filterTabs = document.querySelectorAll('.filter-tab');
-        filterTabs.forEach(tab => {
+        // カテゴリフィルター（カテゴリ領域に限定）
+        const categoryTabs = document.querySelectorAll('.category-controls .filter-tab');
+        categoryTabs.forEach(tab => {
             tab.addEventListener('click', (e) => {
                 e.preventDefault();
                 
                 // アクティブ状態の切り替え
-                filterTabs.forEach(t => t.classList.remove('active'));
+                categoryTabs.forEach(t => t.classList.remove('active'));
                 tab.classList.add('active');
                 
                 // フィルターを更新
