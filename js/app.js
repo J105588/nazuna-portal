@@ -2,8 +2,14 @@
 let supabaseClient = null;
 let supabaseQueries = null;
 
-// Supabaseクライアントを初期化
+// Supabaseクライアントを初期化（重複を避ける）
 function initSupabase() {
+    // 既に初期化されている場合はスキップ
+    if (window.supabaseClient && window.supabaseQueries) {
+        console.log('Supabase client already initialized');
+        return;
+    }
+    
     if (typeof supabase !== 'undefined' && 
         CONFIG.SUPABASE.URL && 
         CONFIG.SUPABASE.ANON_KEY &&

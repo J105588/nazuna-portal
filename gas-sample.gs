@@ -140,6 +140,9 @@ function doGet(e) {
       case 'registerFCMToken':
         result = registerFCMToken(e.parameter);
         break;
+      case 'verifyAdminSession':
+        result = verifyAdminSession(e.parameter);
+        break;
       // シンプル通知システム用のアクション
       case 'registerDeviceSimple':
         result = registerDeviceSimple(e.parameter);
@@ -511,20 +514,38 @@ function initializeSpreadsheet() {
 // 管理者認証システム
 // ========================================
 
-// 管理者ログイン
+// 管理者ログイン（パスワードハッシュ化対応）
 function adminLogin(data) {
   try {
     // URLパラメータまたはJSONボディからデータを取得
     const email = data.email || data.parameter?.email;
+    const passwordHash = data.passwordHash || data.parameter?.passwordHash;
     const password = data.password || data.parameter?.password;
     
     const adminCredentials = getAdminCredentials();
     
-    if (adminCredentials[email] && adminCredentials[email].password === password) {
+    // パスワードハッシュ化対応
+    let isValid = false;
+    if (adminCredentials[email]) {
+      const admin = adminCredentials[email];
+      
+      // ハッシュ化されたパスワードが送信された場合
+      if (passwordHash) {
+        // 既存のパスワードをハッシュ化して比較
+        const hashedPassword = hashPassword(admin.password);
+        isValid = hashedPassword === passwordHash;
+      } else if (password) {
+        // プレーンテキストパスワードの場合（後方互換性）
+        isValid = admin.password === password;
+      }
+    }
+    
+    if (isValid) {
       const admin = adminCredentials[email];
       return {
         success: true,
-        admin: {
+        token: generateSessionToken(email),
+        user: {
           email: email,
           name: admin.name,
           role: admin.role,
@@ -537,6 +558,78 @@ function adminLogin(data) {
   } catch (error) {
     console.error('Error in adminLogin:', error);
     return { success: false, error: error.toString() };
+  }
+}
+
+// パスワードハッシュ化（SHA-256）
+function hashPassword(password) {
+  const digest = Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, password, Utilities.Charset.UTF_8);
+  const hashArray = digest.map(byte => {
+    const unsignedByte = byte < 0 ? byte + 256 : byte;
+    return ('0' + unsignedByte.toString(16)).slice(-2);
+  });
+  return hashArray.join('');
+}
+
+// セッショントークン生成
+function generateSessionToken(email) {
+  const timestamp = Date.now();
+  const random = Math.random().toString(36).substring(2);
+  const tokenData = `${email}:${timestamp}:${random}`;
+  return Utilities.base64Encode(tokenData);
+}
+
+// セッショントークン検証
+function verifySessionToken(token, email) {
+  try {
+    const decoded = Utilities.base64Decode(token);
+    const parts = decoded.split(':');
+    if (parts.length !== 3) return false;
+    
+    const tokenEmail = parts[0];
+    const timestamp = parseInt(parts[1]);
+    const now = Date.now();
+    
+    // トークンの有効期限は30分
+    if (now - timestamp > 30 * 60 * 1000) return false;
+    
+    return tokenEmail === email;
+  } catch (error) {
+    return false;
+  }
+}
+
+// セッション検証
+function verifyAdminSession(data) {
+  try {
+    const token = data.token || data.parameter?.token;
+    const email = data.email || data.parameter?.email;
+    
+    if (!token || !email) {
+      return { valid: false, error: 'Token and email are required' };
+    }
+    
+    const isValid = verifySessionToken(token, email);
+    
+    if (isValid) {
+      const adminCredentials = getAdminCredentials();
+      const admin = adminCredentials[email];
+      
+      return {
+        valid: true,
+        user: {
+          email: email,
+          name: admin.name,
+          role: admin.role,
+          permissions: admin.permissions
+        }
+      };
+    }
+    
+    return { valid: false, error: 'Invalid or expired session' };
+  } catch (error) {
+    console.error('Error verifying session:', error);
+    return { valid: false, error: error.toString() };
   }
 }
 
@@ -585,34 +678,45 @@ function setupAdminAccounts() {
 // FCMトークン登録（firebase-config.js用）
 function registerFCMToken(params) {
   try {
-    const { fcmToken, deviceInfo } = params;
+    const fcmToken = params.fcmToken || params.parameter?.fcmToken;
+    const deviceInfo = params.deviceInfo || params.parameter?.deviceInfo;
     
     if (!fcmToken) {
       return { success: false, error: 'FCM token is required' };
     }
     
+    // deviceInfoが文字列の場合はパース
+    let parsedDeviceInfo = deviceInfo;
+    if (typeof deviceInfo === 'string') {
+      try {
+        parsedDeviceInfo = JSON.parse(deviceInfo);
+      } catch (e) {
+        parsedDeviceInfo = {};
+      }
+    }
+    
     const deviceData = {
       fcm_token: fcmToken,
-      user_agent: deviceInfo?.userAgent || '',
-      platform: deviceInfo?.platform || 'web',
-      browser: deviceInfo?.browser || '',
-      device_info: deviceInfo || {},
+      user_agent: parsedDeviceInfo?.userAgent || '',
+      platform: parsedDeviceInfo?.platform || 'web',
+      browser: parsedDeviceInfo?.browser || '',
+      device_info: parsedDeviceInfo || {},
       is_active: true,
       last_used_at: new Date().toISOString()
     };
     
-    const response = supabaseRequest('POST', 'device_registrations?on_conflict=fcm_token', deviceData);
+    const response = supabaseRequest('POST', 'notification_devices?on_conflict=fcm_token', deviceData);
     
     if (response.error) {
       // 既存のトークンの場合は更新
       if (response.error.code === '23505') { // unique violation
         const updateResponse = supabaseRequest('PATCH', 
-          `device_registrations?fcm_token=eq.${fcmToken}`, 
+          `notification_devices?fcm_token=eq.${fcmToken}`, 
           {
             is_active: true,
-            last_used_at: new Date().toISOString(),
-            user_agent: deviceInfo?.userAgent,
-            device_info: deviceInfo
+            last_used: new Date().toISOString(),
+            user_agent: parsedDeviceInfo?.userAgent,
+            device_info: parsedDeviceInfo
           }
         );
         return { success: !updateResponse.error, data: updateResponse.data };
