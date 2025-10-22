@@ -1,26 +1,26 @@
 /**
- * Service Worker Unified - 統合Service Worker
- * sw.js + sw-optimized.js + sw-v2.js の統合版
- * シンプル・確実・高速なキャッシュ戦略
+ * Service Worker - 最適化版
+ * なずなポータルサイト用
+ * パフォーマンス最適化済み
  */
 
 // =====================================
-// 設定
+// キャッシュ設定
 // =====================================
 
-const CACHE_VERSION = 2;
-const CACHE_NAME = `nazuna-portal-unified-${CACHE_VERSION}`;
-const CACHE_PREFIX = 'nazuna-portal-unified-';
+const CACHE_VERSION = 30;
+const CACHE_NAME = `nazuna-portal-optimized-v${CACHE_VERSION}`;
+const CACHE_PREFIX = 'nazuna-portal-optimized-v';
 
 // 必須リソース（即座にキャッシュ）
 const CRITICAL_RESOURCES = [
     '/',
     'index.html',
-    'css/style.css',
-    'js/app-unified.js',
-    'js/config-unified.js',
+    'css/style-optimized.css',
+    'js/app-optimized.js',
+    'js/config.js',
     'manifest.json',
-    'images/icon.png'
+    'images/icon-192x192.png'
 ];
 
 // 重要リソース（バックグラウンドでキャッシュ）
@@ -30,18 +30,17 @@ const IMPORTANT_RESOURCES = [
     'forum.html',
     'news.html',
     'survey.html',
-    'admin.html',
-    'js/supabase-unified.js',
-    'js/notification-unified.js',
-    'js/pwa-unified.js'
+    'js/supabase-queries.js',
+    'js/news-loader.js',
+    'images/icon-512x512.png'
 ];
 
-// 動的キャッシュ対象
-const DYNAMIC_PATTERNS = [
-    /\.(css|js|png|jpg|jpeg|svg|gif|webp|ico|woff|woff2)$/,
+// 動的キャッシュパターン
+const DYNAMIC_CACHE_PATTERNS = [
     /^https:\/\/fonts\.googleapis\.com/,
     /^https:\/\/fonts\.gstatic\.com/,
-    /^https:\/\/cdnjs\.cloudflare\.com/
+    /^https:\/\/cdnjs\.cloudflare\.com/,
+    /\.(?:png|jpg|jpeg|svg|gif|webp|ico)$/
 ];
 
 // キャッシュしないパターン
@@ -50,8 +49,7 @@ const NO_CACHE_PATTERNS = [
     /supabase\.co/,
     /googleapis\.com\/.*\/messages/,
     /firebase\.googleapis\.com/,
-    /\.json$/,
-    /manifest\.json$/
+    /\.json$/ // JSONファイルは動的に取得
 ];
 
 // =====================================
@@ -59,7 +57,7 @@ const NO_CACHE_PATTERNS = [
 // =====================================
 
 self.addEventListener('install', (event) => {
-    console.log('[SW Unified] Installing Service Worker version', CACHE_VERSION);
+    console.log('[SW] Installing optimized Service Worker version', CACHE_VERSION);
     
     event.waitUntil(
         (async () => {
@@ -69,21 +67,20 @@ self.addEventListener('install', (event) => {
                 // 必須リソースを即座にキャッシュ
                 const criticalPromises = CRITICAL_RESOURCES.map(async (url) => {
                     try {
-                        const response = await fetch(url, {
+                        const response = await fetch(url, { 
                             cache: 'reload',
                             headers: {
                                 'Cache-Control': 'no-cache'
                             }
                         });
-                        
                         if (response.ok) {
                             await cache.put(url, response);
-                            console.log(`[SW Unified] Cached critical: ${url}`);
+                            console.log(`[SW] Cached critical: ${url}`);
                             return true;
                         }
                         return false;
                     } catch (error) {
-                        console.warn(`[SW Unified] Failed to cache critical ${url}:`, error.message);
+                        console.warn(`[SW] Failed to cache critical ${url}:`, error.message);
                         return false;
                     }
                 });
@@ -91,10 +88,10 @@ self.addEventListener('install', (event) => {
                 const criticalResults = await Promise.all(criticalPromises);
                 const criticalSuccess = criticalResults.filter(Boolean).length;
                 
-                console.log(`[SW Unified] Critical resources cached: ${criticalSuccess}/${CRITICAL_RESOURCES.length}`);
+                console.log(`[SW] Critical resources cached: ${criticalSuccess}/${CRITICAL_RESOURCES.length}`);
                 
-                // 即座にアクティブ化
-                await self.skipWaiting();
+                // 重要リソースをバックグラウンドでキャッシュ
+                self.skipWaiting();
                 
                 // バックグラウンドで重要リソースをキャッシュ
                 setTimeout(async () => {
@@ -103,12 +100,12 @@ self.addEventListener('install', (event) => {
                             const response = await fetch(url);
                             if (response.ok) {
                                 await cache.put(url, response);
-                                console.log(`[SW Unified] Cached important: ${url}`);
+                                console.log(`[SW] Cached important: ${url}`);
                                 return true;
                             }
                             return false;
                         } catch (error) {
-                            console.warn(`[SW Unified] Failed to cache important ${url}:`, error.message);
+                            console.warn(`[SW] Failed to cache important ${url}:`, error.message);
                             return false;
                         }
                     });
@@ -116,11 +113,11 @@ self.addEventListener('install', (event) => {
                     const importantResults = await Promise.all(importantPromises);
                     const importantSuccess = importantResults.filter(Boolean).length;
                     
-                    console.log(`[SW Unified] Important resources cached: ${importantSuccess}/${IMPORTANT_RESOURCES.length}`);
+                    console.log(`[SW] Important resources cached: ${importantSuccess}/${IMPORTANT_RESOURCES.length}`);
                 }, 1000);
                 
             } catch (error) {
-                console.error('[SW Unified] Installation failed:', error);
+                console.error('[SW] Installation failed:', error);
             }
         })()
     );
@@ -131,7 +128,7 @@ self.addEventListener('install', (event) => {
 // =====================================
 
 self.addEventListener('activate', (event) => {
-    console.log('[SW Unified] Activating Service Worker version', CACHE_VERSION);
+    console.log('[SW] Activating optimized Service Worker version', CACHE_VERSION);
     
     event.waitUntil(
         (async () => {
@@ -141,7 +138,7 @@ self.addEventListener('activate', (event) => {
                 const deletePromises = cacheNames
                     .filter(name => name.startsWith(CACHE_PREFIX) && name !== CACHE_NAME)
                     .map(name => {
-                        console.log(`[SW Unified] Deleting old cache: ${name}`);
+                        console.log(`[SW] Deleting old cache: ${name}`);
                         return caches.delete(name);
                     });
                 
@@ -150,10 +147,10 @@ self.addEventListener('activate', (event) => {
                 // クライアントを制御
                 await self.clients.claim();
                 
-                console.log('[SW Unified] Service Worker activated');
+                console.log('[SW] Optimized Service Worker activated');
                 
             } catch (error) {
-                console.error('[SW Unified] Activation failed:', error);
+                console.error('[SW] Activation failed:', error);
             }
         })()
     );
@@ -172,29 +169,29 @@ self.addEventListener('fetch', (event) => {
         return; // ネットワークリクエストをそのまま通す
     }
     
-    // GETリクエストのみ処理
-    if (request.method !== 'GET') {
-        return;
-    }
-    
     event.respondWith(
         (async () => {
             try {
-                // ナビゲーションリクエスト（HTMLページ）
-                if (request.mode === 'navigate') {
-                    return await handleNavigationRequest(request);
-                }
-                
-                // 静的リソース
+                // キャッシュファースト戦略（静的リソース）
                 if (isStaticResource(request)) {
                     return await cacheFirst(request);
                 }
                 
-                // その他のリソース
+                // ネットワークファースト戦略（動的コンテンツ）
+                if (isDynamicContent(request)) {
+                    return await networkFirst(request);
+                }
+                
+                // ストール・リバリ戦略（API呼び出し）
+                if (isAPIRequest(request)) {
+                    return await staleWhileRevalidate(request);
+                }
+                
+                // デフォルト：ネットワークファースト
                 return await networkFirst(request);
                 
             } catch (error) {
-                console.error('[SW Unified] Fetch failed:', error);
+                console.error('[SW] Fetch failed:', error);
                 
                 // フォールバック：オフライン用ページ
                 if (request.destination === 'document') {
@@ -215,41 +212,7 @@ self.addEventListener('fetch', (event) => {
 // キャッシュ戦略
 // =====================================
 
-/**
- * ナビゲーションリクエスト処理
- */
-async function handleNavigationRequest(request) {
-    try {
-        // ネットワークから取得を試みる
-        const networkResponse = await fetch(request);
-        
-        if (networkResponse && networkResponse.ok) {
-            // 成功した場合はキャッシュに保存
-            const cache = await caches.open(CACHE_NAME);
-            cache.put(request, networkResponse.clone());
-        }
-        
-        return networkResponse;
-        
-    } catch (error) {
-        console.log('[SW Unified] Network failed, trying cache:', request.url);
-        
-        // ネットワークが失敗した場合はキャッシュから取得
-        const cache = await caches.open(CACHE_NAME);
-        const cachedResponse = await cache.match(request);
-        
-        if (cachedResponse) {
-            return cachedResponse;
-        }
-        
-        // キャッシュにもない場合はindex.html
-        return cache.match('/index.html');
-    }
-}
-
-/**
- * キャッシュファースト戦略
- */
+// キャッシュファースト戦略
 async function cacheFirst(request) {
     const cache = await caches.open(CACHE_NAME);
     const cachedResponse = await cache.match(request);
@@ -269,9 +232,7 @@ async function cacheFirst(request) {
     return networkResponse;
 }
 
-/**
- * ネットワークファースト戦略
- */
+// ネットワークファースト戦略
 async function networkFirst(request) {
     try {
         const networkResponse = await fetch(request);
@@ -293,28 +254,153 @@ async function networkFirst(request) {
     }
 }
 
-/**
- * バックグラウンドでキャッシュを更新
- */
+// ストール・リバリ戦略
+async function staleWhileRevalidate(request) {
+    const cache = await caches.open(CACHE_NAME);
+    const cachedResponse = await cache.match(request);
+    
+    // バックグラウンドで更新
+    const networkPromise = fetch(request).then(networkResponse => {
+        if (networkResponse.ok) {
+            cache.put(request, networkResponse.clone());
+        }
+        return networkResponse;
+    }).catch(() => null);
+    
+    // キャッシュがあれば即座に返し、なければネットワークを待つ
+    return cachedResponse || networkPromise;
+}
+
+// バックグラウンドでキャッシュを更新
 async function updateCacheInBackground(request, cache) {
     try {
         const networkResponse = await fetch(request);
         if (networkResponse.ok) {
             await cache.put(request, networkResponse);
-            console.log(`[SW Unified] Cache updated in background: ${request.url}`);
         }
     } catch (error) {
         // バックグラウンド更新の失敗は無視
-        console.log(`[SW Unified] Background update failed: ${request.url}`);
+        console.warn('[SW] Background cache update failed:', error.message);
     }
 }
 
-/**
- * 静的リソースかどうか判定
- */
+// =====================================
+// リソース分類
+// =====================================
+
 function isStaticResource(request) {
     const url = new URL(request.url);
-    return DYNAMIC_PATTERNS.some(pattern => pattern.test(url.href));
+    const staticExtensions = ['.css', '.js', '.png', '.jpg', '.jpeg', '.svg', '.gif', '.webp', '.ico', '.woff', '.woff2'];
+    const isStaticFile = staticExtensions.some(ext => url.pathname.endsWith(ext));
+    const isFont = url.hostname.includes('fonts.googleapis.com') || url.hostname.includes('fonts.gstatic.com');
+    const isCDN = url.hostname.includes('cdnjs.cloudflare.com');
+    
+    return isStaticFile || isFont || isCDN;
+}
+
+function isDynamicContent(request) {
+    const url = new URL(request.url);
+    return url.pathname.endsWith('.html') && !url.pathname.includes('admin');
+}
+
+function isAPIRequest(request) {
+    const url = new URL(request.url);
+    return url.pathname.includes('/api/') || 
+           url.hostname.includes('supabase.co') ||
+           url.hostname.includes('script.google.com');
+}
+
+// =====================================
+// メッセージ処理
+// =====================================
+
+self.addEventListener('message', (event) => {
+    const { type, payload } = event.data;
+    
+    switch (type) {
+        case 'SKIP_WAITING':
+            self.skipWaiting();
+            break;
+            
+        case 'CACHE_URLS':
+            cacheUrls(payload.urls);
+            break;
+            
+        case 'CLEAR_CACHE':
+            clearCache();
+            break;
+            
+        case 'GET_CACHE_STATUS':
+            getCacheStatus().then(status => {
+                event.ports[0].postMessage(status);
+            });
+            break;
+            
+        default:
+            console.log('[SW] Unknown message type:', type);
+    }
+});
+
+// URLリストをキャッシュ
+async function cacheUrls(urls) {
+    const cache = await caches.open(CACHE_NAME);
+    const promises = urls.map(async (url) => {
+        try {
+            const response = await fetch(url);
+            if (response.ok) {
+                await cache.put(url, response);
+                console.log(`[SW] Cached URL: ${url}`);
+                return true;
+            }
+            return false;
+        } catch (error) {
+            console.warn(`[SW] Failed to cache URL ${url}:`, error.message);
+            return false;
+        }
+    });
+    
+    const results = await Promise.all(promises);
+    const successCount = results.filter(Boolean).length;
+    console.log(`[SW] Cached ${successCount}/${urls.length} URLs`);
+}
+
+// キャッシュをクリア
+async function clearCache() {
+    try {
+        const cacheNames = await caches.keys();
+        const deletePromises = cacheNames
+            .filter(name => name.startsWith(CACHE_PREFIX))
+            .map(name => caches.delete(name));
+        
+        await Promise.all(deletePromises);
+        console.log('[SW] Cache cleared');
+    } catch (error) {
+        console.error('[SW] Failed to clear cache:', error);
+    }
+}
+
+// キャッシュステータスを取得
+async function getCacheStatus() {
+    try {
+        const cacheNames = await caches.keys();
+        const cacheStatus = {};
+        
+        for (const name of cacheNames) {
+            if (name.startsWith(CACHE_PREFIX)) {
+                const cache = await caches.open(name);
+                const keys = await cache.keys();
+                cacheStatus[name] = {
+                    size: keys.length,
+                    urls: keys.map(request => request.url)
+                };
+            }
+        }
+        
+        return cacheStatus;
+    } catch (error) {
+        console.error('[SW] Failed to get cache status:', error);
+        return {};
+    }
 }
 
 // =====================================
@@ -350,7 +436,7 @@ self.addEventListener('push', (event) => {
         );
         
     } catch (error) {
-        console.error('[SW Unified] Push notification error:', error);
+        console.error('[SW] Push notification error:', error);
         
         // フォールバック通知
         event.waitUntil(
@@ -362,10 +448,7 @@ self.addEventListener('push', (event) => {
     }
 });
 
-// =====================================
-// 通知クリック
-// =====================================
-
+// 通知クリック処理
 self.addEventListener('notificationclick', (event) => {
     event.notification.close();
     
@@ -397,132 +480,6 @@ self.addEventListener('notificationclick', (event) => {
 });
 
 // =====================================
-// メッセージ処理
-// =====================================
-
-self.addEventListener('message', (event) => {
-    const { type, payload } = event.data;
-    
-    switch (type) {
-        case 'SKIP_WAITING':
-            self.skipWaiting();
-            break;
-            
-        case 'CLEAR_CACHE':
-            clearCache();
-            break;
-            
-        case 'GET_CACHE_STATUS':
-            getCacheStatus().then(status => {
-                event.ports[0].postMessage(status);
-            });
-            break;
-            
-        case 'CACHE_URLS':
-            cacheUrls(payload.urls);
-            break;
-            
-        case 'GET_SYSTEM_INFO':
-            getSystemInfo().then(info => {
-                event.ports[0].postMessage(info);
-            });
-            break;
-            
-        default:
-            console.log('[SW Unified] Unknown message type:', type);
-    }
-});
-
-/**
- * キャッシュクリア
- */
-async function clearCache() {
-    try {
-        const cacheNames = await caches.keys();
-        const deletePromises = cacheNames
-            .filter(name => name.startsWith(CACHE_PREFIX))
-            .map(name => caches.delete(name));
-        
-        await Promise.all(deletePromises);
-        console.log('[SW Unified] Cache cleared');
-    } catch (error) {
-        console.error('[SW Unified] Failed to clear cache:', error);
-    }
-}
-
-/**
- * キャッシュステータス取得
- */
-async function getCacheStatus() {
-    try {
-        const cacheNames = await caches.keys();
-        const cacheStatus = {};
-        
-        for (const name of cacheNames) {
-            if (name.startsWith(CACHE_PREFIX)) {
-                const cache = await caches.open(name);
-                const keys = await cache.keys();
-                cacheStatus[name] = {
-                    size: keys.length,
-                    urls: keys.map(request => request.url)
-                };
-            }
-        }
-        
-        return cacheStatus;
-    } catch (error) {
-        console.error('[SW Unified] Failed to get cache status:', error);
-        return {};
-    }
-}
-
-/**
- * URLリストをキャッシュ
- */
-async function cacheUrls(urls) {
-    const cache = await caches.open(CACHE_NAME);
-    const promises = urls.map(async (url) => {
-        try {
-            const response = await fetch(url);
-            if (response.ok) {
-                await cache.put(url, response);
-                console.log(`[SW Unified] Cached URL: ${url}`);
-                return true;
-            }
-            return false;
-        } catch (error) {
-            console.warn(`[SW Unified] Failed to cache URL ${url}:`, error.message);
-            return false;
-        }
-    });
-    
-    const results = await Promise.all(promises);
-    const successCount = results.filter(Boolean).length;
-    console.log(`[SW Unified] Cached ${successCount}/${urls.length} URLs`);
-}
-
-/**
- * システム情報取得
- */
-async function getSystemInfo() {
-    try {
-        const info = {
-            version: CACHE_VERSION,
-            cacheName: CACHE_NAME,
-            criticalResources: CRITICAL_RESOURCES.length,
-            importantResources: IMPORTANT_RESOURCES.length,
-            cacheStatus: await getCacheStatus(),
-            timestamp: Date.now()
-        };
-        
-        return info;
-    } catch (error) {
-        console.error('[SW Unified] Failed to get system info:', error);
-        return { error: error.message };
-    }
-}
-
-// =====================================
 // バックグラウンド同期
 // =====================================
 
@@ -534,7 +491,7 @@ self.addEventListener('sync', (event) => {
 
 async function doBackgroundSync() {
     try {
-        console.log('[SW Unified] Background sync started');
+        console.log('[SW] Background sync started');
         
         // 重要なリソースを更新
         const cache = await caches.open(CACHE_NAME);
@@ -543,18 +500,18 @@ async function doBackgroundSync() {
                 const response = await fetch(url);
                 if (response.ok) {
                     await cache.put(url, response);
-                    console.log(`[SW Unified] Background sync updated: ${url}`);
+                    console.log(`[SW] Background sync updated: ${url}`);
                 }
             } catch (error) {
-                console.warn(`[SW Unified] Background sync failed for ${url}:`, error.message);
+                console.warn(`[SW] Background sync failed for ${url}:`, error.message);
             }
         });
         
         await Promise.all(importantPromises);
-        console.log('[SW Unified] Background sync completed');
+        console.log('[SW] Background sync completed');
         
     } catch (error) {
-        console.error('[SW Unified] Background sync error:', error);
+        console.error('[SW] Background sync error:', error);
     }
 }
 
@@ -563,11 +520,11 @@ async function doBackgroundSync() {
 // =====================================
 
 self.addEventListener('error', (event) => {
-    console.error('[SW Unified] Global error:', event.error);
+    console.error('[SW] Global error:', event.error);
 });
 
 self.addEventListener('unhandledrejection', (event) => {
-    console.error('[SW Unified] Unhandled promise rejection:', event.reason);
+    console.error('[SW] Unhandled promise rejection:', event.reason);
 });
 
-console.log('[SW Unified] Service Worker loaded, version:', CACHE_VERSION);
+console.log('[SW] Optimized Service Worker loaded');

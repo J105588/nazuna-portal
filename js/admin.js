@@ -18,19 +18,12 @@ let currentUser = null;
 document.addEventListener('DOMContentLoaded', async () => {
     console.log('Admin panel initializing...');
     
-    // デバッグ情報を表示
-    console.log('CONFIG:', window.CONFIG);
-    console.log('API Client available:', !!window.apiClient);
-    console.log('GAS URL:', window.CONFIG?.GAS_URL);
-    
     // API Clientの初期化（重複作成を避ける）
     if (!window.apiClient) {
-        if (typeof UnifiedAPIClient !== 'undefined') {
-            window.apiClient = new UnifiedAPIClient();
-        } else if (typeof APIClient !== 'undefined') {
+        if (typeof APIClient !== 'undefined') {
             window.apiClient = new APIClient();
         } else {
-            console.error('API Client not found');
+            console.error('APIClient not found');
             showError('システムエラー: APIクライアントが読み込まれていません');
             return;
         }
@@ -91,7 +84,7 @@ async function verifyAdminSession(token, email) {
             email: email
         });
         
-        if (result && result.valid) {
+        if (result.valid) {
             currentUser = result.user;
             return true;
         }
@@ -148,16 +141,12 @@ async function performLogin(email, password) {
         const passwordHash = await hashPassword(password);
         
         console.log('Sending login request...');
-        console.log('Email:', email);
-        console.log('Password hash length:', passwordHash.length);
         
         // GAS APIでログイン
         const result = await window.apiClient.sendRequest('adminLogin', {
             email: email,
             passwordHash: passwordHash
         });
-        
-        console.log('Login result:', result);
         
         if (result.success) {
             // セッション情報を保存
@@ -179,21 +168,7 @@ async function performLogin(email, password) {
     } catch (error) {
         console.error('Login error:', error);
         
-        // エラーメッセージを詳細化
-        let errorMessage = 'ログインに失敗しました';
-        if (error.message) {
-            if (error.message.includes('Invalid credentials')) {
-                errorMessage = 'メールアドレスまたはパスワードが正しくありません';
-            } else if (error.message.includes('Network')) {
-                errorMessage = 'ネットワークエラーが発生しました。接続を確認してください';
-            } else if (error.message.includes('timeout')) {
-                errorMessage = 'タイムアウトしました。しばらくしてから再試行してください';
-            } else {
-                errorMessage = error.message;
-            }
-        }
-        
-        loginError.textContent = errorMessage;
+        loginError.textContent = error.message || 'ログインに失敗しました';
         loginError.style.display = 'block';
         
         // ボタンを再有効化
@@ -724,8 +699,8 @@ function formatDateTime(dateString) {
 }
 
 // CSSアニメーション
-const adminStyle = document.createElement('style');
-adminStyle.textContent = `
+const style = document.createElement('style');
+style.textContent = `
     @keyframes slideIn {
         from {
             transform: translateX(100%);
@@ -748,4 +723,4 @@ adminStyle.textContent = `
         }
     }
 `;
-document.head.appendChild(adminStyle);
+document.head.appendChild(style);

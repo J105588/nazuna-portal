@@ -1,28 +1,6 @@
 /* Modal positioning enforcement */
-.modal-overlay{
-    position: fixed !important; 
-    top: 0 !important;
-    left: 0 !important;
-    right: 0 !important;
-    bottom: 0 !important;
-    width: 100vw !important;
-    height: 100vh !important;
-    display: flex !important;
-    align-items: center !important;
-    justify-content: center !important;
-}
-#auth-modal-overlay{
-    position: fixed !important; 
-    top: 0 !important;
-    left: 0 !important;
-    right: 0 !important;
-    bottom: 0 !important;
-    width: 100vw !important;
-    height: 100vh !important;
-    display: flex !important;
-    align-items: center !important;
-    justify-content: center !important;
-}
+.modal-overlay{position:fixed !important; inset:0;}
+#auth-modal-overlay{position:fixed !important; inset:0;}
 /* リセットCSS */
 * {
     margin: 0;
@@ -406,11 +384,9 @@ html {
 }
 
 .modal-overlay.active {
-    display: flex !important;
+    display: flex;
     opacity: 1;
     pointer-events: auto;
-    align-items: center !important;
-    justify-content: center !important;
 }
 
 .modal-overlay.opening {
@@ -2477,6 +2453,27 @@ footer {
     opacity: 0.8;
 }
 
+/* 管理者ログインリンク */
+.admin-link {
+    font-size: 0.8rem !important;
+    margin-top: 1rem !important;
+}
+
+.admin-link a {
+    color: rgba(255, 255, 255, 0.6) !important;
+    text-decoration: none;
+    padding: 0.3rem 0.6rem;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    border-radius: 0.25rem;
+    transition: all 0.3s ease;
+    font-size: 0.75rem;
+}
+
+.admin-link a:hover {
+    color: white !important;
+    background-color: rgba(255, 255, 255, 0.1);
+    border-color: rgba(255, 255, 255, 0.5);
+}
 
 /* ページヘッダー */
 .page-header {

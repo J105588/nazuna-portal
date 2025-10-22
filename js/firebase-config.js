@@ -28,6 +28,16 @@ const vapidKey = "BCEnp7nRdNubcooPI86iEEFqavkUxRal0t3AKkjsC1nB-PYLOUiE-EnGITJKfd
 // Firebase初期化（クロスプラットフォーム対応）
 function initializeFirebase() {
     try {
+        // APIクライアントの初期化
+        if (typeof APIClient !== 'undefined') {
+            if (!window.apiClient) {
+                window.apiClient = new APIClient();
+                console.log('API client initialized successfully');
+            }
+        } else {
+            console.warn('APIClient class not available');
+        }
+        
         // Firebase SDKが読み込まれているかチェック
         if (typeof firebase === 'undefined') {
             console.warn('Firebase SDK not loaded. Using fallback push notification system.');
@@ -38,16 +48,6 @@ function initializeFirebase() {
         if (!firebase.apps.length) {
             firebase.initializeApp(firebaseConfig);
             console.log('Firebase initialized successfully');
-        }
-        
-        // APIクライアントの初期化（重複を避ける）
-        if (typeof APIClient !== 'undefined' && !window.apiClient) {
-            window.apiClient = new APIClient();
-            console.log('API client initialized successfully');
-        } else if (window.apiClient) {
-            console.log('API client already initialized');
-        } else {
-            console.warn('APIClient class not available');
         }
         
         // Firebase Messaging初期化（簡略版）
@@ -266,7 +266,7 @@ async function registerFCMToken(token) {
                 }
                 retries--;
                 if (retries > 0) {
-                    await new Promise(resolve => setTimeout(resolve, 2000)); // リトライ間隔を延長
+                    await new Promise(resolve => setTimeout(resolve, 1000));
                 }
             } catch (err) {
                 const emsg = String(err && (err.message || err)).toLowerCase();
@@ -294,10 +294,9 @@ async function registerFCMToken(token) {
             localStorage.setItem('fcmTokenTimestamp', new Date().toISOString());
         } else {
             console.error('Failed to register FCM token:', result?.error || 'Registration failed after retries');
-            // オフライン時やサーバーエラー時はローカルストレージに保存
+            // オフライン時はローカルストレージに保存
             localStorage.setItem('fcmToken', token);
             localStorage.setItem('fcmTokenTimestamp', new Date().toISOString());
-            console.log('FCM token saved locally for later registration');
         }
     } catch (error) {
         console.error('Error registering FCM token:', error);

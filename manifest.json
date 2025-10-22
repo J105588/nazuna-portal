@@ -80,6 +80,20 @@
   "dir": "ltr",
   "prefer_related_applications": false,
   "related_applications": [],
+  "screenshots": [
+    {
+      "src": "./images/screenshot-mobile.png",
+      "sizes": "390x844",
+      "type": "image/png",
+      "form_factor": "narrow"
+    },
+    {
+      "src": "./images/screenshot-desktop.png",
+      "sizes": "1280x720",
+      "type": "image/png",
+      "form_factor": "wide"
+    }
+  ],
   "shortcuts": [
     {
       "name": "ホーム",
