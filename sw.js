@@ -7,7 +7,7 @@
 // キャッシュ設定
 // =====================================
 
-const CACHE_VERSION = 29;
+const CACHE_VERSION = 30;
 const CACHE_NAME = `nazuna-portal-v${CACHE_VERSION}`;
 const CACHE_PREFIX = 'nazuna-portal-v';
 
@@ -53,11 +53,17 @@ const DYNAMIC_CACHE_PATTERNS = [
   /\.(?:png|jpg|jpeg|svg|gif|webp)$/
 ];
 
-// キャッシュしないパターン
+// キャッシュしないパターン（Service Workerを完全にバイパス）
 const NO_CACHE_PATTERNS = [
-  /\/api\//,
   /supabase\.co/,
-  /googleapis\.com\/.*\/messages/
+  /googleapis\.com\/.*\/messages/,
+  /\/api\//
+];
+
+// Service Workerを通さないパターン（完全にブラウザに処理させる）
+const BYPASS_SW_PATTERNS = [
+  /supabase\.co/,
+  /googleapis\.com/
 ];
 
 // =====================================
@@ -200,6 +206,13 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
+  // Service Workerを完全にバイパスするパターン（Supabaseなど）
+  const shouldBypass = BYPASS_SW_PATTERNS.some(pattern => pattern.test(request.url));
+  if (shouldBypass) {
+    // Service Workerに介入させない（ブラウザが直接処理）
+    return;
+  }
+  
   // キャッシュしないパターンをチェック
   const shouldNotCache = NO_CACHE_PATTERNS.some(pattern => pattern.test(request.url));
   

@@ -11,14 +11,27 @@ function initSupabase() {
         CONFIG.SUPABASE.ANON_KEY !== 'YOUR_SUPABASE_ANON_KEY_HERE') {
         
         try {
-            supabaseClient = supabase.createClient(CONFIG.SUPABASE.URL, CONFIG.SUPABASE.ANON_KEY);
+            // 古いクライアントをクリア
+            if (window.supabaseClient) {
+                window.supabaseClient = null;
+            }
+            
+            // 新しいクライアントを作成（CORS設定を含む）
+            const supabaseOptions = CONFIG.SUPABASE.OPTIONS || {};
+            supabaseClient = supabase.createClient(CONFIG.SUPABASE.URL, CONFIG.SUPABASE.ANON_KEY, supabaseOptions);
             window.supabaseClient = supabaseClient; // グローバルに公開
+            
             if (typeof SupabaseQueries === 'undefined') {
                 throw new Error('SupabaseQueries class not available');
             }
             supabaseQueries = new SupabaseQueries(supabaseClient);
             window.supabaseQueries = supabaseQueries; // グローバルに公開
+            
             console.log('Supabase client and queries initialized successfully');
+            console.log('Supabase URL:', CONFIG.SUPABASE.URL);
+            
+            // 接続テスト
+            testSupabaseConnection();
         } catch (error) {
             console.error('Failed to initialize Supabase client:', error);
             console.log('Continuing with demo mode...');
@@ -36,6 +49,109 @@ function initSupabase() {
         window.supabaseQueries = null;
     }
 }
+
+// Supabase接続テスト
+async function testSupabaseConnection() {
+    if (!supabaseClient) return;
+    
+    try {
+        // 簡単な接続テスト（council_membersテーブルの存在確認）
+        const { data, error } = await supabaseClient
+            .from('council_members')
+            .select('id')
+            .limit(1);
+            
+        if (error) {
+            console.error('Supabase connection test failed:', error);
+            if (error.message.includes('410') || error.message.includes('Gone')) {
+                console.error('Supabase project appears to be deleted or unavailable');
+                console.log('Attempting to clear cache and reinitialize...');
+                clearSupabaseCacheAndReinit();
+                showConnectionError('Supabaseプロジェクトが削除されているか、利用できません。キャッシュをクリアして再試行します。');
+            } else if (error.message.includes('CORS')) {
+                console.error('CORS error detected');
+                console.log('Attempting to clear cache and reinitialize...');
+                clearSupabaseCacheAndReinit();
+                showConnectionError('CORSエラーが発生しています。キャッシュをクリアして再試行します。');
+            }
+        } else {
+            console.log('Supabase connection test successful');
+        }
+    } catch (error) {
+        console.error('Supabase connection test error:', error);
+    }
+}
+
+// 接続エラー表示
+function showConnectionError(message) {
+    // ユーザーにエラーメッセージを表示
+    if (typeof showNotification === 'function') {
+        showNotification(message, 'error');
+    } else {
+        console.error('Connection Error:', message);
+        // フォールバック: アラート表示
+        if (confirm(`${message}\n\nページをリロードしますか？`)) {
+            window.location.reload();
+        }
+    }
+}
+
+// キャッシュクリアとSupabase再初期化
+function clearSupabaseCacheAndReinit() {
+    try {
+        // ローカルストレージからSupabase関連のキャッシュをクリア
+        const keysToRemove = [];
+        for (let i = 0; i < localStorage.length; i++) {
+            const key = localStorage.key(i);
+            if (key && (key.includes('supabase') || key.includes('sb-'))) {
+                keysToRemove.push(key);
+            }
+        }
+        keysToRemove.forEach(key => localStorage.removeItem(key));
+        
+        // セッションストレージからもクリア
+        const sessionKeysToRemove = [];
+        for (let i = 0; i < sessionStorage.length; i++) {
+            const key = sessionStorage.key(i);
+            if (key && (key.includes('supabase') || key.includes('sb-'))) {
+                sessionKeysToRemove.push(key);
+            }
+        }
+        sessionKeysToRemove.forEach(key => sessionStorage.removeItem(key));
+        
+        console.log('Supabase cache cleared');
+        
+        // Supabaseクライアントを再初期化
+        initSupabase();
+        
+    } catch (error) {
+        console.error('Error clearing Supabase cache:', error);
+    }
+}
+
+// グローバルに公開（デバッグ用）
+window.clearSupabaseCacheAndReinit = clearSupabaseCacheAndReinit;
+
+// API Client初期化関数
+function initializeAPIClient() {
+    if (typeof APIClient !== 'undefined') {
+        if (!window.apiClient) {
+            try {
+                window.apiClient = new APIClient();
+                console.log('API Client initialized successfully');
+            } catch (error) {
+                console.error('API Client initialization failed:', error);
+            }
+        } else {
+            console.log('API Client already initialized');
+        }
+    } else {
+        console.warn('APIClient class not available');
+    }
+}
+
+// グローバルに公開
+window.initializeAPIClient = initializeAPIClient;
 
 // JSONP用のグローバルコールバック関数を格納するオブジェクト
 window.gasCallbacks = {};
@@ -101,7 +217,10 @@ class APIClient {
                     }
                     resolve(data);
                 } else {
-                    reject(new Error(data.error || CONFIG.MESSAGES.ERROR.SERVER));
+                    // より詳細なエラーメッセージを提供
+                    const errorMessage = data.error || CONFIG.MESSAGES.ERROR.SERVER;
+                    console.error('API Error:', errorMessage, data);
+                    reject(new Error(errorMessage));
                 }
                 
                 this.cleanup(callbackName);
@@ -181,6 +300,9 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Supabaseを初期化
     initSupabase();
+    
+    // API Client初期化
+    initializeAPIClient();
     
     // 基本機能を初期化
     initNavigation();

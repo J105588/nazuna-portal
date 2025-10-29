@@ -18,23 +18,165 @@ let currentUser = null;
 document.addEventListener('DOMContentLoaded', async () => {
     console.log('Admin panel initializing...');
     
-    // API Clientの初期化（重複作成を避ける）
-    if (!window.apiClient) {
-        if (typeof APIClient !== 'undefined') {
-            window.apiClient = new APIClient();
-        } else {
-            console.error('APIClient not found');
-            showError('システムエラー: APIクライアントが読み込まれていません');
-            return;
-        }
-    }
+    // 初期化を待つ
+    await waitForInitialization();
     
     // セッションチェック
     await checkExistingSession();
     
     // イベントリスナーの設定
     setupEventListeners();
+    
+    // デバッグ情報の表示（開発時のみ）
+    if (window.CONFIG && window.CONFIG.APP && window.CONFIG.APP.DEBUG) {
+        showDebugInfo();
+    }
 });
+
+// 初期化待機関数
+async function waitForInitialization() {
+    let attempts = 0;
+    const maxAttempts = 10;
+    
+    while (attempts < maxAttempts) {
+        // API Clientの初期化
+        if (!window.apiClient) {
+            if (typeof APIClient !== 'undefined') {
+                try {
+                    window.apiClient = new APIClient();
+                    console.log('API Client initialized in admin panel');
+                } catch (error) {
+                    console.error('API Client initialization failed:', error);
+                }
+            } else {
+                console.log('Waiting for APIClient...');
+            }
+        }
+        
+        // Supabaseの初期化確認
+        if (!window.supabaseClient) {
+            if (typeof supabase !== 'undefined' && window.CONFIG && window.CONFIG.SUPABASE) {
+                try {
+                    window.supabaseClient = supabase.createClient(
+                        window.CONFIG.SUPABASE.URL, 
+                        window.CONFIG.SUPABASE.ANON_KEY,
+                        window.CONFIG.SUPABASE.OPTIONS || {}
+                    );
+                    console.log('Supabase initialized in admin panel');
+                } catch (error) {
+                    console.error('Supabase initialization failed:', error);
+                }
+            } else {
+                console.log('Waiting for Supabase...');
+            }
+        }
+        
+        // 両方が初期化されたら終了
+        if (window.apiClient && window.supabaseClient) {
+            console.log('All components initialized successfully');
+            break;
+        }
+        
+        attempts++;
+        await new Promise(resolve => setTimeout(resolve, 500));
+    }
+    
+    // 最終チェック
+    if (!window.apiClient) {
+        console.error('API Client initialization failed after retries');
+        showError('システムエラー: APIクライアントが初期化できませんでした');
+        return;
+    }
+    
+    if (!window.supabaseClient) {
+        console.warn('Supabase not available, continuing with limited functionality');
+    }
+}
+
+// デバッグ情報表示
+function showDebugInfo() {
+    const debugInfo = document.getElementById('debug-info');
+    if (!debugInfo) return;
+    
+    debugInfo.style.display = 'block';
+    
+    // GAS URL表示
+    const gasUrlElement = document.getElementById('debug-gas-url');
+    if (gasUrlElement && window.CONFIG) {
+        gasUrlElement.textContent = window.CONFIG.GAS_URL;
+    }
+    
+    // API Client状態表示
+    const apiStatusElement = document.getElementById('debug-api-status');
+    if (apiStatusElement) {
+        if (window.apiClient) {
+            apiStatusElement.textContent = '✅ 利用可能';
+        } else {
+            apiStatusElement.textContent = '❌ 利用不可';
+        }
+    }
+    
+    // Supabase状態表示
+    const supabaseStatusElement = document.getElementById('debug-supabase-status');
+    if (supabaseStatusElement) {
+        if (window.supabaseClient) {
+            supabaseStatusElement.textContent = '✅ 接続済み';
+        } else {
+            supabaseStatusElement.textContent = '❌ 未接続';
+        }
+    }
+}
+
+// 手動初期化（グローバル関数）
+window.initializeManually = function() {
+    console.log('手動初期化開始...');
+    
+    // API Client初期化
+    if (typeof APIClient !== 'undefined') {
+        try {
+            window.apiClient = new APIClient();
+            console.log('API Client manually initialized');
+            
+            const apiStatusElement = document.getElementById('debug-api-status');
+            if (apiStatusElement) {
+                apiStatusElement.textContent = '✅ 手動初期化完了';
+            }
+        } catch (error) {
+            console.error('API Client manual initialization failed:', error);
+            
+            const apiStatusElement = document.getElementById('debug-api-status');
+            if (apiStatusElement) {
+                apiStatusElement.textContent = '❌ 手動初期化失敗';
+            }
+        }
+    }
+    
+    // Supabase初期化
+    if (typeof supabase !== 'undefined' && window.CONFIG && window.CONFIG.SUPABASE) {
+        try {
+            window.supabaseClient = supabase.createClient(
+                window.CONFIG.SUPABASE.URL, 
+                window.CONFIG.SUPABASE.ANON_KEY,
+                window.CONFIG.SUPABASE.OPTIONS || {}
+            );
+            console.log('Supabase manually initialized');
+            
+            const supabaseStatusElement = document.getElementById('debug-supabase-status');
+            if (supabaseStatusElement) {
+                supabaseStatusElement.textContent = '✅ 手動初期化完了';
+            }
+        } catch (error) {
+            console.error('Supabase manual initialization failed:', error);
+            
+            const supabaseStatusElement = document.getElementById('debug-supabase-status');
+            if (supabaseStatusElement) {
+                supabaseStatusElement.textContent = '❌ 手動初期化失敗';
+            }
+        }
+    }
+    
+    alert('手動初期化完了！');
+};
 
 // =====================================
 // セッション管理
@@ -136,11 +278,21 @@ async function performLogin(email, password) {
     loginError.style.display = 'none';
     
     try {
-        // パスワードをハッシュ化
+        // 本番モードでの認証
         console.log('Hashing password...');
         const passwordHash = await hashPassword(password);
         
         console.log('Sending login request...');
+        
+        // API Clientが利用可能かチェック・初期化
+        if (!window.apiClient) {
+            if (typeof APIClient !== 'undefined') {
+                console.log('API Clientを再初期化中...');
+                window.apiClient = new APIClient();
+            } else {
+                throw new Error('API Clientが初期化されていません');
+            }
+        }
         
         // GAS APIでログイン
         const result = await window.apiClient.sendRequest('adminLogin', {
@@ -167,8 +319,12 @@ async function performLogin(email, password) {
         
     } catch (error) {
         console.error('Login error:', error);
+        const loginError = document.getElementById('login-error');
+        const loginErrorText = document.getElementById('login-error-text');
         
-        loginError.textContent = error.message || 'ログインに失敗しました';
+        if (loginErrorText) {
+            loginErrorText.textContent = error.message || 'ログインに失敗しました';
+        }
         loginError.style.display = 'block';
         
         // ボタンを再有効化
@@ -224,6 +380,9 @@ function showAdminPanel(user) {
     
     // デフォルト表示
     loadAdminData();
+    
+    // メンテナンス制御を初期化
+    initMaintenanceControls();
 }
 
 /**
@@ -350,6 +509,82 @@ function setupEventListeners() {
             }
         });
     }
+    
+    // フォーラム管理のフィルターとボタン
+    const approvalFilter = document.getElementById('forum-approval-filter');
+    if (approvalFilter) {
+        approvalFilter.addEventListener('change', loadForumPosts);
+    }
+    
+    const forumRefreshBtn = document.getElementById('forum-refresh-btn');
+    if (forumRefreshBtn) {
+        forumRefreshBtn.addEventListener('click', loadForumPosts);
+    }
+    
+    const clearNotificationFormBtn = document.getElementById('clear-notification-form');
+    if (clearNotificationFormBtn) {
+        clearNotificationFormBtn.addEventListener('click', clearNotificationForm);
+    }
+    
+    // モーダルの閉じるボタン
+    const modalCloseBtn = document.getElementById('modal-close');
+    const modalCancelBtn = document.getElementById('modal-cancel');
+    const modalOverlay = document.getElementById('modal-overlay');
+    
+    if (modalCloseBtn) {
+        modalCloseBtn.addEventListener('click', () => {
+            modalOverlay?.classList.remove('active');
+        });
+    }
+    
+    if (modalCancelBtn) {
+        modalCancelBtn.addEventListener('click', () => {
+            modalOverlay?.classList.remove('active');
+        });
+    }
+    
+    if (modalOverlay) {
+        modalOverlay.addEventListener('click', (e) => {
+            if (e.target === modalOverlay) {
+                modalOverlay.classList.remove('active');
+            }
+        });
+    }
+    
+    // サブサイドバーのハンバーガーメニュー
+    const hamburgerMenu = document.getElementById('hamburger-menu');
+    const adminSidebar = document.getElementById('admin-sidebar');
+    const sidebarCloseBtn = document.getElementById('admin-sidebar-close');
+    
+    if (hamburgerMenu && adminSidebar) {
+        hamburgerMenu.addEventListener('click', () => {
+            adminSidebar.classList.toggle('active');
+            hamburgerMenu.classList.toggle('active');
+        });
+    }
+    
+    if (sidebarCloseBtn && adminSidebar) {
+        sidebarCloseBtn.addEventListener('click', () => {
+            adminSidebar.classList.remove('active');
+            hamburgerMenu?.classList.remove('active');
+        });
+    }
+}
+
+/**
+ * 通知フォームをクリア
+ */
+function clearNotificationForm() {
+    const form = document.getElementById('notification-form');
+    if (!form) return;
+    
+    form.querySelectorAll('input, textarea, select').forEach(element => {
+        if (element.type === 'checkbox' || element.type === 'radio') {
+            element.checked = false;
+        } else {
+            element.value = '';
+        }
+    });
 }
 
 // =====================================
@@ -390,8 +625,14 @@ async function loadTabData(tabName) {
         case 'posts':
             await loadPostList();
             break;
+        case 'forum':
+            await loadForumPosts();
+            break;
         case 'settings':
             loadSettings();
+            break;
+        case 'dashboard':
+            await loadDashboardStats();
             break;
     }
 }
@@ -673,6 +914,298 @@ function loadSettings() {
 }
 
 // =====================================
+// フォーラム管理（投稿承認機能）
+// =====================================
+
+/**
+ * フォーラム投稿一覧を読み込む
+ */
+async function loadForumPosts() {
+    const container = document.getElementById('forum-table-body');
+    const alertDiv = document.getElementById('approval-alert');
+    const pendingCountSpan = document.getElementById('pending-count');
+    
+    if (!container) return;
+    
+    container.innerHTML = '<tr><td colspan="7" class="loading-state">読み込み中...</td></tr>';
+    
+    try {
+        // 承認状態フィルターを取得
+        const approvalFilter = document.getElementById('forum-approval-filter')?.value || 'all';
+        
+        // Supabaseから投稿を取得
+        let query = window.supabaseClient
+            .from('posts')
+            .select('*')
+            .order('created_at', { ascending: false });
+        
+        if (approvalFilter !== 'all') {
+            query = query.eq('approval_status', approvalFilter);
+        }
+        
+        const { data, error } = await query;
+        
+        if (error) throw error;
+        
+        // 承認待ち件数を表示
+        if (pendingCountSpan && data) {
+            const pendingCount = data.filter(p => p.approval_status === 'pending').length;
+            pendingCountSpan.textContent = pendingCount;
+            
+            if (alertDiv) {
+                alertDiv.style.display = pendingCount > 0 ? 'block' : 'none';
+            }
+        }
+        
+        if (data && data.length > 0) {
+            container.innerHTML = data.map(post => renderForumPostRow(post)).join('');
+        } else {
+            container.innerHTML = '<tr><td colspan="7" class="empty-state">投稿がありません</td></tr>';
+        }
+        
+    } catch (error) {
+        console.error('Error loading forum posts:', error);
+        container.innerHTML = '<tr><td colspan="7" class="error-state">読み込みエラーが発生しました</td></tr>';
+    }
+}
+
+/**
+ * フォーラム投稿の行をレンダリング
+ */
+function renderForumPostRow(post) {
+    const approvalBadge = getApprovalStatusBadge(post.approval_status);
+    const statusBadge = getStatusBadge(post.status || 'pending');
+    const category = getCategoryLabel(post.category);
+    const contentPreview = post.content.length > 100 
+        ? post.content.substring(0, 100) + '...' 
+        : post.content;
+    const createdDate = formatDateTime(post.created_at);
+    
+    const actionButtons = post.approval_status === 'pending'
+        ? `
+            <button class="btn btn-success btn-sm" onclick="approvePost('${post.id}')">
+                <i class="fas fa-check"></i> 承認
+            </button>
+            <button class="btn btn-danger btn-sm" onclick="rejectPostPrompt('${post.id}')">
+                <i class="fas fa-times"></i> 却下
+            </button>
+        `
+        : '';
+    
+    return `
+        <tr>
+            <td>${post.id.substring(0, 8)}...</td>
+            <td>${escapeHtml(contentPreview)}</td>
+            <td>${category}</td>
+            <td>${approvalBadge}</td>
+            <td>${statusBadge}</td>
+            <td>${createdDate}</td>
+            <td class="action-buttons">
+                ${actionButtons}
+                <button class="btn btn-outline btn-sm" onclick="viewPostDetails('${post.id}')">
+                    <i class="fas fa-eye"></i>
+                </button>
+            </td>
+        </tr>
+    `;
+}
+
+/**
+ * 承認ステータスのバッジを取得
+ */
+function getApprovalStatusBadge(status) {
+    const badges = {
+        'pending': '<span class="status-badge status-pending"><i class="fas fa-clock"></i> 承認待ち</span>',
+        'approved': '<span class="status-badge status-active"><i class="fas fa-check-circle"></i> 承認済み</span>',
+        'rejected': '<span class="status-badge status-closed"><i class="fas fa-times-circle"></i> 却下済み</span>'
+    };
+    return badges[status] || status;
+}
+
+/**
+ * ステータスのバッジを取得
+ */
+function getStatusBadge(status) {
+    const badges = {
+        'pending': '<span class="status-badge status-pending">対応待ち</span>',
+        'in_progress': '<span class="status-badge status-active">対応中</span>',
+        'resolved': '<span class="status-badge status-resolved">解決済み</span>',
+        'closed': '<span class="status-badge status-closed">終了</span>'
+    };
+    return badges[status] || status;
+}
+
+/**
+ * カテゴリのラベルを取得
+ */
+function getCategoryLabel(category) {
+    const categories = {
+        'suggestion': '提案・要望',
+        'complaint': '苦情・問題',
+        'question': '質問',
+        'event': 'イベント',
+        'facility': '施設・設備',
+        'other': 'その他',
+        'general': '一般'
+    };
+    return categories[category] || category;
+}
+
+/**
+ * 投稿を承認
+ */
+async function approvePost(postId) {
+    if (!confirm('この投稿を承認しますか？')) return;
+    
+    try {
+        const currentUserEmail = currentUser?.email || 'admin@school.ac.jp';
+        
+        const { error } = await window.supabaseClient
+            .from('posts')
+            .update({
+                approval_status: 'approved',
+                approval_admin_email: currentUserEmail,
+                approval_date: new Date().toISOString()
+            })
+            .eq('id', postId);
+        
+        if (error) throw error;
+        
+        // アクションログに記録
+        await logPostAction(postId, 'approve', currentUserEmail);
+        
+        showSuccess('投稿を承認しました');
+        await loadForumPosts();
+        
+    } catch (error) {
+        console.error('Error approving post:', error);
+        showError('承認に失敗しました');
+    }
+}
+
+/**
+ * 却下理由入力プロンプト
+ */
+function rejectPostPrompt(postId) {
+    const reason = prompt('却下理由を入力してください（任意）');
+    if (reason !== null) {
+        rejectPost(postId, reason);
+    }
+}
+
+/**
+ * 投稿を却下
+ */
+async function rejectPost(postId, reason = '') {
+    try {
+        const currentUserEmail = currentUser?.email || 'admin@school.ac.jp';
+        
+        const { error } = await window.supabaseClient
+            .from('posts')
+            .update({
+                approval_status: 'rejected',
+                approval_admin_email: currentUserEmail,
+                approval_date: new Date().toISOString(),
+                rejection_reason: reason
+            })
+            .eq('id', postId);
+        
+        if (error) throw error;
+        
+        // アクションログに記録
+        await logPostAction(postId, 'reject', currentUserEmail, { reason });
+        
+        showSuccess('投稿を却下しました');
+        await loadForumPosts();
+        
+    } catch (error) {
+        console.error('Error rejecting post:', error);
+        showError('却下に失敗しました');
+    }
+}
+
+/**
+ * 投稿アクションをログに記録
+ */
+async function logPostAction(postId, actionType, adminEmail, details = {}) {
+    try {
+        const { error } = await window.supabaseClient
+            .from('post_action_logs')
+            .insert([{
+                post_id: postId,
+                action_type: actionType,
+                admin_email: adminEmail,
+                admin_name: currentUser?.name || '管理者',
+                details: details
+            }]);
+        
+        if (error) throw error;
+        
+    } catch (error) {
+        console.error('Error logging post action:', error);
+    }
+}
+
+/**
+ * 投稿詳細を表示
+ */
+async function viewPostDetails(postId) {
+    try {
+        const { data, error } = await window.supabaseClient
+            .from('posts')
+            .select('*')
+            .eq('id', postId)
+            .single();
+        
+        if (error) throw error;
+        
+        // モーダルで詳細を表示
+        showModal('投稿詳細', `
+            <div class="post-details">
+                <p><strong>投稿ID:</strong> ${data.id}</p>
+                <p><strong>内容:</strong></p>
+                <p>${escapeHtml(data.content)}</p>
+                <p><strong>カテゴリ:</strong> ${getCategoryLabel(data.category)}</p>
+                <p><strong>承認状態:</strong> ${getApprovalStatusBadge(data.approval_status)}</p>
+                <p><strong>投稿日:</strong> ${formatDateTime(data.created_at)}</p>
+                ${data.rejection_reason ? `<p><strong>却下理由:</strong> ${escapeHtml(data.rejection_reason)}</p>` : ''}
+            </div>
+        `);
+        
+    } catch (error) {
+        console.error('Error viewing post details:', error);
+        showError('投稿詳細の取得に失敗しました');
+    }
+}
+
+/**
+ * モーダルを表示
+ */
+function showModal(title, content) {
+    document.getElementById('modal-title').textContent = title;
+    document.getElementById('modal-body').innerHTML = content;
+    document.getElementById('modal-overlay').classList.add('active');
+}
+
+/**
+ * ダッシュボード統計を読み込む
+ */
+async function loadDashboardStats() {
+    try {
+        const stats = await window.supabaseQueries?.getStatistics();
+        
+        if (stats) {
+            document.getElementById('news-count').textContent = stats.news_count || 0;
+            document.getElementById('survey-count').textContent = stats.surveys_count || 0;
+            document.getElementById('club-count').textContent = stats.clubs_count || 0;
+            document.getElementById('forum-count').textContent = stats.posts_count || 0;
+        }
+    } catch (error) {
+        console.error('Error loading dashboard stats:', error);
+    }
+}
+
+// =====================================
 // ユーティリティ関数
 // =====================================
 
@@ -723,4 +1256,206 @@ style.textContent = `
         }
     }
 `;
+
+// メンテナンスモード管理のスタイル
+const maintenanceStyle = document.createElement('style');
+maintenanceStyle.textContent = `
+    .system-controls {
+        display: grid;
+        gap: 20px;
+        margin-top: 20px;
+    }
+    
+    .control-card {
+        background: var(--surface-color);
+        border: 1px solid var(--border-color);
+        border-radius: 12px;
+        padding: 24px;
+        box-shadow: var(--shadow-light);
+    }
+    
+    .control-card h3 {
+        margin: 0 0 16px;
+        font-size: 1.1rem;
+        font-weight: 600;
+        color: var(--text-color);
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+    
+    .maintenance-status {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        margin-bottom: 16px;
+        padding: 12px;
+        background: var(--background-color);
+        border-radius: 8px;
+    }
+    
+    .status-indicator {
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        flex-shrink: 0;
+    }
+    
+    .status-indicator.status-active {
+        background: #f39c12;
+        box-shadow: 0 0 8px rgba(243, 156, 18, 0.5);
+    }
+    
+    .status-indicator.status-inactive {
+        background: #27ae60;
+        box-shadow: 0 0 8px rgba(39, 174, 96, 0.5);
+    }
+    
+    .status-text {
+        font-weight: 500;
+        color: var(--text-color);
+    }
+    
+    .maintenance-actions {
+        display: flex;
+        gap: 12px;
+        flex-wrap: wrap;
+    }
+    
+    .maintenance-form {
+        margin-top: 16px;
+        padding: 16px;
+        background: var(--background-color);
+        border-radius: 8px;
+        border: 1px solid var(--border-color);
+    }
+    
+    .form-actions {
+        display: flex;
+        gap: 12px;
+        margin-top: 16px;
+        justify-content: flex-end;
+    }
+    
+    @media (max-width: 768px) {
+        .maintenance-actions {
+            flex-direction: column;
+        }
+        
+        .form-actions {
+            flex-direction: column;
+        }
+    }
+`;
+
 document.head.appendChild(style);
+document.head.appendChild(maintenanceStyle);
+
+/**
+ * メンテナンスモード管理の初期化
+ */
+function initMaintenanceControls() {
+    const enableBtn = document.getElementById('enable-maintenance-btn');
+    const disableBtn = document.getElementById('disable-maintenance-btn');
+    const confirmBtn = document.getElementById('confirm-maintenance-btn');
+    const cancelBtn = document.getElementById('cancel-maintenance-btn');
+    const form = document.getElementById('maintenance-form');
+    const actions = document.getElementById('maintenance-actions');
+    
+    if (enableBtn) {
+        enableBtn.addEventListener('click', () => {
+            form.style.display = 'block';
+            actions.style.display = 'none';
+        });
+    }
+    
+    if (disableBtn) {
+        disableBtn.addEventListener('click', async () => {
+            if (confirm('メンテナンスモードを終了しますか？')) {
+                const success = await window.maintenanceChecker.disableMaintenance();
+                if (success) {
+                    updateMaintenanceStatus(false);
+                }
+            }
+        });
+    }
+    
+    if (confirmBtn) {
+        confirmBtn.addEventListener('click', async () => {
+            const message = document.getElementById('maintenance-message').value;
+            const endTimeInput = document.getElementById('maintenance-end-time').value;
+            
+            if (!message.trim()) {
+                alert('メッセージを入力してください');
+                return;
+            }
+            
+            // datetime-localの値をISO形式に変換
+            let endTime = null;
+            if (endTimeInput) {
+                const date = new Date(endTimeInput);
+                endTime = date.toISOString();
+            }
+            
+            const success = await window.maintenanceChecker.enableMaintenance(message, endTime);
+            if (success) {
+                updateMaintenanceStatus(true);
+                form.style.display = 'none';
+                actions.style.display = 'block';
+                // フォームをリセット
+                document.getElementById('maintenance-message').value = '';
+                document.getElementById('maintenance-end-time').value = '';
+            }
+        });
+    }
+    
+    if (cancelBtn) {
+        cancelBtn.addEventListener('click', () => {
+            form.style.display = 'none';
+            actions.style.display = 'block';
+        });
+    }
+    
+    // 初期状態をチェック
+    checkMaintenanceStatus();
+}
+
+/**
+ * メンテナンス状態をチェック
+ */
+async function checkMaintenanceStatus() {
+    try {
+        const result = await window.apiClient.sendRequest('checkMaintenance');
+        if (result.success) {
+            updateMaintenanceStatus(result.maintenance);
+        }
+    } catch (error) {
+        console.warn('Failed to check maintenance status:', error);
+        updateMaintenanceStatus(false);
+    }
+}
+
+/**
+ * メンテナンス状態のUIを更新
+ */
+function updateMaintenanceStatus(isMaintenance) {
+    const indicator = document.getElementById('maintenance-indicator');
+    const text = document.getElementById('maintenance-text');
+    const actions = document.getElementById('maintenance-actions');
+    const enableBtn = document.getElementById('enable-maintenance-btn');
+    const disableBtn = document.getElementById('disable-maintenance-btn');
+    
+    if (isMaintenance) {
+        indicator.className = 'status-indicator status-active';
+        text.textContent = 'メンテナンス中';
+        enableBtn.style.display = 'none';
+        disableBtn.style.display = 'inline-flex';
+    } else {
+        indicator.className = 'status-indicator status-inactive';
+        text.textContent = '通常稼働中';
+        enableBtn.style.display = 'inline-flex';
+        disableBtn.style.display = 'none';
+    }
+    
+    actions.style.display = 'block';
+}

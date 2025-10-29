@@ -28,8 +28,23 @@ function getConfig() {
     REQUESTS_PER_MINUTE: 600,
     
     // デバッグモード
-    DEBUG_MODE: properties.getProperty('DEBUG_MODE') === 'true'
+    DEBUG_MODE: properties.getProperty('DEBUG_MODE') === 'true',
+    
+    // メンテナンスモード設定
+    MAINTENANCE_MODE: properties.getProperty('MAINTENANCE_MODE') === 'true',
+    MAINTENANCE_MESSAGE: properties.getProperty('MAINTENANCE_MESSAGE') || 'システムメンテナンス中です。しばらくお待ちください。',
+    MAINTENANCE_END_TIME: properties.getProperty('MAINTENANCE_END_TIME') || null
   };
+}
+
+// パスワードをSHA-256でハッシュ化（ブラウザ互換）
+function hashPassword(password) {
+  const digest = Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, password, Utilities.Charset.UTF_8);
+  const hashArray = digest.map(byte => {
+    const hex = (byte < 0 ? byte + 256 : byte).toString(16);
+    return hex.length === 1 ? '0' + hex : hex;
+  });
+  return hashArray.join('');
 }
 
 // 管理者認証情報を取得
@@ -39,9 +54,13 @@ function getAdminCredentials() {
   
   if (!adminData) {
     // デフォルト管理者（初回設定用）
+    // パスワードを動的にハッシュ化
+    const defaultPassword = 'Nazuna-portal@igsc';
+    const passwordHash = hashPassword(defaultPassword);
+    
     return {
-      'admin@school.ac.jp': {
-        password: 'admin123',
+      'admin@nazuna-portal.com': {
+        passwordHash: passwordHash,
         name: 'システム管理者',
         role: 'super_admin',
         permissions: ['all']
@@ -67,6 +86,79 @@ const SHEETS = {
 };
 
 // ========================================
+// メンテナンスモード管理
+// ========================================
+
+// メンテナンス状態をチェック
+function checkMaintenanceStatus() {
+  const config = getConfig();
+  
+  // メンテナンスモードが有効かチェック
+  if (!config.MAINTENANCE_MODE) {
+    return {
+      success: true,
+      maintenance: false,
+      message: null
+    };
+  }
+  
+  // 終了時間が設定されている場合、時間をチェック
+  if (config.MAINTENANCE_END_TIME) {
+    const endTime = new Date(config.MAINTENANCE_END_TIME);
+    const now = new Date();
+    
+    if (now > endTime) {
+      // メンテナンス時間が終了している場合、自動的に無効化
+      const properties = PropertiesService.getScriptProperties();
+      properties.setProperty('MAINTENANCE_MODE', 'false');
+      properties.deleteProperty('MAINTENANCE_END_TIME');
+      
+      return {
+        success: true,
+        maintenance: false,
+        message: null
+      };
+    }
+  }
+  
+  return {
+    success: true,
+    maintenance: true,
+    message: config.MAINTENANCE_MESSAGE,
+    endTime: config.MAINTENANCE_END_TIME
+  };
+}
+
+// メンテナンスモードを有効化
+function enableMaintenanceMode(message, endTime) {
+  const properties = PropertiesService.getScriptProperties();
+  properties.setProperty('MAINTENANCE_MODE', 'true');
+  properties.setProperty('MAINTENANCE_MESSAGE', message || 'システムメンテナンス中です。しばらくお待ちください。');
+  
+  if (endTime) {
+    properties.setProperty('MAINTENANCE_END_TIME', endTime);
+  }
+  
+  return {
+    success: true,
+    message: 'メンテナンスモードが有効になりました'
+  };
+}
+
+// メンテナンスモードを無効化
+function disableMaintenanceMode() {
+  const properties = PropertiesService.getScriptProperties();
+  properties.setProperty('MAINTENANCE_MODE', 'false');
+  properties.deleteProperty('MAINTENANCE_MESSAGE');
+  properties.deleteProperty('MAINTENANCE_END_TIME');
+  
+  return {
+    success: true,
+    message: 'メンテナンスモードが無効になりました'
+  };
+}
+
+// ========================================
 // メイン関数（WebAppのエントリーポイント）
 // ========================================
 
@@ -79,6 +171,15 @@ function doGet(e) {
   
   try {
     switch (action) {
+      case 'checkMaintenance':
+        result = checkMaintenanceStatus();
+        break;
+      case 'enableMaintenance':
+        result = enableMaintenanceMode(e.parameter.message, e.parameter.endTime);
+        break;
+      case 'disableMaintenance':
+        result = disableMaintenanceMode();
+        break;
       case 'getClubs':
         result = getClubs(e.parameter);
         break;
@@ -100,6 +201,24 @@ function doGet(e) {
       // POST系のアクションもGETで処理（JSONP対応）
       case 'adminLogin':
         result = adminLogin(e.parameter);
+        break;
+      case 'verifyAdminSession':
+        result = verifyAdminSession(e.parameter);
+        break;
+      case 'createAdminAccount':
+        result = createOrUpdateAdminAccount(
+          e.parameter.email,
+          e.parameter.password,
+          e.parameter.name,
+          e.parameter.role,
+          e.parameter.permissions
+        );
+        break;
+      case 'deleteAdminAccount':
+        result = deleteAdminAccount(e.parameter.email);
+        break;
+      case 'debugAdminSettings':
+        result = debugAdminSettings();
         break;
       case 'registerDevice':
         result = registerDevice(e.parameter);
@@ -139,16 +258,6 @@ function doGet(e) {
         break;
       case 'registerFCMToken':
         result = registerFCMToken(e.parameter);
-        break;
-      // メンテナンスモード管理
-      case 'checkMaintenance':
-        result = checkMaintenance(e.parameter);
-        break;
-      case 'enableMaintenance':
-        result = enableMaintenance(e.parameter);
-        break;
-      case 'disableMaintenance':
-        result = disableMaintenance(e.parameter);
         break;
       // シンプル通知システム用のアクション
       case 'registerDeviceSimple':
@@ -220,6 +329,24 @@ function doPost(e) {
       // 認証
       case 'adminLogin':
         result = adminLogin(data);
+        break;
+      case 'verifyAdminSession':
+        result = verifyAdminSession(data);
+        break;
+      case 'createAdminAccount':
+        result = createOrUpdateAdminAccount(
+          data.email,
+          data.password,
+          data.name,
+          data.role,
+          data.permissions
+        );
+        break;
+      case 'deleteAdminAccount':
+        result = deleteAdminAccount(data.email);
+        break;
+      case 'debugAdminSettings':
+        result = debugAdminSettings();
         break;
       
       // 通知システム
@@ -527,14 +654,44 @@ function adminLogin(data) {
     // URLパラメータまたはJSONボディからデータを取得
     const email = data.email || data.parameter?.email;
     const password = data.password || data.parameter?.password;
+    const passwordHash = data.passwordHash || data.parameter?.passwordHash;
+    
+    console.log('Login attempt:', { 
+      email, 
+      hasPassword: !!password,
+      hasPasswordHash: !!passwordHash,
+      passwordHash: passwordHash ? passwordHash.substring(0, 10) + '...' : 'none' 
+    });
     
     const adminCredentials = getAdminCredentials();
+    console.log('Available admins:', Object.keys(adminCredentials));
     
-    if (adminCredentials[email] && adminCredentials[email].password === password) {
+    // パスワードハッシュを計算（生のパスワードが提供された場合）
+    let computedHash = passwordHash;
+    if (password && !passwordHash) {
+      computedHash = hashPassword(password);
+      console.log('Computed hash from password:', computedHash);
+    }
+    
+    // デバッグ用：期待されるハッシュを計算
+    const expectedHash = adminCredentials[email] ? adminCredentials[email].passwordHash : 'N/A';
+    console.log('Expected hash:', expectedHash);
+    console.log('Received hash:', computedHash);
+    console.log('Hash match:', computedHash === expectedHash);
+    
+    // ハッシュ化されたパスワードで認証
+    if (adminCredentials[email] && adminCredentials[email].passwordHash === computedHash) {
       const admin = adminCredentials[email];
+      
+      // セッショントークンを生成
+      const token = generateSessionToken(email);
+      
+      console.log('Login successful for:', email);
+      
       return {
         success: true,
-        admin: {
+        token: token,
+        user: {
           email: email,
           name: admin.name,
           role: admin.role,
@@ -543,14 +700,91 @@ function adminLogin(data) {
       };
     }
     
-    return { success: false, error: 'Invalid credentials' };
+    console.log('Login failed - credentials mismatch');
+    return { 
+      success: false, 
+      error: 'Invalid credentials',
+      debug: {
+        email: email,
+        hasAdmin: !!adminCredentials[email],
+        hashMatch: adminCredentials[email] ? adminCredentials[email].passwordHash === computedHash : false,
+        expectedHash: adminCredentials[email] ? adminCredentials[email].passwordHash : 'N/A',
+        computedHash: computedHash
+      }
+    };
   } catch (error) {
     console.error('Error in adminLogin:', error);
     return { success: false, error: error.toString() };
   }
 }
 
-// 管理者認証チェック
+// セッショントークンを生成
+function generateSessionToken(email) {
+  const timestamp = new Date().getTime();
+  const random = Math.random().toString(36).substring(2);
+  return Utilities.base64Encode(`${email}:${timestamp}:${random}`);
+}
+
+// セッションを検証
+function verifyAdminSession(data) {
+  try {
+    const token = data.token || data.parameter?.token;
+    const email = data.email || data.parameter?.email;
+    
+    if (!token || !email) {
+      return { valid: false, error: 'Missing token or email' };
+    }
+    
+    // トークンをデコード
+    const decoded = Utilities.base64Decode(token);
+    const parts = decoded.split(':');
+    
+    if (parts.length !== 3) {
+      return { valid: false, error: 'Invalid token format' };
+    }
+    
+    const tokenEmail = parts[0];
+    const timestamp = parseInt(parts[1]);
+    
+    // メールアドレスが一致するかチェック
+    if (tokenEmail !== email) {
+      return { valid: false, error: 'Token email mismatch' };
+    }
+    
+    // トークンの有効期限をチェック（24時間）
+    const now = new Date().getTime();
+    const tokenAge = now - timestamp;
+    const maxAge = 24 * 60 * 60 * 1000; // 24時間
+    
+    if (tokenAge > maxAge) {
+      return { valid: false, error: 'Token expired' };
+    }
+    
+    // 管理者情報を取得
+    const adminCredentials = getAdminCredentials();
+    const admin = adminCredentials[email];
+    
+    if (!admin) {
+      return { valid: false, error: 'Admin not found' };
+    }
+    
+    return {
+      valid: true,
+      user: {
+        email: email,
+        name: admin.name,
+        role: admin.role,
+        permissions: admin.permissions
+      }
+    };
+    
+  } catch (error) {
+    console.error('Error verifying session:', error);
+    return { valid: false, error: 'Session verification failed' };
+  }
+}
+
+// 管理者認証チェック（後方互換性のため）
 function isAuthorized(email, password) {
   if (!email || !password) return false;
   
@@ -558,23 +792,151 @@ function isAuthorized(email, password) {
   return adminCredentials[email] && adminCredentials[email].password === password;
 }
 
+// 管理者アカウント作成・更新
+function createOrUpdateAdminAccount(email, password, name, role, permissions) {
+  try {
+    const properties = PropertiesService.getScriptProperties();
+    const adminData = properties.getProperty('ADMIN_ACCOUNTS');
+    
+    let adminAccounts = {};
+    if (adminData) {
+      try {
+        adminAccounts = JSON.parse(adminData);
+      } catch (error) {
+        console.error('Error parsing existing admin accounts:', error);
+      }
+    }
+    
+    // 新しいアカウント情報を作成
+    adminAccounts[email] = {
+      passwordHash: hashPassword(password),
+      name: name,
+      role: role,
+      permissions: permissions || ['basic']
+    };
+    
+    // 保存
+    properties.setProperty('ADMIN_ACCOUNTS', JSON.stringify(adminAccounts));
+    
+    console.log('Admin account created/updated:', email);
+    return {
+      success: true,
+      message: '管理者アカウントが正常に作成/更新されました',
+      account: {
+        email: email,
+        name: name,
+        role: role,
+        permissions: permissions
+      }
+    };
+    
+  } catch (error) {
+    console.error('Error creating/updating admin account:', error);
+    return {
+      success: false,
+      error: error.toString()
+    };
+  }
+}
+
+// 管理者アカウント削除
+function deleteAdminAccount(email) {
+  try {
+    const properties = PropertiesService.getScriptProperties();
+    const adminData = properties.getProperty('ADMIN_ACCOUNTS');
+    
+    if (!adminData) {
+      return {
+        success: false,
+        error: '管理者アカウントが見つかりません'
+      };
+    }
+    
+    let adminAccounts = {};
+    try {
+      adminAccounts = JSON.parse(adminData);
+    } catch (error) {
+      console.error('Error parsing admin accounts:', error);
+      return {
+        success: false,
+        error: '管理者アカウントデータの解析に失敗しました'
+      };
+    }
+    
+    if (!adminAccounts[email]) {
+      return {
+        success: false,
+        error: '指定された管理者アカウントが見つかりません'
+      };
+    }
+    
+    // アカウントを削除
+    delete adminAccounts[email];
+    
+    // 保存
+    properties.setProperty('ADMIN_ACCOUNTS', JSON.stringify(adminAccounts));
+    
+    console.log('Admin account deleted:', email);
+    return {
+      success: true,
+      message: '管理者アカウントが正常に削除されました'
+    };
+    
+  } catch (error) {
+    console.error('Error deleting admin account:', error);
+    return {
+      success: false,
+      error: error.toString()
+    };
+  }
+}
+
+// デバッグ用：現在の管理者設定を確認
+function debugAdminSettings() {
+  const adminCredentials = getAdminCredentials();
+  const testPassword = 'Nazuna-portal@igsc';
+  const expectedHash = hashPassword(testPassword);
+  
+  console.log('=== 管理者設定デバッグ ===');
+  console.log('利用可能な管理者:', Object.keys(adminCredentials));
+  console.log('admin@nazuna-portal.com の設定:', adminCredentials['admin@nazuna-portal.com']);
+  console.log('テストパスワード:', testPassword);
+  console.log('期待されるハッシュ:', expectedHash);
+  console.log('実際のハッシュ:', adminCredentials['admin@nazuna-portal.com']?.passwordHash);
+  console.log('ハッシュ一致:', adminCredentials['admin@nazuna-portal.com']?.passwordHash === expectedHash);
+  
+  return {
+    availableAdmins: Object.keys(adminCredentials),
+    adminConfig: adminCredentials['admin@nazuna-portal.com'],
+    testPassword: testPassword,
+    expectedHash: expectedHash,
+    actualHash: adminCredentials['admin@nazuna-portal.com']?.passwordHash,
+    hashMatch: adminCredentials['admin@nazuna-portal.com']?.passwordHash === expectedHash
+  };
+}
+
 // 管理者アカウント設定（初期設定用）
 function setupAdminAccounts() {
+  // パスワードを動的にハッシュ化
+  const adminPassword = 'Nazuna-portal@igsc';
+  const councilPassword = 'council456';
+  const teacherPassword = 'teacher789';
+  
   const adminAccounts = {
-    'admin@school.ac.jp': {
-      password: 'admin123',
+    'admin@nazuna-portal.com': {
+      passwordHash: hashPassword(adminPassword),
       name: 'システム管理者',
       role: 'super_admin',
       permissions: ['all']
     },
     'council@school.ac.jp': {
-      password: 'council456',
+      passwordHash: hashPassword(councilPassword),
       name: '生徒会管理者',
       role: 'admin',
       permissions: ['notification', 'news', 'survey', 'forum']
     },
     'teacher@school.ac.jp': {
-      password: 'teacher789',
+      passwordHash: hashPassword(teacherPassword),
       name: '教員管理者',
       role: 'moderator',
       permissions: ['forum', 'news']
@@ -1881,76 +2243,5 @@ function getPlatformFromUserAgent(userAgent) {
     return 'android';
   } else {
     return 'web';
-  }
-}
-
-// ========================================
-// メンテナンスモード管理
-// ========================================
-
-// メンテナンス状態をチェック
-function checkMaintenance(data) {
-  try {
-    const config = getConfig();
-    const properties = PropertiesService.getScriptProperties();
-    const maintenance = properties.getProperty('MAINTENANCE_MODE') === 'true';
-    const message = properties.getProperty('MAINTENANCE_MESSAGE') || 'システムメンテナンス中です。しばらくお待ちください。';
-    const endTime = properties.getProperty('MAINTENANCE_END_TIME');
-    
-    return {
-      success: true,
-      maintenance: maintenance,
-      message: message,
-      endTime: endTime || null
-    };
-  } catch (error) {
-    console.error('Error checking maintenance status:', error);
-    return {
-      success: true,
-      maintenance: false,
-      message: '',
-      endTime: null
-    };
-  }
-}
-
-// メンテナンスモードを有効化
-function enableMaintenance(data) {
-  try {
-    const message = data.message || data.parameter?.message;
-    const endTime = data.endTime || data.parameter?.endTime;
-    
-    const properties = PropertiesService.getScriptProperties();
-    properties.setProperty('MAINTENANCE_MODE', 'true');
-    
-    if (message) {
-      properties.setProperty('MAINTENANCE_MESSAGE', message);
-    }
-    
-    if (endTime) {
-      properties.setProperty('MAINTENANCE_END_TIME', endTime);
-    }
-    
-    console.log('Maintenance mode enabled');
-    return { success: true, message: 'メンテナンスモードを開始しました' };
-  } catch (error) {
-    console.error('Error enabling maintenance mode:', error);
-    return { success: false, error: error.toString() };
-  }
-}
-
-// メンテナンスモードを無効化
-function disableMaintenance(data) {
-  try {
-    const properties = PropertiesService.getScriptProperties();
-    properties.setProperty('MAINTENANCE_MODE', 'false');
-    properties.deleteProperty('MAINTENANCE_MESSAGE');
-    properties.deleteProperty('MAINTENANCE_END_TIME');
-    
-    console.log('Maintenance mode disabled');
-    return { success: true, message: 'メンテナンスモードを終了しました' };
-  } catch (error) {
-    console.error('Error disabling maintenance mode:', error);
-    return { success: false, error: error.toString() };
   }
 }

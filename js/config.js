@@ -4,13 +4,27 @@
 const CONFIG = {
     // Supabase設定
     SUPABASE: {
-        URL: 'https://jirppalacwwinwnsyauo.supabase.co',
-        ANON_KEY: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImppcnBwYWxhY3d3aW53bnN5YXVvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTk2NTYwNDUsImV4cCI6MjA3NTIzMjA0NX0.wbCEhrTTPETy1iOB3MmbNVtN4JQk5Be2Dxfs61x7fr4'
+        URL: 'https://jffjacpedwldbgmggdcy.supabase.co',
+        ANON_KEY: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpmZmphY3BlZHdsZGJnbWdnZGN5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjE1ODIyOTQsImV4cCI6MjA3NzE1ODI5NH0.Moh7vFh_TGK8soy8mGmqGgCH_ZFVW0m6PP2IoB9ADd4',
+        // CORS設定
+        OPTIONS: {
+            auth: {
+                persistSession: false,
+                autoRefreshToken: false
+            },
+            global: {
+                headers: {
+                    'Access-Control-Allow-Origin': '*',
+                    'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+                    'Access-Control-Allow-Headers': 'Content-Type, Authorization, apikey'
+                }
+            }
+        }
     },
     
     // Google Apps Script WebApp URL
     // デプロイ後にこのURLを更新してください
-    GAS_URL: 'https://script.google.com/macros/s/AKfycbxeusUgwu6ndqUf58VgRGHfy9NnPQW90mYN5HC19EsV3U5UaRF9qAQDxkq39v0Uzxfl/exec',
+    GAS_URL: 'https://script.google.com/macros/s/AKfycbxPcKdTBL7k5D_QpEpL_gH4elUBJVCbB-8H_DfrDJ8OuLP9W9Re86T9v-QIzneeQ6q6/exec',
     
     // Firebase設定（通知システム用）
     FIREBASE: {

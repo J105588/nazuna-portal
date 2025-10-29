@@ -1,5 +1,82 @@
 /* 管理画面専用スタイル */
 
+/* 投稿承認アラート */
+.approval-alert {
+    background: linear-gradient(135deg, #ff9800 0%, #f57c00 100%);
+    color: white;
+    padding: 1rem 1.5rem;
+    border-radius: 0.5rem;
+    margin-bottom: 1.5rem;
+    animation: slideDown 0.3s ease;
+}
+
+@keyframes slideDown {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.approval-alert .alert-content {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.approval-alert i {
+    font-size: 1.25rem;
+}
+
+.approval-alert strong {
+    font-weight: 600;
+}
+
+/* ボタンスタイル */
+.btn-success {
+    background: linear-gradient(135deg, #27ae60 0%, #2ecc71 100%);
+    color: white;
+    border: none;
+}
+
+.btn-success:hover {
+    background: linear-gradient(135deg, #229954 0%, #27ae60 100%);
+    transform: translateY(-1px);
+}
+
+.btn-danger {
+    background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%);
+    color: white;
+    border: none;
+}
+
+.btn-danger:hover {
+    background: linear-gradient(135deg, #c0392b 0%, #a93226 100%);
+    transform: translateY(-1px);
+}
+
+/* テーブル状態クラス */
+.loading-state {
+    text-align: center;
+    padding: 2rem;
+    color: var(--text-light);
+}
+
+.empty-state {
+    text-align: center;
+    padding: 2rem;
+    color: var(--text-light);
+}
+
+.error-state {
+    text-align: center;
+    padding: 2rem;
+    color: var(--accent-color);
+}
+
 /* レスポンシブ対応 */
 @media (max-width: 768px) {
     .admin-main {

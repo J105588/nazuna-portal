@@ -125,17 +125,19 @@ class PWAInstaller {
         this.banner.className = 'pwa-smart-banner';
         this.banner.innerHTML = `
             <div class="pwa-smart-banner-content">
-                <div class="pwa-smart-banner-icon"><i class="fas fa-download"></i></div>
-                <div class="pwa-smart-banner-text">
-                    <strong>アプリとしてインストール</strong>
-                    <span>ホーム画面から素早くアクセスできます</span>
+                <div class="pwa-smart-banner-header">
+                    <div class="pwa-smart-banner-icon"><i class="fas fa-download"></i></div>
+                    <div class="pwa-smart-banner-text">
+                        <strong>アプリとしてインストール</strong>
+                        <span>ホーム画面から素早くアクセスできます</span>
+                    </div>
                 </div>
                 <div class="pwa-smart-banner-actions">
                     <button class="btn btn-primary" id="pwa-smart-install">インストール</button>
-                    <button class="btn btn-outline" id="pwa-smart-dismiss" aria-label="閉じる">
-                        <i class="fas fa-times"></i>
-                    </button>
                 </div>
+                <button class="pwa-smart-banner-close" id="pwa-smart-dismiss" aria-label="閉じる">
+                    <i class="fas fa-times"></i>
+                </button>
             </div>
         `;
         document.body.appendChild(this.banner);

@@ -1,4 +1,4 @@
-// PWAアップデート機能
+// PWAアップデート機能（統合版）
 
 class PWAUpdater {
     constructor() {
@@ -178,19 +178,10 @@ class PWAUpdater {
         if (document.querySelector('.pwa-update-announcement')) return;
         const overlay = document.createElement('div');
         overlay.className = 'pwa-update-announcement';
-
-        overlay.style.position = 'fixed';
-        overlay.style.top = '0';
-        overlay.style.left = '50%';
-        overlay.style.transform = 'translateX(-50%)';
-        overlay.style.width = '100%';
-        overlay.style.zIndex = '1000'; // 他の要素より手前に表示
         
         overlay.innerHTML = `
             <div class="pwa-update-announcement-content">
-                <div class="pwa-ripples"></div>
                 <div class="pwa-update-hero">
-                    <div class="pwa-update-glow"></div>
                     <div class="pwa-update-icon">
                         <i class="fas fa-rocket"></i>
                     </div>
@@ -379,19 +370,7 @@ class PWAUpdater {
                     <p>しばらくお待ちください</p>
                 </div>
             </div>
-            <div class="pwa-ripples"></div>
         `;
-        // テーマカラー適用（グラデーション）
-        try {
-            const theme = this.getThemeColor();
-            const box = loadingModal.querySelector('.pwa-update-loading-content');
-            const spinner = loadingModal.querySelector('.spinner');
-            if (box) box.style.background = `linear-gradient(135deg, ${theme} 0%, #6b9b7a 100%)`;
-            if (spinner) {
-                spinner.style.borderTopColor = '#fff';
-                spinner.style.borderColor = 'rgba(255,255,255,.35)';
-            }
-        } catch {}
         
         document.body.appendChild(loadingModal);
         
@@ -694,6 +673,55 @@ class PWAUpdater {
         };
     }
 
+    // シンプルなアップデート通知を表示（統合版）
+    showSimpleUpdateNotification() {
+        // 既に表示中なら再表示しない
+        if (document.querySelector('.pwa-update-notification')) return;
+        
+        const notification = document.createElement('div');
+        notification.className = 'pwa-update-notification';
+        notification.innerHTML = `
+            <div class="pwa-update-notification-content">
+                <div class="pwa-update-notification-icon">
+                    <i class="fas fa-sync-alt"></i>
+                </div>
+                <div class="pwa-update-notification-text">
+                    <h3>アップデートが利用可能です</h3>
+                    <p>新しいバージョンに更新しますか？</p>
+                </div>
+                <div class="pwa-update-notification-actions">
+                    <button class="btn btn-primary" id="pwa-update-apply">
+                        <i class="fas fa-download"></i>
+                        更新する
+                    </button>
+                    <button class="btn btn-outline" id="pwa-update-later">
+                        後で
+                    </button>
+                </div>
+            </div>
+        `;
+        
+        document.body.appendChild(notification);
+        
+        // アニメーション
+        setTimeout(() => {
+            notification.classList.add('pwa-update-notification-show');
+        }, 100);
+        
+        // イベントリスナー
+        const applyBtn = notification.querySelector('#pwa-update-apply');
+        const laterBtn = notification.querySelector('#pwa-update-later');
+        
+        applyBtn.addEventListener('click', () => {
+            this.applyUpdate();
+            notification.remove();
+        });
+        
+        laterBtn.addEventListener('click', () => {
+            notification.remove();
+        });
+    }
+
     // 最小限のスタイルを注入して確実に表示
     ensureStyles() {
         const STYLE_ID = 'pwa-update-minimal-style';
@@ -713,14 +741,40 @@ class PWAUpdater {
             .pwa-update-btn-primary:hover { filter: brightness(0.95); }
             @media (max-width: 480px) { .pwa-update-toast { right: 8px; left: 8px; } .pwa-update-toast-inner { max-width: none; } }
             /* Loading modal (viewport center) */
-            .pwa-update-loading { position: fixed; inset: 0; z-index: 2147483646; display: grid; place-items: center; background:
-                radial-gradient(1200px 600px at 20% -20%, rgba(255,255,255,.10), transparent),
-                linear-gradient(135deg, #4a7c59 0%, #6b9b7a 100%);
-                opacity: 0; transition: opacity .16s ease-out; overflow:hidden; }
+            .pwa-update-loading { 
+                position: fixed; 
+                top: 0; 
+                left: 0; 
+                width: 100vw; 
+                height: 100vh; 
+                z-index: 2147483646; 
+                display: flex; 
+                align-items: center; 
+                justify-content: center; 
+                background: rgba(0, 0, 0, 0.7);
+                opacity: 0; 
+                transition: opacity .16s ease-out; 
+            }
             .pwa-update-loading-show { opacity: 1; }
-            .pwa-update-loading-content { background: rgba(17,24,39,.82); color: #fff; padding: 22px 24px; border-radius: 14px; width: min(92vw, 460px); box-shadow: 0 18px 48px rgba(0,0,0,.5); text-align: center; backdrop-filter: blur(10px); }
-            .pwa-update-loading-spinner { margin-bottom: 12px; display: grid; place-items: center; }
-            .pwa-update-loading-spinner .spinner { width: 32px; height: 32px; border: 4px solid rgba(255,255,255,.25); border-top-color: #10b981; border-radius: 50%; animation: pwa-spin 1s linear infinite; }
+            .pwa-update-loading-content { 
+                background: var(--surface-color); 
+                color: var(--text-color); 
+                padding: 32px; 
+                border-radius: 16px; 
+                width: min(90vw, 400px); 
+                box-shadow: 0 20px 60px rgba(0,0,0,0.3); 
+                text-align: center; 
+                border: 1px solid var(--border-color);
+            }
+            .pwa-update-loading-spinner { margin-bottom: 16px; display: flex; justify-content: center; }
+            .pwa-update-loading-spinner .spinner { 
+                width: 40px; 
+                height: 40px; 
+                border: 4px solid var(--border-color); 
+                border-top-color: var(--primary-color); 
+                border-radius: 50%; 
+                animation: pwa-spin 1s linear infinite; 
+            }
             @keyframes pwa-spin { to { transform: rotate(360deg); } }
             /* Details/Module (viewport centered) */
             .pwa-update-details, .pwa-update-module { position: fixed; inset: 0; z-index: 2147483646; display: grid; place-items: center; background: rgba(0,0,0,.35); opacity: 0; transition: opacity .16s ease-out; }
@@ -728,28 +782,76 @@ class PWAUpdater {
             .pwa-update-details-content, .pwa-update-module-content { background: #111827; color:#fff; width: min(92vw, 560px); border-radius: 12px; box-shadow: 0 12px 36px rgba(0,0,0,.45); }
             .pwa-update-details-header, .pwa-update-module-header { display:flex; align-items:center; justify-content: space-between; padding: 12px 16px; border-bottom: 1px solid rgba(255,255,255,.08); }
             .pwa-update-details-body, .pwa-update-module-body { padding: 14px 16px; }
-            /* Full-screen glamorous announcement (opening theme) */
-            .pwa-update-announcement { position: fixed; inset:0; z-index:2147483647; display:grid; place-items:center; 
-                background:
-                  radial-gradient(1200px 600px at 20% -20%, rgba(255,255,255,.10), transparent),
-                  linear-gradient(135deg, #4a7c59 0%, #6b9b7a 100%);
-                opacity:0; transition: opacity .18s ease-out; overflow:hidden; }
-            .pwa-update-announcement.show { opacity:1; }
-            .pwa-update-announcement-content { width:min(92vw,740px); padding:28px; border-radius:18px; background: rgba(17,24,39,.72); color:#fff; box-shadow: 0 24px 72px rgba(0,0,0,.55); backdrop-filter: blur(12px); text-align:center; }
-            .pwa-update-hero { position:relative; padding:12px 0 18px; }
-            .pwa-update-glow { position:absolute; inset:-24px -24px auto -24px; height:120px; filter: blur(28px); background: conic-gradient(from 0deg at 50% 50%, rgba(102,126,234,.45), rgba(118,75,162,.35), rgba(102,126,234,.45)); opacity:.8; border-radius:24px; }
-            .pwa-update-icon { position:relative; z-index:1; width:72px; height:72px; margin:0 auto 10px; border-radius:50%; display:grid; place-items:center; background: linear-gradient(135deg, rgba(255,255,255,.16), rgba(255,255,255,.06)); box-shadow: inset 0 0 0 1px rgba(255,255,255,.12); font-size:28px; }
-            /* Ripple animation */
-            .pwa-ripples { position:absolute; inset:0; pointer-events:none; overflow:hidden; }
-            .pwa-ripples::before, .pwa-ripples::after { content:''; position:absolute; top:50%; left:50%; width:20vmin; height:20vmin; border-radius:50%; transform:translate(-50%, -50%); background: radial-gradient(circle, rgba(255,255,255,.25) 0%, rgba(255,255,255,0) 60%); animation: pwa-ripple 3.2s ease-out infinite; }
-            .pwa-ripples::after { width:28vmin; height:28vmin; animation-delay: 1.2s; background: radial-gradient(circle, rgba(255,255,255,.18) 0%, rgba(255,255,255,0) 60%); }
-            @keyframes pwa-ripple { 0% { transform: translate(-50%, -50%) scale(0.6); opacity:.35; } 70% { opacity:.12; } 100% { transform: translate(-50%, -50%) scale(2.2); opacity:0; } }
-            .pwa-update-hero h2 { position:relative; z-index:1; margin:8px 0 6px; font-size:28px; letter-spacing:.02em; }
-            .pwa-update-hero p { position:relative; z-index:1; margin:0; opacity:.9; }
-            .pwa-update-actions { display:flex; gap:12px; justify-content:center; margin-top:16px; }
-            .pwa-update-primary { appearance:none; border:none; padding:12px 18px; border-radius:12px; color:#0b1220; background: linear-gradient(135deg, #34d399, #10b981); font-weight:700; cursor:pointer; box-shadow: 0 10px 28px rgba(16,185,129,.35); }
-            .pwa-update-primary:hover { filter:brightness(.98); }
-            .pwa-update-secondary { appearance:none; border:1px solid rgba(255,255,255,.28); background: transparent; color:#fff; padding:12px 18px; border-radius:12px; cursor:pointer; }
+            /* Full-screen announcement (viewport center) */
+            .pwa-update-announcement { 
+                position: fixed; 
+                top: 0; 
+                left: 0; 
+                width: 100vw; 
+                height: 100vh; 
+                z-index: 2147483647; 
+                display: flex; 
+                align-items: center; 
+                justify-content: center; 
+                background: rgba(0, 0, 0, 0.8);
+                opacity: 0; 
+                transition: opacity .18s ease-out; 
+            }
+            .pwa-update-announcement.show { opacity: 1; }
+            .pwa-update-announcement-content { 
+                width: min(90vw, 500px); 
+                padding: 32px; 
+                border-radius: 20px; 
+                background: var(--surface-color); 
+                color: var(--text-color); 
+                box-shadow: 0 25px 80px rgba(0,0,0,0.4); 
+                text-align: center; 
+                border: 1px solid var(--border-color);
+            }
+            .pwa-update-hero { padding: 16px 0 24px; }
+            .pwa-update-icon { 
+                width: 64px; 
+                height: 64px; 
+                margin: 0 auto 16px; 
+                border-radius: 50%; 
+                display: flex; 
+                align-items: center; 
+                justify-content: center; 
+                background: var(--primary-color); 
+                color: white; 
+                font-size: 24px; 
+            }
+            .pwa-update-hero h2 { margin: 8px 0 8px; font-size: 24px; font-weight: 600; }
+            .pwa-update-hero p { margin: 0; opacity: 0.8; font-size: 16px; }
+            .pwa-update-actions { display: flex; gap: 12px; justify-content: center; margin-top: 24px; }
+            .pwa-update-primary { 
+                appearance: none; 
+                border: none; 
+                padding: 12px 24px; 
+                border-radius: 8px; 
+                color: white; 
+                background: var(--primary-color); 
+                font-weight: 600; 
+                cursor: pointer; 
+                transition: all 0.2s ease;
+            }
+            .pwa-update-primary:hover { 
+                background: var(--primary-dark); 
+                transform: translateY(-1px);
+            }
+            .pwa-update-secondary { 
+                appearance: none; 
+                border: 1px solid var(--border-color); 
+                background: transparent; 
+                color: var(--text-color); 
+                padding: 12px 24px; 
+                border-radius: 8px; 
+                cursor: pointer; 
+                transition: all 0.2s ease;
+            }
+            .pwa-update-secondary:hover { 
+                background: var(--background-color); 
+            }
         `;
         document.head.appendChild(style);
     }

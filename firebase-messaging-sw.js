@@ -82,28 +82,34 @@ self.addEventListener('notificationclick', function(event) {
         };
         
         // 分析データをキャッシュに保存（オフライン対応）
-        self.registration.pushManager.getSubscription().then(subscription => {
-            if (subscription) {
-                analyticsData.endpoint = subscription.endpoint;
-            }
-            
-            // IndexedDBに保存
-            const dbPromise = indexedDB.open('notification-analytics', 1);
-            
-            dbPromise.onupgradeneeded = function(event) {
-                const db = event.target.result;
-                if (!db.objectStoreNames.contains('events')) {
-                    db.createObjectStore('events', { keyPath: 'id', autoIncrement: true });
-                }
-            };
-            
-            dbPromise.onsuccess = function(event) {
-                const db = event.target.result;
-                const tx = db.transaction('events', 'readwrite');
-                const store = tx.objectStore('events');
-                store.add(analyticsData);
-            };
-        }).catch(err => console.error('Failed to record notification click:', err));
+        if (self.registration && self.registration.pushManager) {
+            self.registration.pushManager.getSubscription()
+                .then(subscription => {
+                    if (subscription) {
+                        analyticsData.endpoint = subscription.endpoint;
+                    }
+                    
+                    // IndexedDBに保存
+                    const dbPromise = indexedDB.open('notification-analytics', 1);
+                    
+                    dbPromise.onupgradeneeded = function(event) {
+                        const db = event.target.result;
+                        if (!db.objectStoreNames.contains('events')) {
+                            db.createObjectStore('events', { keyPath: 'id', autoIncrement: true });
+                        }
+                    };
+                    
+                    dbPromise.onsuccess = function(event) {
+                        const db = event.target.result;
+                        const tx = db.transaction('events', 'readwrite');
+                        const store = tx.objectStore('events');
+                        store.add(analyticsData);
+                    };
+                })
+                .catch(err => console.error('Failed to record notification click:', err));
+        } else {
+            console.log('pushManager not available, skipping analytics');
+        }
     } catch (error) {
         console.error('Error recording notification click:', error);
     }

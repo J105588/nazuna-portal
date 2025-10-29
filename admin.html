@@ -3,13 +3,15 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="なずなポータル管理画面 - お知らせ・アンケート・部活動・生徒会情報の管理">
+    <meta name="theme-color" content="#4a7c59">
     <title>管理画面 - なずなポータル</title>
+    <link rel="icon" type="image/png" href="images/icon-192x192.png">
     <link rel="stylesheet" href="css/style.css">
     <link rel="stylesheet" href="css/admin.css">
     <link rel="manifest" href="manifest.json">
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&display=swap" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
-    <meta name="theme-color" content="#2c3e50">
     <!-- Supabase CDN -->
     <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
     
@@ -46,7 +48,16 @@
                 </button>
                 <div class="login-error" id="login-error" style="display: none;">
                     <i class="fas fa-exclamation-triangle"></i>
-                    <span>ログインに失敗しました。認証情報を確認してください。</span>
+                    <span id="login-error-text">ログインに失敗しました。認証情報を確認してください。</span>
+                </div>
+                
+                <!-- デバッグ情報（開発時のみ表示） -->
+                <div class="debug-info" id="debug-info" style="display: none; margin-top: 20px; padding: 15px; background: #f8f9fa; border-radius: 5px; font-size: 12px;">
+                    <h4>デバッグ情報</h4>
+                    <p><strong>GAS URL:</strong> <span id="debug-gas-url">読み込み中...</span></p>
+                    <p><strong>API Client:</strong> <span id="debug-api-status">チェック中...</span></p>
+                    <p><strong>Supabase:</strong> <span id="debug-supabase-status">チェック中...</span></p>
+                    <button onclick="initializeManually()" style="margin-top: 10px; padding: 5px 10px; font-size: 12px;">手動初期化</button>
                 </div>
             </form>
         </div>
@@ -193,6 +204,54 @@
                         <h3><i class="fas fa-clock"></i> 最近の活動</h3>
                         <div class="recent-list" id="recent-activities">
                             <!-- 最近の活動がここに表示されます -->
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- システム管理 -->
+            <section class="admin-section" id="system-section">
+                <div class="section-header">
+                    <h2><i class="fas fa-cog"></i> システム管理</h2>
+                </div>
+                <div class="system-controls">
+                    <div class="control-card">
+                        <h3><i class="fas fa-tools"></i> メンテナンスモード</h3>
+                        <div class="maintenance-controls">
+                            <div class="maintenance-status" id="maintenance-status">
+                                <span class="status-indicator" id="maintenance-indicator"></span>
+                                <span class="status-text" id="maintenance-text">チェック中...</span>
+                            </div>
+                            <div class="maintenance-actions" id="maintenance-actions" style="display: none;">
+                                <button class="btn btn-warning" id="enable-maintenance-btn">
+                                    <i class="fas fa-play"></i>
+                                    メンテナンス開始
+                                </button>
+                                <button class="btn btn-success" id="disable-maintenance-btn" style="display: none;">
+                                    <i class="fas fa-stop"></i>
+                                    メンテナンス終了
+                                </button>
+                            </div>
+                        </div>
+                        <div class="maintenance-form" id="maintenance-form" style="display: none;">
+                            <div class="form-group">
+                                <label for="maintenance-message">メッセージ</label>
+                                <textarea id="maintenance-message" class="form-control" placeholder="メンテナンスメッセージを入力" rows="3"></textarea>
+                            </div>
+                            <div class="form-group">
+                                <label for="maintenance-end-time">終了予定時刻（任意）</label>
+                                <input type="datetime-local" id="maintenance-end-time" class="form-control">
+                            </div>
+                            <div class="form-actions">
+                                <button class="btn btn-primary" id="confirm-maintenance-btn">
+                                    <i class="fas fa-check"></i>
+                                    メンテナンス開始
+                                </button>
+                                <button class="btn btn-secondary" id="cancel-maintenance-btn">
+                                    <i class="fas fa-times"></i>
+                                    キャンセル
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -388,14 +447,19 @@
                         </div>
                         <div class="form-group">
                             <label for="notification-message">メッセージ</label>
-                            <textarea id="notification-message" class="form-control" rows="3" placeholder="通知メッセージを入力"></textarea>
+                            <textarea id="notification-message" class="form-control" rows="3" placeholder="通知メッセージを入力" maxlength="500"></textarea>
+                        </div>
+                        <div class="form-group">
+                            <label for="notification-url">リンク先URL</label>
+                            <input type="text" id="notification-url" class="form-control" placeholder="例: /news.html または https://...">
                         </div>
                         <div class="form-group">
                             <label for="notification-target">配信対象</label>
                             <select id="notification-target" class="form-control">
                                 <option value="all">全ユーザー</option>
-                                <option value="students">生徒のみ</option>
-                                <option value="teachers">教職員のみ</option>
+                                <option value="web">Webユーザー</option>
+                                <option value="ios">iOSユーザー</option>
+                                <option value="android">Androidユーザー</option>
                             </select>
                         </div>
                         <div class="form-actions">
@@ -403,7 +467,7 @@
                                 <i class="fas fa-paper-plane"></i>
                                 通知を送信
                             </button>
-                            <button type="button" class="btn btn-outline" onclick="clearNotificationForm()">
+                            <button type="button" class="btn btn-outline" id="clear-notification-form">
                                 <i class="fas fa-eraser"></i>
                                 クリア
                             </button>
@@ -418,18 +482,52 @@
                 </div>
             </section>
 
-            <!-- フォーラム管理 -->
+            <!-- フォーラム管理（承認機能付き） -->
             <section class="admin-section" id="forum-section">
                 <div class="section-header">
-                    <h2><i class="fas fa-comments"></i> フォーラム管理</h2>
+                    <h2><i class="fas fa-comments"></i> フォーラム管理・投稿承認</h2>
                 </div>
+                
+                <!-- 投稿承認待ちアラート -->
+                <div class="approval-alert" id="approval-alert" style="display: none;">
+                    <div class="alert-content">
+                        <i class="fas fa-exclamation-circle"></i>
+                        <span id="pending-count">0</span>件の投稿が承認待ちです
+                    </div>
+                </div>
+                
+                <!-- フィルター・検索バー -->
+                <div class="filter-section">
+                    <div class="filter-controls">
+                        <select id="forum-approval-filter" class="form-control">
+                            <option value="all">すべての投稿</option>
+                            <option value="pending">承認待ちのみ</option>
+                            <option value="approved">承認済みのみ</option>
+                            <option value="rejected">却下済みのみ</option>
+                        </select>
+                        <select id="forum-status-filter" class="form-control">
+                            <option value="all">すべてのステータス</option>
+                            <option value="pending">対応待ち</option>
+                            <option value="in_progress">対応中</option>
+                            <option value="resolved">解決済み</option>
+                        </select>
+                        <input type="text" id="forum-search" class="form-control" placeholder="内容で検索">
+                        <button class="btn btn-outline" id="forum-refresh-btn">
+                            <i class="fas fa-refresh"></i>
+                            更新
+                        </button>
+                    </div>
+                </div>
+                
                 <div class="admin-table-container">
                     <table class="admin-table">
                         <thead>
                             <tr>
                                 <th>投稿ID</th>
                                 <th>内容（抜粋）</th>
-                                <th>ステータス</th>
+                                <th>カテゴリ</th>
+                                <th>承認状態</th>
+                                <th>返信状態</th>
                                 <th>投稿日</th>
                                 <th>操作</th>
                             </tr>
@@ -484,10 +582,11 @@
     </footer>
 
     <script src="js/config.js"></script>
+    <script src="js/app.js"></script>
     <script src="js/supabase-queries.js"></script>
     <script src="js/firebase-config.js"></script>
-    <script src="js/app.js"></script>
     <script src="js/pwa-update.js"></script>
+    <script src="js/maintenance-checker.js"></script>
     <script src="js/admin.js"></script>
 </body>
 </html>
