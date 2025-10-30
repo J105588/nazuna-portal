@@ -39,10 +39,51 @@ function initializeFirebase() {
         }
         
         // Firebase SDKが読み込まれているかチェック
-        if (typeof firebase === 'undefined') {
-            console.warn('Firebase SDK not loaded. Using fallback push notification system.');
+        // v9 compat版では firebase 名前空間を使用
+        if (typeof firebase === 'undefined' || typeof firebase.initializeApp === 'undefined') {
+            console.warn('Firebase SDK not loaded. Waiting for script to load...');
+            
+            // イベントベースの読み込み待ち（優先）
+            const firebaseSDKLoadedHandler = () => {
+                window.removeEventListener('firebaseSDKLoaded', firebaseSDKLoadedHandler);
+                console.log('Firebase SDK loaded via event');
+                setTimeout(() => {
+                    initializeFirebaseAfterLoad();
+                }, 100); // 少し待ってから初期化
+            };
+            window.addEventListener('firebaseSDKLoaded', firebaseSDKLoadedHandler);
+            
+            // フォールバック: ポーリング（最大5秒）
+            let attempts = 0;
+            const maxAttempts = 50; // 100ms * 50 = 5秒
+            const checkFirebase = setInterval(() => {
+                attempts++;
+                if (typeof firebase !== 'undefined' && typeof firebase.initializeApp !== 'undefined') {
+                    clearInterval(checkFirebase);
+                    window.removeEventListener('firebaseSDKLoaded', firebaseSDKLoadedHandler);
+                    console.log('Firebase SDK loaded after polling');
+                    initializeFirebaseAfterLoad();
+                } else if (attempts >= maxAttempts) {
+                    clearInterval(checkFirebase);
+                    window.removeEventListener('firebaseSDKLoaded', firebaseSDKLoadedHandler);
+                    console.warn('Firebase SDK not loaded after timeout. Using fallback push notification system.');
+                    return false;
+                }
+            }, 100);
             return false;
         }
+        
+        return initializeFirebaseAfterLoad();
+        
+    } catch (error) {
+        console.error('Error initializing Firebase:', error);
+        return false;
+    }
+}
+
+// Firebase SDK読み込み後の初期化処理
+function initializeFirebaseAfterLoad() {
+    try {
         
         // Firebase初期化
         if (!firebase.apps.length) {
@@ -89,6 +130,10 @@ function initializeFirebase() {
                 });
             
             console.log('Firebase Messaging initialized successfully');
+            
+            // Firebase初期化完了を通知
+            window.dispatchEvent(new Event('firebaseReady'));
+            
             return true;
         } else {
             console.warn('Firebase Messaging is not supported in this browser');
@@ -96,7 +141,7 @@ function initializeFirebase() {
         }
         
     } catch (error) {
-        console.error('Error initializing Firebase:', error);
+        console.error('Error initializing Firebase after load:', error);
         return false;
     }
 }
@@ -211,10 +256,22 @@ function setupFirebaseServiceWorker() {
 
 // 初期化処理
 document.addEventListener('DOMContentLoaded', function() {
-    // Firebase初期化
+    // Firebase初期化（SDK読み込み待ち含む）
     const firebaseInitialized = initializeFirebase();
     
-    if (firebaseInitialized) {
+    // 初期化が遅延する場合に備えて、window.addEventListener('firebaseReady')もサポート
+    if (!firebaseInitialized) {
+        // Firebase SDKの読み込み待ちを通知
+        window.addEventListener('firebaseReady', function() {
+            const initialized = initializeFirebaseAfterLoad();
+            if (initialized && window.notificationManager && vapidKey !== 'your-vapid-key-here') {
+                window.notificationManager.vapidPublicKey = vapidKey;
+                if (window.notificationManager.setupTokenRefreshListener) {
+                    window.notificationManager.setupTokenRefreshListener();
+                }
+            }
+        });
+    } else if (firebaseInitialized) {
         // 通知マネージャーにVAPIDキーを設定
         if (window.notificationManager && vapidKey !== 'your-vapid-key-here') {
             window.notificationManager.vapidPublicKey = vapidKey;

@@ -658,6 +658,66 @@ html {
     max-width: 360px;
 }
 
+/* パスワード入力フィールドのラッパー */
+.password-input-wrapper {
+    position: relative;
+    width: 100%;
+}
+
+.password-input-wrapper .form-control {
+    padding-right: 45px;
+}
+
+/* パスワード表示切替ボタン */
+.password-toggle-btn {
+    position: absolute;
+    right: 8px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    padding: 6px 8px;
+    color: #666;
+    font-size: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border-radius: 4px;
+    transition: all 0.2s ease;
+    z-index: 10;
+}
+
+.password-toggle-btn:hover {
+    background-color: rgba(0, 0, 0, 0.05);
+    color: #333;
+}
+
+.password-toggle-btn:active {
+    background-color: rgba(0, 0, 0, 0.1);
+}
+
+.password-toggle-btn i {
+    font-size: 16px;
+    line-height: 1;
+}
+
+/* 名前確認表示 */
+.student-name-display {
+    padding: 0.75rem;
+    background-color: #f8f9fa;
+    border: 2px solid var(--border-color);
+    border-radius: 0.5rem;
+    font-size: 1rem;
+    color: var(--text-color);
+    min-height: 2.75rem;
+    display: flex;
+    align-items: center;
+    font-weight: 500;
+}
+
 #auth-modal .form-control {
     max-width: 320px;
     margin: 0 auto;

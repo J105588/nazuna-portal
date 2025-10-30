@@ -1383,9 +1383,10 @@ async function submitToSupabase(content, student_number, category = 'general') {
             
             return true;
         } else {
-            // Supabaseが利用できない場合はデモとして成功を返す
-            console.log('Demo mode: Post submitted:', content);
-            return true;
+            // Supabaseが利用できない場合はエラー
+            console.error('Supabase is not available. Post submission failed.');
+            showErrorMessage('投稿の送信に失敗しました。データベースに接続できません。');
+            return false;
         }
     } catch (error) {
         console.error('Error submitting post:', error);
@@ -1437,23 +1438,37 @@ function openAuthModal() {
     const closeBtn = document.getElementById('auth-modal-close');
     const stepNumber = document.getElementById('step-student-number');
     const stepRegister = document.getElementById('step-register');
+    const stepConfirmName = document.getElementById('step-confirm-name');
     const stepLogin = document.getElementById('step-login');
     const err = document.getElementById('auth-error');
     const checkBtn = document.getElementById('check-student-number');
     const registerBtn = document.getElementById('register-student');
+    const confirmNameBtn = document.getElementById('confirm-name-proceed');
     const loginBtn = document.getElementById('login-student');
     const numberInput = document.getElementById('student-number-input');
     const nameInput = document.getElementById('student-name-input');
     const passSetInput = document.getElementById('password-set-input');
+    const passConfirmInput = document.getElementById('password-confirm-input');
     const passLoginInput = document.getElementById('password-login-input');
     const togglePassSet = document.getElementById('toggle-password-set');
+    const togglePassConfirm = document.getElementById('toggle-password-confirm');
     const togglePassLogin = document.getElementById('toggle-password-login');
 
     if (!overlay) return;
     err.style.display = 'none';
     stepNumber.style.display = '';
     stepRegister.style.display = 'none';
+    stepConfirmName.style.display = 'none';
     stepLogin.style.display = 'none';
+    
+    // フォームをリセット
+    if (numberInput) numberInput.value = '';
+    if (nameInput) nameInput.value = '';
+    const nameDisplayDiv = document.getElementById('student-name-display');
+    if (nameDisplayDiv) nameDisplayDiv.textContent = '';
+    if (passSetInput) passSetInput.value = '';
+    if (passConfirmInput) passConfirmInput.value = '';
+    if (passLoginInput) passLoginInput.value = '';
     // 開く（アニメーション：まずopeningでレイアウト→次フレームでactive）
     overlay.classList.remove('closing');
     overlay.classList.add('opening');
@@ -1486,59 +1501,151 @@ function openAuthModal() {
     // パスワード表示切替
     const bindToggle = (btn, input) => {
         if (!btn || !input) return;
-        btn.addEventListener('click', (e) => {
+        // 既存のイベントリスナーを削除（重複防止）
+        const newBtn = btn.cloneNode(true);
+        btn.parentNode.replaceChild(newBtn, btn);
+        
+        newBtn.addEventListener('click', (e) => {
             e.preventDefault();
+            e.stopPropagation();
             const isPw = input.getAttribute('type') === 'password';
             input.setAttribute('type', isPw ? 'text' : 'password');
-            btn.innerHTML = isPw ? '<i class="fas fa-eye-slash"></i>' : '<i class="fas fa-eye"></i>';
-            input.focus();
+            const icon = newBtn.querySelector('i');
+            if (icon) {
+                icon.className = isPw ? 'fas fa-eye-slash' : 'fas fa-eye';
+            }
         });
     };
     bindToggle(togglePassSet, passSetInput);
+    bindToggle(togglePassConfirm, passConfirmInput);
     bindToggle(togglePassLogin, passLoginInput);
 
     const doCheck = async () => {
         const sn = numberInput.value.trim();
         if (!sn) { showAuthError('生徒番号を入力してください'); return; }
         if (!supabaseQueries) { showAuthError('Supabase未設定'); return; }
+        err.style.display = 'none';
+        
         const { data, error } = await supabaseQueries.getStudentByNumber(sn);
         if (error) { showAuthError('確認に失敗しました'); return; }
+        
         if (!data) {
-            // 初回登録
-            stepNumber.style.display = 'none';
-            stepRegister.style.display = '';
-            document.getElementById('auth-modal-title').textContent = '初回登録';
-            const doRegister = async () => {
-                const name = nameInput.value.trim();
-                const pw = passSetInput.value;
-                if (!name || !pw || pw.length < 6) { showAuthError('氏名と6文字以上のパスワード'); return; }
-                const password_hash = await window.sha256(pw);
-                const { data: created, error: insErr } = await supabaseQueries.registerStudent({ student_number: sn, name, password_hash });
-                if (insErr) { showAuthError('登録に失敗しました'); return; }
-                localStorage.setItem('nazuna-auth', JSON.stringify({ student_number: sn, name }));
-                closeModal();
-                updateAuthUI();
+            // 登録されていない場合：エラーメッセージを表示
+            showAuthError('登録されていません。生徒番号を確認してください。');
+            return;
+        }
+        
+        // 登録されている場合：名前確認ステップを表示
+        stepNumber.style.display = 'none';
+        stepConfirmName.style.display = '';
+        document.getElementById('auth-modal-title').textContent = '名前確認';
+        const nameDisplayDiv = document.getElementById('student-name-display');
+        if (nameDisplayDiv) {
+            nameDisplayDiv.textContent = data.name || '（名前が登録されていません）';
+        }
+        err.style.display = 'none';
+        
+        // 名前確認後の処理
+        if (confirmNameBtn) {
+            confirmNameBtn.onclick = () => {
+                stepConfirmName.style.display = 'none';
+                // パスワード未設定（null/空文字など）の場合は、パスワード設定に誘導
+                if (!data.password_hash) {
+                    document.getElementById('auth-modal-title').textContent = 'パスワード設定';
+                    // 既存ユーザーのパスワード設定では氏名は編集不可にする
+                    stepRegister.style.display = '';
+                    if (nameInput) {
+                        nameInput.value = data.name || '';
+                        nameInput.setAttribute('readonly', 'true');
+                        nameInput.style.backgroundColor = '#f5f5f5';
+                        nameInput.style.cursor = 'not-allowed';
+                    }
+                    if (registerBtn) {
+                        registerBtn.textContent = '設定してログイン';
+                        // 既存ユーザーのパスワード更新に切り替え
+                        registerBtn.onclick = async () => {
+                            const pw = passSetInput.value;
+                            const pwConfirm = passConfirmInput.value;
+                            if (!pw || pw.length < 6) { showAuthError('6文字以上のパスワードを入力してください'); return; }
+                            if (pw !== pwConfirm) { showAuthError('パスワードが一致しません'); return; }
+                            const password_hash = await window.sha256(pw);
+                            const { error: updErr } = await supabaseQueries.updateStudentPassword({
+                                student_number: data.student_number,
+                                password_hash
+                            });
+                            if (updErr) { showAuthError('パスワード設定に失敗しました'); return; }
+                            localStorage.setItem('nazuna-auth', JSON.stringify({ student_number: data.student_number, name: data.name }));
+                            closeModal();
+                            updateAuthUI();
+                        };
+                    }
+                } else {
+                    // 通常ログイン
+                    stepLogin.style.display = '';
+                    document.getElementById('auth-modal-title').textContent = 'ログイン';
+                    err.style.display = 'none';
+                    setTimeout(() => passLoginInput?.focus(), 0);
+                }
             };
-            registerBtn.onclick = doRegister;
-            passSetInput.onkeydown = (e) => { if (e.key === 'Enter') doRegister(); };
-        } else {
-            // 既存 -> パスワード入力
-            stepNumber.style.display = 'none';
-            stepLogin.style.display = '';
-            document.getElementById('auth-modal-title').textContent = 'ログイン';
-            const doLogin = async () => {
-                const pw = passLoginInput.value;
-                if (!pw) { showAuthError('パスワードを入力してください'); return; }
-                const hash = await window.sha256(pw);
-                if (hash !== data.password_hash) { showAuthError('認証に失敗しました'); return; }
-                localStorage.setItem('nazuna-auth', JSON.stringify({ student_number: data.student_number, name: data.name }));
-                closeModal();
-                updateAuthUI();
-            };
+        }
+        
+        // ログイン処理
+        const doLogin = async () => {
+            const pw = passLoginInput.value;
+            if (!pw) { showAuthError('パスワードを入力してください'); return; }
+            const hash = await window.sha256(pw);
+            if (hash !== data.password_hash) { 
+                showAuthError('認証に失敗しました'); 
+                return; 
+            }
+            localStorage.setItem('nazuna-auth', JSON.stringify({ student_number: data.student_number, name: data.name }));
+            closeModal();
+            updateAuthUI();
+        };
+        if (loginBtn) {
             loginBtn.onclick = doLogin;
             passLoginInput.onkeydown = (e) => { if (e.key === 'Enter') doLogin(); };
         }
     };
+    
+    // 初回登録処理（管理者による事前登録など、別ルートでの登録に使用可能）
+    if (registerBtn && stepRegister) {
+        registerBtn.onclick = async () => {
+            const sn = numberInput.value.trim();
+            const name = nameInput.value.trim();
+            const pw = passSetInput.value;
+            const pwConfirm = passConfirmInput.value;
+            
+            if (!sn) { showAuthError('生徒番号を入力してください'); return; }
+            if (!name) { showAuthError('氏名を入力してください'); return; }
+            if (!pw || pw.length < 6) { showAuthError('6文字以上のパスワードを入力してください'); return; }
+            if (pw !== pwConfirm) { showAuthError('パスワードが一致しません'); return; }
+            
+            const password_hash = await window.sha256(pw);
+            const { data: created, error: insErr } = await supabaseQueries.registerStudent({ 
+                student_number: sn, 
+                name, 
+                password_hash 
+            });
+            
+            if (insErr) { 
+                showAuthError('登録に失敗しました: ' + (insErr.message || 'エラーが発生しました')); 
+                return; 
+            }
+            
+            localStorage.setItem('nazuna-auth', JSON.stringify({ student_number: sn, name }));
+            closeModal();
+            updateAuthUI();
+        };
+        
+        // Enterキーでの登録
+        if (passConfirmInput) {
+            passConfirmInput.onkeydown = (e) => { 
+                if (e.key === 'Enter' && registerBtn) registerBtn.click(); 
+            };
+        }
+    }
+    
     checkBtn.onclick = doCheck;
     numberInput.onkeydown = (e) => { if (e.key === 'Enter') doCheck(); };
 }
@@ -1684,16 +1791,80 @@ async function loadLatestNews() {
     const container = document.getElementById('latest-news');
     if (!container) return Promise.resolve();
     
-    // デモデータ（実際はDBから取得）
-    const latestNews = [];
+    container.innerHTML = '<div class="loading">読み込み中...</div>';
     
-    container.innerHTML = latestNews.map(item => `
-        <div class="news-preview">
-            <span class="news-type ${item.type}">${getNewsTypeLabel(item.type)}</span>
-            <h4>${item.title}</h4>
-            <span class="news-date">${item.date}</span>
-        </div>
-    `).join('');
+    try {
+        let latestNews = [];
+        
+        // Supabaseから最新のお知らせを取得
+        if (window.supabaseQueries) {
+            const { data, error } = await window.supabaseQueries.getNews({
+                limit: 5,
+                offset: 0,
+                publishedOnly: true
+            });
+            
+            if (error) {
+                console.error('Error loading latest news:', error);
+                throw error;
+            }
+            
+            if (data && data.length > 0) {
+                latestNews = data.map(item => ({
+                    id: item.id,
+                    title: item.title,
+                    category: item.category || item.type || 'general',
+                    date: item.date || item.created_at,
+                    summary: item.summary || item.content?.substring(0, 100) || ''
+                }));
+            }
+        }
+        
+        // データが無い場合またはSupabaseが利用できない場合
+        if (latestNews.length === 0) {
+            container.innerHTML = `
+                <div class="no-data-message">
+                    <div class="no-data-icon">
+                        <i class="fas fa-bell"></i>
+                    </div>
+                    <h3>まだお知らせがありません</h3>
+                    <p>新しいお知らせが追加されるまでお待ちください。</p>
+                </div>
+            `;
+            return;
+        }
+        
+        // お知らせを表示
+        container.innerHTML = latestNews.map(item => {
+            const categoryLabel = getNewsTypeLabel(item.category);
+            // 日付を簡潔に表示（時間は表示しない）
+            const dateObj = new Date(item.date);
+            const formattedDate = isNaN(dateObj.getTime()) 
+                ? item.date 
+                : `${dateObj.getFullYear()}/${(dateObj.getMonth() + 1).toString().padStart(2, '0')}/${dateObj.getDate().toString().padStart(2, '0')}`;
+            
+            return `
+                <div class="news-preview" data-news-id="${item.id}">
+                    <span class="news-type ${item.category}">${escapeHtml(categoryLabel)}</span>
+                    <h4><a href="news.html#${item.id}">${escapeHtml(item.title)}</a></h4>
+                    ${item.summary ? `<p class="news-summary">${escapeHtml(item.summary)}${item.summary.length >= 100 ? '...' : ''}</p>` : ''}
+                    <span class="news-date">${formattedDate}</span>
+                </div>
+            `;
+        }).join('');
+        
+    } catch (error) {
+        console.error('Error loading latest news:', error);
+        container.innerHTML = `
+            <div class="no-data-message">
+                <div class="no-data-icon">
+                    <i class="fas fa-exclamation-triangle"></i>
+                </div>
+                <h3>読み込みエラー</h3>
+                <p>お知らせの読み込みに失敗しました。</p>
+            </div>
+        `;
+    }
 }
 
 // 最新投稿読み込み
@@ -1701,15 +1872,105 @@ async function loadLatestPosts() {
     const container = document.getElementById('latest-posts');
     if (!container) return Promise.resolve();
     
-    container.innerHTML = `
-        <div class="no-data-message">
-            <div class="no-data-icon">
-                <i class="fas fa-comments"></i>
+    container.innerHTML = '<div class="loading">読み込み中...</div>';
+    
+    try {
+        let latestPosts = [];
+        
+        // Supabaseから最新の投稿を取得（承認済みのみ）
+        if (window.supabaseQueries) {
+            // RLSポリシーにより、一般ユーザーは承認済み投稿のみ閲覧可能
+            // さらにフィルターとしてapproval_status='approved'も指定（二重チェック）
+            const { data, error } = await window.supabaseQueries.getTableData('posts', {
+                limit: 5,
+                offset: 0,
+                orderBy: 'created_at',
+                orderDirection: 'desc',
+                filters: {
+                    approval_status: 'approved' // 承認済みのみ表示
+                }
+            });
+            
+            // approval_statusカラムが存在しない場合（古いデータベース）のフォールバック
+            if (error || !data || data.length === 0) {
+                // フィルターなしで再試行（RLSポリシーに任せる）
+                const fallbackResult = await window.supabaseQueries.getTableData('posts', {
+                    limit: 5,
+                    offset: 0,
+                    orderBy: 'created_at',
+                    orderDirection: 'desc'
+                });
+                
+                if (!fallbackResult.error && fallbackResult.data) {
+                    latestPosts = fallbackResult.data;
+                }
+            } else {
+                latestPosts = data;
+            }
+        }
+        
+        // データが無い場合またはSupabaseが利用できない場合
+        if (latestPosts.length === 0) {
+            container.innerHTML = `
+                <div class="no-data-message">
+                    <div class="no-data-icon">
+                        <i class="fas fa-comments"></i>
+                    </div>
+                    <h3>まだ投稿がありません</h3>
+                    <p>フォーラムに投稿してみましょう。</p>
+                </div>
+            `;
+            return;
+        }
+        
+        // 投稿を表示
+        container.innerHTML = latestPosts.map(post => {
+            if (!post.content) return ''; // contentが無い場合はスキップ
+            
+            const contentPreview = post.content.length > 100 
+                ? post.content.substring(0, 100) + '...' 
+                : post.content;
+            
+            // 日付を簡潔に表示（時間は表示しない）
+            const dateObj = new Date(post.created_at);
+            const formattedDate = isNaN(dateObj.getTime()) 
+                ? post.created_at 
+                : `${dateObj.getFullYear()}/${(dateObj.getMonth() + 1).toString().padStart(2, '0')}/${dateObj.getDate().toString().padStart(2, '0')}`;
+            
+            // 承認済みの場合はステータスバッジを表示しない
+            const statusBadge = (post.approval_status === 'approved' && (!post.status || post.status === 'resolved' || post.status === 'closed')) 
+                ? '' 
+                : `<span class="post-status status-${post.status || 'pending'}">${getStatusLabel(post.status || 'pending')}</span>`;
+            
+            return `
+                <div class="post-preview" data-post-id="${post.id}">
+                    <div class="post-header-mini">
+                        <span class="post-date-mini">${formattedDate}</span>
+                        ${statusBadge}
+                    </div>
+                    <p class="post-content-preview">${escapeHtml(contentPreview)}</p>
+                    ${post.reply ? `
+                        <div class="post-reply-mini">
+                            <strong>返信:</strong> ${escapeHtml(post.reply.length > 50 ? post.reply.substring(0, 50) + '...' : post.reply)}
+                        </div>
+                    ` : ''}
+                    <a href="forum.html#post-${post.id}" class="post-link">続きを読む <i class="fas fa-arrow-right"></i></a>
+                </div>
+            `;
+        }).filter(html => html !== '').join(''); // 空のエントリを除外
+        
+    } catch (error) {
+        console.error('Error loading latest posts:', error);
+        container.innerHTML = `
+            <div class="no-data-message">
+                <div class="no-data-icon">
+                    <i class="fas fa-exclamation-triangle"></i>
+                </div>
+                <h3>読み込みエラー</h3>
+                <p>投稿の読み込みに失敗しました。</p>
             </div>
-            <h3>まだ投稿がありません</h3>
-            <p>フォーラムに投稿してみましょう。</p>
-        </div>
-    `;
+        `;
+    }
 }
 
 // PWAインストール機能

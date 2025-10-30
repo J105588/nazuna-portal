@@ -486,7 +486,23 @@ window.notificationManager = new NotificationManager();
 document.addEventListener('DOMContentLoaded', async () => {
     await window.notificationManager.initialize();
     
-    // トークン更新とメッセージ受信のリスナーを設定
-    window.notificationManager.setupTokenRefreshListener();
-    window.notificationManager.setupMessageListener();
+    // Firebase初期化完了を待つ
+    const setupListeners = () => {
+        // トークン更新とメッセージ受信のリスナーを設定
+        window.notificationManager.setupTokenRefreshListener();
+        window.notificationManager.setupMessageListener();
+    };
+    
+    // Firebaseが既に初期化されている場合は即座に実行
+    if (window.firebase && window.firebase.apps && window.firebase.apps.length > 0) {
+        setupListeners();
+    } else {
+        // Firebase初期化完了を待つ
+        window.addEventListener('firebaseReady', setupListeners, { once: true });
+        
+        // フォールバック: 5秒後に強制的に実行（Firebaseが利用できない場合）
+        setTimeout(() => {
+            setupListeners();
+        }, 5000);
+    }
 });

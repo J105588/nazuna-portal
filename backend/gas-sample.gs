@@ -789,7 +789,11 @@ function isAuthorized(email, password) {
   if (!email || !password) return false;
   
   const adminCredentials = getAdminCredentials();
-  return adminCredentials[email] && adminCredentials[email].password === password;
+  if (!adminCredentials[email]) return false;
+  
+  // パスワードをハッシュ化して比較
+  const passwordHash = hashPassword(password);
+  return adminCredentials[email].passwordHash === passwordHash;
 }
 
 // 管理者アカウント作成・更新

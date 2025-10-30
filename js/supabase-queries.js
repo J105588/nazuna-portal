@@ -367,6 +367,29 @@ class SupabaseQueries {
     }
 
     /**
+     * 既存生徒のパスワードを更新（初回パスワード未設定のケースに対応）
+     * @param {Object} payload - { student_number, password_hash }
+     * @returns {Promise<Object>} クエリ結果
+     */
+    async updateStudentPassword(payload) {
+        if (!this.isAvailable) {
+            return { data: null, error: null };
+        }
+
+        try {
+            const { data, error } = await this.client
+                .from('students')
+                .update({ password_hash: payload.password_hash })
+                .eq('student_number', payload.student_number)
+                .select();
+            return { data: data?.[0] || null, error };
+        } catch (error) {
+            console.error('Error updating student password:', error);
+            return { data: null, error };
+        }
+    }
+
+    /**
      * チャットメッセージ送信
      * @param {Object} chatData - { post_id, sender, message, is_admin }
      * @returns {Promise<Object>} クエリ結果

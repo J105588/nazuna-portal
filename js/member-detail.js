@@ -308,19 +308,11 @@ async function loadMemberDetail() {
                     return;
                 }
             } else {
-                console.log('Supabase not available - using demo data');
-                // Supabaseが利用できない場合はデモデータを使用
-                const demoMember = membersData[memberId];
-                if (demoMember) {
-                    console.log('Using demo member data for ID:', memberId);
-                    member = demoMember;
-                    showInfoMessage('デモデータを表示しています。');
-                } else {
-                    showErrorMessage('指定されたメンバーIDのデータが見つかりません。');
-                    showInfoMessage(`利用可能なID: ${Object.keys(membersData).join(', ')}`);
-                    showMemberNotFound();
-                    return;
-                }
+                // Supabaseが利用できない場合はエラーを表示
+                console.error('Supabase is not available. Cannot load member detail.');
+                showErrorMessage('データベースに接続できません。メンバー情報を読み込むことができませんでした。');
+                showMemberNotFound();
+                return;
             }
         }
         

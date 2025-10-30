@@ -4,8 +4,8 @@
 const CONFIG = {
     // Supabase設定
     SUPABASE: {
-        URL: 'https://jffjacpedwldbgmggdcy.supabase.co',
-        ANON_KEY: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpmZmphY3BlZHdsZGJnbWdnZGN5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjE1ODIyOTQsImV4cCI6MjA3NzE1ODI5NH0.Moh7vFh_TGK8soy8mGmqGgCH_ZFVW0m6PP2IoB9ADd4',
+        URL: 'https://ttcniefqeqcynbafxmsp.supabase.co',
+        ANON_KEY: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InR0Y25pZWZxZXFjeW5iYWZ4bXNwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjE3MjMzNjcsImV4cCI6MjA3NzI5OTM2N30.i2qvGWrpZGjHgkem9sQNgFwTF2gdmYOvij1o-h2agTA',
         // CORS設定
         OPTIONS: {
             auth: {
@@ -24,7 +24,7 @@ const CONFIG = {
     
     // Google Apps Script WebApp URL
     // デプロイ後にこのURLを更新してください
-    GAS_URL: 'https://script.google.com/macros/s/AKfycbxPcKdTBL7k5D_QpEpL_gH4elUBJVCbB-8H_DfrDJ8OuLP9W9Re86T9v-QIzneeQ6q6/exec',
+    GAS_URL: 'https://script.google.com/macros/s/AKfycbx861E4qboX6BxjcQ1kr8gz3c68j_3VfhZSGveeHkgl8aZD6qq8c-Wv_tPXcfdDtjxv/exec',
     
     // Firebase設定（通知システム用）
     FIREBASE: {

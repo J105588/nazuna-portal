@@ -38,6 +38,10 @@ class MaintenanceChecker {
             // apiClientが存在しない場合はスキップ
             if (!window.apiClient || typeof window.apiClient.sendRequest !== 'function') {
                 console.warn('apiClient not available');
+                // apiClientが利用できない場合は、wip.htmlにいる場合はindex.htmlにリダイレクト
+                if (this.isWipPage() && !this.isAdminPage()) {
+                    window.location.href = 'index.html';
+                }
                 return;
             }
             
@@ -49,33 +53,55 @@ class MaintenanceChecker {
                 this.maintenanceEndTime = result.endTime || null;
                 
                 if (this.isMaintenanceMode) {
-                    // admin.html以外の場合はwip.htmlにリダイレクト
+                    // メンテナンスモード中：admin.html以外はすべてwip.htmlにリダイレクト
                     if (!this.isAdminPage()) {
-                        if (window.location.pathname !== '/wip.html') {
+                        if (!this.isWipPage()) {
+                            // 現在wip.htmlではない場合、wip.htmlにリダイレクト
                             window.location.href = 'wip.html';
+                            return; // リダイレクトするので以降の処理は不要
                         }
+                        // wip.htmlにいる場合はそのまま表示
                     } else {
                         // admin.html内ではメンテナンス中でも通常表示
                         this.hideMaintenancePage();
                     }
                 } else {
-                    // メンテナンス終了時、wip.htmlから他のページにリダイレクト
-                    if (window.location.pathname === '/wip.html' || window.location.pathname.endsWith('wip.html')) {
+                    // メンテナンスモードでない場合：wip.htmlからindex.htmlにリダイレクト
+                    if (this.isWipPage()) {
                         window.location.href = 'index.html';
+                        return; // リダイレクトするので以降の処理は不要
                     }
+                    // 通常ページの場合はオーバーレイを非表示
                     this.hideMaintenancePage();
                 }
             }
         } catch (error) {
             console.warn('Failed to check maintenance status:', error);
-            // ネットワークエラーの場合は通常通り表示
+            // ネットワークエラーの場合：wip.htmlにいる場合はindex.htmlにリダイレクト
+            if (this.isWipPage() && !this.isAdminPage()) {
+                window.location.href = 'index.html';
+                return;
+            }
+            // 通常ページの場合は通常通り表示
             this.hideMaintenancePage();
         }
     }
     
     isAdminPage() {
-        return window.location.pathname.includes('admin.html') || 
-               window.location.href.includes('admin.html');
+        const pathname = window.location.pathname.toLowerCase();
+        const href = window.location.href.toLowerCase();
+        return pathname.includes('admin.html') || 
+               pathname.includes('admin-account-manager.html') ||
+               href.includes('admin.html') ||
+               href.includes('admin-account-manager.html');
+    }
+    
+    isWipPage() {
+        const pathname = window.location.pathname.toLowerCase();
+        const href = window.location.href.toLowerCase();
+        return pathname === '/wip.html' || 
+               pathname.endsWith('wip.html') ||
+               href.includes('wip.html');
     }
 
     showMaintenancePage() {
@@ -84,7 +110,7 @@ class MaintenanceChecker {
         
         // admin.html以外でメンテナンス中の場合、wip.htmlにリダイレクト
         if (!this.isAdminPage()) {
-            if (window.location.pathname !== '/wip.html') {
+            if (!this.isWipPage()) {
                 window.location.href = 'wip.html';
             }
             return;

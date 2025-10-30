@@ -41,8 +41,8 @@
     <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
     
     <!-- Firebase SDK -->
-    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-messaging-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js" onload="console.log('Firebase App SDK loaded'); if (typeof firebase !== 'undefined') { setTimeout(function() { window.dispatchEvent(new Event('firebaseSDKLoaded')); }, 50); }"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-messaging-compat.js" onload="console.log('Firebase Messaging SDK loaded'); if (typeof firebase !== 'undefined' && typeof firebase.messaging !== 'undefined') { window.dispatchEvent(new Event('firebaseSDKLoaded')); }"></script>
     <!-- Firebase初期化は js/firebase-config.js にて一元管理 -->
 </head>
 <body>

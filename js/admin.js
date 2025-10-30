@@ -26,11 +26,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     
     // イベントリスナーの設定
     setupEventListeners();
-    
-    // デバッグ情報の表示（開発時のみ）
-    if (window.CONFIG && window.CONFIG.APP && window.CONFIG.APP.DEBUG) {
-        showDebugInfo();
-    }
 });
 
 // 初期化待機関数
@@ -93,39 +88,7 @@ async function waitForInitialization() {
     }
 }
 
-// デバッグ情報表示
-function showDebugInfo() {
-    const debugInfo = document.getElementById('debug-info');
-    if (!debugInfo) return;
-    
-    debugInfo.style.display = 'block';
-    
-    // GAS URL表示
-    const gasUrlElement = document.getElementById('debug-gas-url');
-    if (gasUrlElement && window.CONFIG) {
-        gasUrlElement.textContent = window.CONFIG.GAS_URL;
-    }
-    
-    // API Client状態表示
-    const apiStatusElement = document.getElementById('debug-api-status');
-    if (apiStatusElement) {
-        if (window.apiClient) {
-            apiStatusElement.textContent = '✅ 利用可能';
-        } else {
-            apiStatusElement.textContent = '❌ 利用不可';
-        }
-    }
-    
-    // Supabase状態表示
-    const supabaseStatusElement = document.getElementById('debug-supabase-status');
-    if (supabaseStatusElement) {
-        if (window.supabaseClient) {
-            supabaseStatusElement.textContent = '✅ 接続済み';
-        } else {
-            supabaseStatusElement.textContent = '❌ 未接続';
-        }
-    }
-}
+// デバッグ情報表示（削除済み）
 
 // 手動初期化（グローバル関数）
 window.initializeManually = function() {
@@ -660,16 +623,27 @@ async function sendNotification() {
     
     try {
         // 全デバイスに送信（GAS側の実装に合わせてエンドポイントを選択）
-        const result = await window.apiClient.sendRequest('sendBulkNotifications', {
-            title: title,
-            body: body,
-            target: target,
-            url: '/',
-            category: 'general'
+        const result = await window.apiClient.sendRequest('sendNotification', {
+            preferCustom: true,
+            templateData: {
+                title: title,
+                message: body,
+                url: document.getElementById('notification-url')?.value || '/',
+                category: 'general',
+                priority: 1,
+                icon: 'https://raw.githubusercontent.com/J105588/nazuna-portal/main/images/icon-192x192.png',
+                badge: '/images/badge-72x72.png'
+            },
+            targetType: target || 'all',
+            targetCriteria: {},
+            adminEmail: currentUser?.email
         });
         
         if (result.success) {
-            showSuccess(`通知を送信しました（成功: ${result.results.success}, 失敗: ${result.results.failed}）`);
+            const successCount = result.data?.successfulSends || 0;
+            const failureCount = result.data?.failedSends || 0;
+            const totalRecipients = result.data?.totalRecipients || 0;
+            showSuccess(`通知を送信しました（送信先: ${totalRecipients}件、成功: ${successCount}件、失敗: ${failureCount}件）`);
             
             // フォームをリセット
             if (titleEl) titleEl.value = '';

@@ -204,10 +204,26 @@
     <script src="js/config.js"></script>
     <!-- API Client -->
     <script src="js/app.js"></script>
+    <!-- メンテナンスチェッカー -->
+    <script src="js/maintenance-checker.js"></script>
     
     <script>
         async function checkMaintenanceStatus() {
             try {
+                // apiClientが初期化されるまで待機
+                let attempts = 0;
+                while (!window.apiClient && attempts < 20) {
+                    await new Promise(resolve => setTimeout(resolve, 100));
+                    attempts++;
+                }
+                
+                if (!window.apiClient || typeof window.apiClient.sendRequest !== 'function') {
+                    console.warn('apiClient not available, redirecting to index.html');
+                    // apiClientが利用できない場合は、メンテナンスではないと判断してindex.htmlにリダイレクト
+                    window.location.href = 'index.html';
+                    return;
+                }
+                
                 const result = await window.apiClient.sendRequest('checkMaintenance');
                 
                 if (result.success) {
@@ -238,13 +254,20 @@
                         }
                     }
                     
-                    // メンテナンスが終了していればリダイレクト
+                    // メンテナンスが終了していればindex.htmlにリダイレクト
                     if (!result.maintenance) {
                         window.location.href = 'index.html';
+                        return;
                     }
+                } else {
+                    // チェックに失敗した場合は、メンテナンスではないと判断してindex.htmlにリダイレクト
+                    console.warn('Failed to check maintenance status, redirecting to index.html');
+                    window.location.href = 'index.html';
                 }
             } catch (error) {
                 console.error('Failed to check maintenance status:', error);
+                // エラーが発生した場合は、メンテナンスではないと判断してindex.htmlにリダイレクト
+                window.location.href = 'index.html';
             }
         }
         
@@ -276,7 +299,7 @@
                 // 時間切れの場合は要素を削除
                 const countdownElement = document.getElementById('countdown');
                 if (countdownElement) {
-                    countdownElement.textContent = '時間が経過しました';
+                    countdownElement.textContent = 'まもなく終了します';
                 }
             }
         }
