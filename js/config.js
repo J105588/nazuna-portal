@@ -24,7 +24,7 @@ const CONFIG = {
     
     // Google Apps Script WebApp URL
     // デプロイ後にこのURLを更新してください
-    GAS_URL: 'https://script.google.com/macros/s/AKfycbx861E4qboX6BxjcQ1kr8gz3c68j_3VfhZSGveeHkgl8aZD6qq8c-Wv_tPXcfdDtjxv/exec',
+    GAS_URL: 'https://script.google.com/macros/s/AKfycbwrHLd7ijr1I8I9fBrWZcjTG0o_yFpRb-n8YyVoqHVIWaoT4dkGj0xmucDGjbEahjLe/exec',
     
     // Firebase設定（通知システム用）
     FIREBASE: {

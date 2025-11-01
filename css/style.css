@@ -5905,6 +5905,24 @@ textarea.form-control {
     margin: 0 auto;
 }
 
+/* Clubs page filter tabs: avoid horizontal cut-off by wrapping and using full width */
+.clubs-filter .filter-tabs {
+    flex-wrap: wrap;
+    overflow: visible;
+    max-width: none;
+    width: 100%;
+    justify-content: center;
+    padding: 0.4rem;
+    gap: 0.2rem;
+}
+
+/* Clubs page: make filter tabs slightly larger and more prominent */
+.clubs-filter .filter-tab {
+    padding: 0.7rem 1.1rem;
+    font-size: 0.95rem;
+    min-height: 44px;
+}
+
 .filter-tabs::-webkit-scrollbar {
     display: none;
 }
@@ -6012,6 +6030,16 @@ textarea.form-control {
     color: white;
 }
 
+/* Clubs page uses buttons with both filter-btn and filter-tab.
+   Prevent excessive spacing and truncation by overriding layout. */
+.filter-tabs .filter-btn.filter-tab {
+    justify-content: center; /* avoid space-between pushing icon/text */
+    gap: 0.25rem;            /* much tighter icon-text spacing */
+    min-width: auto;         /* let width fit content */
+    padding: 0.35rem 0.55rem;/* significantly narrower padding */
+    font-size: 0.85rem;      /* slightly smaller text */
+}
+
 .filter-btn:hover,
 .date-filter-btn:hover {
     border-color: var(--primary-color);
@@ -6103,6 +6131,14 @@ textarea.form-control {
         font-size: 0.85rem;
         min-width: 100px;
     }
+
+    /* Make club filter tabs narrower on small screens */
+    .filter-tabs .filter-btn.filter-tab {
+        min-width: auto;           /* override 100px on small screens */
+        padding: 0.3rem 0.5rem;    /* even narrower padding */
+        font-size: 0.78rem;        /* smaller text */
+        gap: 0.25rem;
+    }
     
     .filter-count {
         font-size: 0.7rem;
@@ -6113,6 +6149,17 @@ textarea.form-control {
     .filter-tabs {
         padding: 0.25rem;
         gap: 0.125rem;
+    }
+
+    /* Clubs page: ensure no cut-off on small screens */
+    .clubs-filter .filter-tabs {
+        flex-wrap: wrap;
+        overflow: visible;
+        max-width: none;
+        width: 100%;
+        justify-content: center;
+        padding: 0.25rem;
+        gap: 0.15rem;
     }
     
     .filter-tab {
@@ -6141,4 +6188,27 @@ textarea.form-control {
         justify-content: center;
         max-width: 100%;
     }
+}
+
+/* ==== Loading Overlay ===== */
+.loading-overlay {
+    position: fixed;
+    z-index: 99999;
+    inset: 0;
+    background: rgba(255,255,255,0.94);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: opacity 0.2s ease;
+}
+.loading-spinner {
+    border: 6px solid #e0e0e0;
+    border-top: 6px solid #4a7c59;
+    border-radius: 50%;
+    width: 48px;
+    height: 48px;
+    animation: loading-spin 1s linear infinite;
+}
+@keyframes loading-spin {
+    100% { transform: rotate(360deg); }
 }

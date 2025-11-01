@@ -413,54 +413,114 @@ function doOptions(e) {
   });
 }
 
-// 部活動データを取得
+// 部活動データを取得（Supabase優先）
 function getClubs(params) {
   try {
     const config = getConfig();
-    const sheet = SpreadsheetApp.openById(config.SPREADSHEET_ID).getSheetByName(SHEETS.CLUBS);
-    const data = sheet.getDataRange().getValues();
     
-    if (data.length <= 1) {
-      return { success: true, clubs: [] };
+    // Supabaseから取得を優先
+    if (config.SUPABASE_URL && config.SUPABASE_URL !== 'YOUR_SUPABASE_URL_HERE') {
+      try {
+        const limit = params?.limit || 200;
+        const query = `clubs?order=display_order.asc&order=created_at.desc&limit=${limit}`;
+        const response = supabaseRequest('GET', query);
+        
+        if (!response.error && response.data) {
+          return { success: true, clubs: response.data, data: response.data };
+        }
+      } catch (supabaseError) {
+        console.warn('Supabase getClubs failed, trying Spreadsheet fallback:', supabaseError);
+      }
     }
     
-    const headers = data[0];
-    const clubs = data.slice(1).map(row => {
-      const club = {};
-      headers.forEach((header, index) => {
-        club[header] = row[index];
-      });
-      return club;
-    });
+    // Spreadsheetからの取得（後方互換性・フォールバック）
+    if (config.SPREADSHEET_ID && config.SPREADSHEET_ID !== 'YOUR_SPREADSHEET_ID_HERE') {
+      try {
+        const sheet = SpreadsheetApp.openById(config.SPREADSHEET_ID).getSheetByName(SHEETS.CLUBS);
+        const data = sheet.getDataRange().getValues();
+        
+        if (data.length <= 1) {
+          return { success: true, clubs: [], data: [] };
+        }
+        
+        const headers = data[0];
+        const clubs = data.slice(1).map(row => {
+          const club = {};
+          headers.forEach((header, index) => {
+            club[header] = row[index];
+          });
+          return club;
+        });
+        
+        return { success: true, clubs: clubs, data: clubs };
+      } catch (spreadsheetError) {
+        console.warn('Spreadsheet getClubs failed:', spreadsheetError);
+      }
+    }
     
-    return { success: true, clubs: clubs };
+    // どちらも失敗した場合は空の配列を返す
+    return { success: true, clubs: [], data: [] };
+    
   } catch (error) {
     console.error('Error in getClubs:', error);
     return { success: false, error: error.toString() };
   }
 }
 
-// 投稿データを取得
+// 投稿データを取得（Supabase優先）
 function getPosts(params) {
   try {
     const config = getConfig();
-    const sheet = SpreadsheetApp.openById(config.SPREADSHEET_ID).getSheetByName(SHEETS.POSTS);
-    const data = sheet.getDataRange().getValues();
     
-    if (data.length <= 1) {
-      return { success: true, posts: [] };
+    // Supabaseから取得を優先
+    if (config.SUPABASE_URL && config.SUPABASE_URL !== 'YOUR_SUPABASE_URL_HERE') {
+      try {
+        const limit = params?.limit || 200;
+        let query = `posts?order=created_at.desc&limit=${limit}`;
+        
+        // 承認状態フィルター
+        if (params?.approval) {
+          query = `posts?approval_status=eq.${params.approval}&order=created_at.desc&limit=${limit}`;
+        }
+        
+        const response = supabaseRequest('GET', query);
+        
+        if (!response.error && response.data) {
+          return { success: true, posts: response.data, data: response.data };
+        }
+      } catch (supabaseError) {
+        console.warn('Supabase getPosts failed, trying Spreadsheet fallback:', supabaseError);
+      }
     }
     
-    const headers = data[0];
-    const posts = data.slice(1).map(row => {
-      const post = {};
-      headers.forEach((header, index) => {
-        post[header] = row[index];
-      });
-      return post;
-    }).reverse(); // 新しい投稿を上に
+    // Spreadsheetからの取得（後方互換性・フォールバック）
+    if (config.SPREADSHEET_ID && config.SPREADSHEET_ID !== 'YOUR_SPREADSHEET_ID_HERE') {
+      try {
+        const sheet = SpreadsheetApp.openById(config.SPREADSHEET_ID).getSheetByName(SHEETS.POSTS);
+        const data = sheet.getDataRange().getValues();
+        
+        if (data.length <= 1) {
+          return { success: true, posts: [], data: [] };
+        }
+        
+        const headers = data[0];
+        const posts = data.slice(1).map(row => {
+          const post = {};
+          headers.forEach((header, index) => {
+            post[header] = row[index];
+          });
+          return post;
+        }).reverse(); // 新しい投稿を上に
+        
+        return { success: true, posts: posts, data: posts };
+      } catch (spreadsheetError) {
+        console.warn('Spreadsheet getPosts failed:', spreadsheetError);
+      }
+    }
     
-    return { success: true, posts: posts };
+    // どちらも失敗した場合は空の配列を返す
+    return { success: true, posts: [], data: [] };
+    
   } catch (error) {
     console.error('Error in getPosts:', error);
     return { success: false, error: error.toString() };
@@ -511,81 +571,162 @@ function submitPost(params) {
   }
 }
 
-// お知らせデータを取得
+// お知らせデータを取得（Supabase優先）
 function getNews(params) {
   try {
     const config = getConfig();
-    const sheet = SpreadsheetApp.openById(config.SPREADSHEET_ID).getSheetByName(SHEETS.NEWS);
-    const data = sheet.getDataRange().getValues();
     
-    if (data.length <= 1) {
-      return { success: true, news: [] };
+    // Supabaseから取得を優先
+    if (config.SUPABASE_URL && config.SUPABASE_URL !== 'YOUR_SUPABASE_URL_HERE') {
+      try {
+        const limit = params?.limit || 200;
+        const query = `news?order=date.desc&limit=${limit}`;
+        const response = supabaseRequest('GET', query);
+        
+        if (!response.error && response.data) {
+          return { success: true, news: response.data, data: response.data };
+        }
+      } catch (supabaseError) {
+        console.warn('Supabase getNews failed, trying Spreadsheet fallback:', supabaseError);
+      }
     }
     
-    const headers = data[0];
-    const news = data.slice(1).map(row => {
-      const item = {};
-      headers.forEach((header, index) => {
-        item[header] = row[index];
-      });
-      return item;
-    }).reverse(); // 新しいお知らせを上に
+    // Spreadsheetからの取得（後方互換性・フォールバック）
+    if (config.SPREADSHEET_ID && config.SPREADSHEET_ID !== 'YOUR_SPREADSHEET_ID_HERE') {
+      try {
+        const sheet = SpreadsheetApp.openById(config.SPREADSHEET_ID).getSheetByName(SHEETS.NEWS);
+        const data = sheet.getDataRange().getValues();
+        
+        if (data.length <= 1) {
+          return { success: true, news: [], data: [] };
+        }
+        
+        const headers = data[0];
+        const news = data.slice(1).map(row => {
+          const item = {};
+          headers.forEach((header, index) => {
+            item[header] = row[index];
+          });
+          return item;
+        }).reverse(); // 新しいお知らせを上に
+        
+        return { success: true, news: news, data: news };
+      } catch (spreadsheetError) {
+        console.warn('Spreadsheet getNews failed:', spreadsheetError);
+      }
+    }
     
-    return { success: true, news: news };
+    // どちらも失敗した場合は空の配列を返す
+    return { success: true, news: [], data: [] };
+    
   } catch (error) {
     console.error('Error in getNews:', error);
     return { success: false, error: error.toString() };
   }
 }
 
-// アンケートデータを取得
+// アンケートデータを取得（Supabase優先）
 function getSurveys(params) {
   try {
     const config = getConfig();
-    const sheet = SpreadsheetApp.openById(config.SPREADSHEET_ID).getSheetByName(SHEETS.SURVEYS);
-    const data = sheet.getDataRange().getValues();
     
-    if (data.length <= 1) {
-      return { success: true, surveys: [] };
+    // Supabaseから取得を優先
+    if (config.SUPABASE_URL && config.SUPABASE_URL !== 'YOUR_SUPABASE_URL_HERE') {
+      try {
+        const limit = params?.limit || 200;
+        const query = `surveys?order=created_at.desc&limit=${limit}`;
+        const response = supabaseRequest('GET', query);
+        
+        if (!response.error && response.data) {
+          return { success: true, surveys: response.data, data: response.data };
+        }
+      } catch (supabaseError) {
+        console.warn('Supabase getSurveys failed, trying Spreadsheet fallback:', supabaseError);
+      }
     }
     
-    const headers = data[0];
-    const surveys = data.slice(1).map(row => {
-      const survey = {};
-      headers.forEach((header, index) => {
-        survey[header] = row[index];
-      });
-      return survey;
-    });
+    // Spreadsheetからの取得（後方互換性・フォールバック）
+    if (config.SPREADSHEET_ID && config.SPREADSHEET_ID !== 'YOUR_SPREADSHEET_ID_HERE') {
+      try {
+        const sheet = SpreadsheetApp.openById(config.SPREADSHEET_ID).getSheetByName(SHEETS.SURVEYS);
+        const data = sheet.getDataRange().getValues();
+        
+        if (data.length <= 1) {
+          return { success: true, surveys: [], data: [] };
+        }
+        
+        const headers = data[0];
+        const surveys = data.slice(1).map(row => {
+          const survey = {};
+          headers.forEach((header, index) => {
+            survey[header] = row[index];
+          });
+          return survey;
+        });
+        
+        return { success: true, surveys: surveys, data: surveys };
+      } catch (spreadsheetError) {
+        console.warn('Spreadsheet getSurveys failed:', spreadsheetError);
+      }
+    }
     
-    return { success: true, surveys: surveys };
+    // どちらも失敗した場合は空の配列を返す
+    return { success: true, surveys: [], data: [] };
+    
   } catch (error) {
     console.error('Error in getSurveys:', error);
     return { success: false, error: error.toString() };
   }
 }
 
-// メンバーデータを取得
+// メンバーデータを取得（Supabase優先）
 function getMembers(params) {
   try {
     const config = getConfig();
-    const sheet = SpreadsheetApp.openById(config.SPREADSHEET_ID).getSheetByName(SHEETS.MEMBERS);
-    const data = sheet.getDataRange().getValues();
     
-    if (data.length <= 1) {
-      return { success: true, members: [] };
+    // Supabaseから取得を優先
+    if (config.SUPABASE_URL && config.SUPABASE_URL !== 'YOUR_SUPABASE_URL_HERE') {
+      try {
+        const limit = params?.limit || 200;
+        const query = `council_members?is_active=eq.true&order=display_order.asc&limit=${limit}`;
+        const response = supabaseRequest('GET', query);
+        
+        if (!response.error && response.data) {
+          return { success: true, members: response.data, data: response.data };
+        }
+      } catch (supabaseError) {
+        console.warn('Supabase getMembers failed, trying Spreadsheet fallback:', supabaseError);
+      }
     }
     
-    const headers = data[0];
-    const members = data.slice(1).map(row => {
-      const member = {};
-      headers.forEach((header, index) => {
-        member[header] = row[index];
-      });
-      return member;
-    });
+    // Spreadsheetからの取得（後方互換性・フォールバック）
+    if (config.SPREADSHEET_ID && config.SPREADSHEET_ID !== 'YOUR_SPREADSHEET_ID_HERE') {
+      try {
+        const sheet = SpreadsheetApp.openById(config.SPREADSHEET_ID).getSheetByName(SHEETS.MEMBERS);
+        const data = sheet.getDataRange().getValues();
+        
+        if (data.length <= 1) {
+          return { success: true, members: [], data: [] };
+        }
+        
+        const headers = data[0];
+        const members = data.slice(1).map(row => {
+          const member = {};
+          headers.forEach((header, index) => {
+            member[header] = row[index];
+          });
+          return member;
+        });
+        
+        return { success: true, members: members, data: members };
+      } catch (spreadsheetError) {
+        console.warn('Spreadsheet getMembers failed:', spreadsheetError);
+      }
+    }
     
-    return { success: true, members: members };
+    // どちらも失敗した場合は空の配列を返す
+    return { success: true, members: [], data: [] };
+    
   } catch (error) {
     console.error('Error in getMembers:', error);
     return { success: false, error: error.toString() };
@@ -1265,25 +1406,131 @@ function sendBulkNotification(data) {
 
 // 通知履歴取得
 function getNotificationHistory(data) {
-  const { limit = 50, offset = 0 } = data;
-  
-  const response = supabaseRequest('GET', 
-    `notification_history?order=sent_at.desc&limit=${limit}&offset=${offset}`
-  );
-  
-  return { success: !response.error, data: response.data };
+  try {
+    const config = getConfig();
+    const { limit = 50, offset = 0 } = data || {};
+    
+    // Supabaseから取得
+    if (config.SUPABASE_URL && config.SUPABASE_URL !== 'YOUR_SUPABASE_URL_HERE') {
+      try {
+        const response = supabaseRequest('GET', 
+          `notification_history?order=sent_at.desc&limit=${limit}&offset=${offset}`
+        );
+        
+        if (!response.error && response.data) {
+          return { success: true, data: response.data };
+        }
+      } catch (supabaseError) {
+        console.warn('Supabase notification history failed:', supabaseError);
+      }
+    }
+    
+    // フォールバック: 空の配列を返す
+    return { success: true, data: [] };
+    
+  } catch (error) {
+    console.error('Error in getNotificationHistory:', error);
+    return { success: true, data: [] }; // エラーでも空の配列を返す
+  }
 }
 
 // 通知統計取得
 function getNotificationStatistics(data) {
-  const { days = 30 } = data;
-  const fromDate = new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString();
-  
-  const response = supabaseRequest('GET', 
-    `notification_statistics?sent_at=gte.${fromDate}&order=sent_at.desc`
-  );
-  
-  return { success: !response.error, data: response.data };
+  try {
+    const config = getConfig();
+    const { days = 30 } = data || {};
+    const fromDate = new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString();
+    
+    // Supabaseから統計データを取得
+    if (config.SUPABASE_URL && config.SUPABASE_URL !== 'YOUR_SUPABASE_URL_HERE') {
+      try {
+        // notification_historyテーブルから集計
+        const historyResponse = supabaseRequest('GET', 
+          `notification_history?sent_at=gte.${fromDate}&order=sent_at.desc&limit=1000`
+        );
+        
+        if (!historyResponse.error && historyResponse.data) {
+          const history = historyResponse.data;
+          
+          // 統計を計算
+          let notificationsSent = 0;
+          let deliverySuccess = 0;
+          let deliveryFailed = 0;
+          
+          history.forEach(record => {
+            notificationsSent++;
+            deliverySuccess += record.successful_sends || 0;
+            deliveryFailed += record.failed_sends || 0;
+          });
+          
+          // デバイス数を取得
+          const devicesResponse = supabaseRequest('GET', 
+            'device_registrations?is_active=eq.true&select=count'
+          );
+          const devicesRegistered = Array.isArray(devicesResponse.data) ? devicesResponse.data.length : 0;
+          
+          // 期間別に集計
+          const periods = [];
+          const now = new Date();
+          for (let i = 0; i < Math.min(days, 7); i++) {
+            const periodDate = new Date(now.getTime() - i * 24 * 60 * 60 * 1000);
+            const periodStart = new Date(periodDate.setHours(0, 0, 0, 0)).toISOString();
+            const periodEnd = new Date(periodDate.setHours(23, 59, 59, 999)).toISOString();
+            
+            const periodRecords = history.filter(r => {
+              const sentAt = new Date(r.sent_at);
+              return sentAt >= new Date(periodStart) && sentAt <= new Date(periodEnd);
+            });
+            
+            periods.push({
+              period: `${periodDate.getMonth() + 1}/${periodDate.getDate()}`,
+              sent: periodRecords.length,
+              success: periodRecords.reduce((sum, r) => sum + (r.successful_sends || 0), 0),
+              failed: periodRecords.reduce((sum, r) => sum + (r.failed_sends || 0), 0)
+            });
+          }
+          
+          return {
+            success: true,
+            data: {
+              notificationsSent: notificationsSent,
+              devicesRegistered: devicesRegistered,
+              deliverySuccess: deliverySuccess,
+              deliveryFailed: deliveryFailed,
+              periods: periods.reverse() // 古い順に並べ替え
+            }
+          };
+        }
+      } catch (supabaseError) {
+        console.warn('Supabase notification statistics failed:', supabaseError);
+      }
+    }
+    
+    // フォールバック: デフォルト値を返す
+    return {
+      success: true,
+      data: {
+        notificationsSent: 0,
+        devicesRegistered: 0,
+        deliverySuccess: 0,
+        deliveryFailed: 0,
+        periods: []
+      }
+    };
+    
+  } catch (error) {
+    console.error('Error in getNotificationStatistics:', error);
+    return {
+      success: true, // エラーでも空の統計を返す（システムを壊さないため）
+      data: {
+        notificationsSent: 0,
+        devicesRegistered: 0,
+        deliverySuccess: 0,
+        deliveryFailed: 0,
+        periods: []
+      }
+    };
+  }
 }
 
 // ========================================

@@ -7,28 +7,16 @@
     <meta name="theme-color" content="#4a7c59">
     <title>管理画面 - なずなポータル</title>
     <link rel="icon" type="image/png" href="https://lh3.googleusercontent.com/pw/AP1GczPtDAtqRlRZY8yBF0ajASVZzyEDa1uq1vlm3Dw7a7TIXMQUzwOjquumsabe_DDWZiM6tg2Ruxgtb-kvWibkkbxvcklHnPPqCat1N8H4mKJp3QPpmvyEyJxObatEQq4xD2zu0AQ8yBYZf7GePeGIoEEF=w1033-h1033-s-no-gm?authuser=0">
-    <link rel="apple-touch-icon" href="https://lh3.googleusercontent.com/pw/AP1GczPtDAtqRlRZY8yBF0ajASVZzyEDa1uq1vlm3Dw7a7TIXMQUzwOjquumsabe_DDWZiM6tg2Ruxgtb-kvWibkkbxvcklHnPPqCat1N8H4mKJp3QPpmvyEyJxObatEQq4xD2zu0AQ8yBYZf7GePeGIoEEF=w1033-h1033-s-no-gm?authuser=0">
-    <meta name="msapplication-TileImage" content="https://lh3.googleusercontent.com/pw/AP1GczPtDAtqRlRZY8yBF0ajASVZzyEDa1uq1vlm3Dw7a7TIXMQUzwOjquumsabe_DDWZiM6tg2Ruxgtb-kvWibkkbxvcklHnPPqCat1N8H4mKJp3QPpmvyEyJxObatEQq4xD2zu0AQ8yBYZf7GePeGIoEEF=w1033-h1033-s-no-gm?authuser=0">
-    <meta name="msapplication-square70x70logo" content="https://lh3.googleusercontent.com/pw/AP1GczPtDAtqRlRZY8yBF0ajASVZzyEDa1uq1vlm3Dw7a7TIXMQUzwOjquumsabe_DDWZiM6tg2Ruxgtb-kvWibkkbxvcklHnPPqCat1N8H4mKJp3QPpmvyEyJxObatEQq4xD2zu0AQ8yBYZf7GePeGIoEEF=w1033-h1033-s-no-gm?authuser=0">
-    <meta name="msapplication-square150x150logo" content="https://lh3.googleusercontent.com/pw/AP1GczPtDAtqRlRZY8yBF0ajASVZzyEDa1uq1vlm3Dw7a7TIXMQUzwOjquumsabe_DDWZiM6tg2Ruxgtb-kvWibkkbxvcklHnPPqCat1N8H4mKJp3QPpmvyEyJxObatEQq4xD2zu0AQ8yBYZf7GePeGIoEEF=w1033-h1033-s-no-gm?authuser=0">
-    <meta name="msapplication-wide310x150logo" content="https://lh3.googleusercontent.com/pw/AP1GczPtDAtqRlRZY8yBF0ajASVZzyEDa1uq1vlm3Dw7a7TIXMQUzwOjquumsabe_DDWZiM6tg2Ruxgtb-kvWibkkbxvcklHnPPqCat1N8H4mKJp3QPpmvyEyJxObatEQq4xD2zu0AQ8yBYZf7GePeGIoEEF=w1033-h1033-s-no-gm?authuser=0">
-    <meta name="msapplication-square310x310logo" content="https://lh3.googleusercontent.com/pw/AP1GczPtDAtqRlRZY8yBF0ajASVZzyEDa1uq1vlm3Dw7a7TIXMQUzwOjquumsabe_DDWZiM6tg2Ruxgtb-kvWibkkbxvcklHnPPqCat1N8H4mKJp3QPpmvyEyJxObatEQq4xD2zu0AQ8yBYZf7GePeGIoEEF=w1033-h1033-s-no-gm?authuser=0">
     <link rel="stylesheet" href="css/style.css">
     <link rel="stylesheet" href="css/admin.css">
     <link rel="manifest" href="manifest.json">
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&display=swap" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
-    <!-- Supabase CDN -->
     <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
-    
-    <!-- Firebase SDK -->
     <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-messaging-compat.js"></script>
 </head>
 <body>
-    <!-- メインコンテンツオーバーレイ -->
-    <div class="main-overlay" id="main-overlay"></div>
-
     <!-- ログイン画面 -->
     <div class="login-screen" id="login-screen">
         <div class="login-container">
@@ -64,7 +52,6 @@
     <div class="admin-main" id="admin-main" style="display: none;">
         <!-- ヘッダー -->
         <header class="admin-header">
-            <!-- ハンバーガーメニューボタン -->
             <button class="hamburger-menu" id="hamburger-menu" aria-label="メニューを開く">
                 <span></span>
                 <span></span>
@@ -99,54 +86,17 @@
             </div>
             <nav class="admin-menu">
                 <ul>
-                    <li>
-                        <a href="#dashboard" class="menu-item active" data-section="dashboard">
-                            <i class="fas fa-tachometer-alt"></i>
-                            <span>ダッシュボード</span>
-                        </a>
-                    </li>
-                    <li>
-                        <a href="#news" class="menu-item" data-section="news">
-                            <i class="fas fa-newspaper"></i>
-                            <span>お知らせ管理</span>
-                        </a>
-                    </li>
-                    <li>
-                        <a href="#surveys" class="menu-item" data-section="surveys">
-                            <i class="fas fa-poll"></i>
-                            <span>アンケート管理</span>
-                        </a>
-                    </li>
-                    <li>
-                        <a href="#clubs" class="menu-item" data-section="clubs">
-                            <i class="fas fa-running"></i>
-                            <span>部活動管理</span>
-                        </a>
-                    </li>
-                    <li>
-                        <a href="#council" class="menu-item" data-section="council">
-                            <i class="fas fa-users"></i>
-                            <span>生徒会情報</span>
-                        </a>
-                    </li>
-                    <li>
-                        <a href="#achievements" class="menu-item" data-section="achievements">
-                            <i class="fas fa-trophy"></i>
-                            <span>活動実績管理</span>
-                        </a>
-                    </li>
-                    <li>
-                        <a href="#notifications" class="menu-item" data-section="notifications">
-                            <i class="fas fa-bell"></i>
-                            <span>通知配信</span>
-                        </a>
-                    </li>
-                    <li>
-                        <a href="#forum" class="menu-item" data-section="forum">
-                            <i class="fas fa-comments"></i>
-                            <span>フォーラム管理</span>
-                        </a>
-                    </li>
+                    <li><a href="#dashboard" class="menu-item active" data-section="dashboard"><i class="fas fa-tachometer-alt"></i><span>ダッシュボード</span></a></li>
+                    <li><a href="#news" class="menu-item" data-section="news"><i class="fas fa-newspaper"></i><span>お知らせ管理</span></a></li>
+                    <li><a href="#surveys" class="menu-item" data-section="surveys"><i class="fas fa-poll"></i><span>アンケート管理</span></a></li>
+                    <li><a href="#clubs" class="menu-item" data-section="clubs"><i class="fas fa-running"></i><span>部活動管理</span></a></li>
+                    <li><a href="#council" class="menu-item" data-section="council"><i class="fas fa-users"></i><span>生徒会情報</span></a></li>
+                    <li><a href="#achievements" class="menu-item" data-section="achievements"><i class="fas fa-trophy"></i><span>活動実績管理</span></a></li>
+                    <li><a href="#notifications" class="menu-item" data-section="notifications"><i class="fas fa-bell"></i><span>通知配信</span></a></li>
+                    <li><a href="#statistics" class="menu-item" data-section="statistics"><i class="fas fa-chart-line"></i><span>統計</span></a></li>
+                    <li><a href="#accounts" class="menu-item" data-section="accounts"><i class="fas fa-user-shield"></i><span>アカウント管理</span></a></li>
+                    <li><a href="#forum" class="menu-item" data-section="forum"><i class="fas fa-comments"></i><span>フォーラム管理</span></a></li>
+                    <li><a href="#system" class="menu-item" data-section="system"><i class="fas fa-cog"></i><span>システム管理</span></a></li>
                 </ul>
             </nav>
         </div>
@@ -160,36 +110,28 @@
                 </div>
                 <div class="dashboard-stats">
                     <div class="stat-card">
-                        <div class="stat-icon news-stat">
-                            <i class="fas fa-newspaper"></i>
-                        </div>
+                        <div class="stat-icon news-stat"><i class="fas fa-newspaper"></i></div>
                         <div class="stat-content">
                             <h3 id="news-count">0</h3>
                             <p>お知らせ</p>
                         </div>
                     </div>
                     <div class="stat-card">
-                        <div class="stat-icon survey-stat">
-                            <i class="fas fa-poll"></i>
-                        </div>
+                        <div class="stat-icon survey-stat"><i class="fas fa-poll"></i></div>
                         <div class="stat-content">
                             <h3 id="survey-count">0</h3>
                             <p>アンケート</p>
                         </div>
                     </div>
                     <div class="stat-card">
-                        <div class="stat-icon club-stat">
-                            <i class="fas fa-running"></i>
-                        </div>
+                        <div class="stat-icon club-stat"><i class="fas fa-running"></i></div>
                         <div class="stat-content">
                             <h3 id="club-count">0</h3>
                             <p>部活動</p>
                         </div>
                     </div>
                     <div class="stat-card">
-                        <div class="stat-icon forum-stat">
-                            <i class="fas fa-comments"></i>
-                        </div>
+                        <div class="stat-icon forum-stat"><i class="fas fa-comments"></i></div>
                         <div class="stat-content">
                             <h3 id="forum-count">0</h3>
                             <p>フォーラム投稿</p>
@@ -199,57 +141,97 @@
                 <div class="dashboard-recent">
                     <div class="recent-card">
                         <h3><i class="fas fa-clock"></i> 最近の活動</h3>
-                        <div class="recent-list" id="recent-activities">
-                            <!-- 最近の活動がここに表示されます -->
-                        </div>
+                        <div class="recent-list" id="recent-activities"></div>
                     </div>
                 </div>
             </section>
 
-            <!-- システム管理 -->
-            <section class="admin-section" id="system-section">
+            <!-- 統計 -->
+            <section class="admin-section" id="statistics-section">
                 <div class="section-header">
-                    <h2><i class="fas fa-cog"></i> システム管理</h2>
+                    <h2><i class="fas fa-chart-line"></i> 統計</h2>
                 </div>
-                <div class="system-controls">
-                    <div class="control-card">
-                        <h3><i class="fas fa-tools"></i> メンテナンスモード</h3>
-                        <div class="maintenance-controls">
-                            <div class="maintenance-status" id="maintenance-status">
-                                <span class="status-indicator" id="maintenance-indicator"></span>
-                                <span class="status-text" id="maintenance-text">チェック中...</span>
-                            </div>
-                            <div class="maintenance-actions" id="maintenance-actions" style="display: none;">
-                                <button class="btn btn-warning" id="enable-maintenance-btn">
-                                    <i class="fas fa-play"></i>
-                                    メンテナンス開始
-                                </button>
-                                <button class="btn btn-success" id="disable-maintenance-btn" style="display: none;">
-                                    <i class="fas fa-stop"></i>
-                                    メンテナンス終了
-                                </button>
-                            </div>
+                <div class="dashboard-stats">
+                    <div class="stat-card">
+                        <div class="stat-icon"><i class="fas fa-bell"></i></div>
+                        <div class="stat-content">
+                            <h3 id="stat-notifications-sent">0</h3>
+                            <p>通知送信数（直近）</p>
                         </div>
-                        <div class="maintenance-form" id="maintenance-form" style="display: none;">
-                            <div class="form-group">
-                                <label for="maintenance-message">メッセージ</label>
-                                <textarea id="maintenance-message" class="form-control" placeholder="メンテナンスメッセージを入力" rows="3"></textarea>
-                            </div>
-                            <div class="form-group">
-                                <label for="maintenance-end-time">終了予定時刻（任意）</label>
-                                <input type="datetime-local" id="maintenance-end-time" class="form-control">
-                            </div>
-                            <div class="form-actions">
-                                <button class="btn btn-primary" id="confirm-maintenance-btn">
-                                    <i class="fas fa-check"></i>
-                                    メンテナンス開始
-                                </button>
-                                <button class="btn btn-secondary" id="cancel-maintenance-btn">
-                                    <i class="fas fa-times"></i>
-                                    キャンセル
-                                </button>
-                            </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon"><i class="fas fa-mobile-alt"></i></div>
+                        <div class="stat-content">
+                            <h3 id="stat-devices-registered">0</h3>
+                            <p>登録デバイス</p>
                         </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon"><i class="fas fa-check"></i></div>
+                        <div class="stat-content">
+                            <h3 id="stat-delivery-success">0</h3>
+                            <p>配信成功</p>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon"><i class="fas fa-times"></i></div>
+                        <div class="stat-content">
+                            <h3 id="stat-delivery-failed">0</h3>
+                            <p>配信失敗</p>
+                        </div>
+                    </div>
+                </div>
+                <div id="statistics-detail" class="admin-table-container">
+                    <table class="admin-table">
+                        <thead>
+                            <tr>
+                                <th>期間</th>
+                                <th>送信数</th>
+                                <th>成功</th>
+                                <th>失敗</th>
+                            </tr>
+                        </thead>
+                        <tbody id="statistics-table-body"></tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- アカウント管理 -->
+            <section class="admin-section" id="accounts-section">
+                <div class="section-header">
+                    <h2><i class="fas fa-user-shield"></i> アカウント管理</h2>
+                </div>
+                <div class="admin-table-container" style="padding: 1rem;">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>メール</label>
+                            <input id="account-email" class="form-control" placeholder="admin@example.com">
+                        </div>
+                        <div class="form-group">
+                            <label>パスワード</label>
+                            <input id="account-password" type="password" class="form-control" placeholder="6文字以上">
+                        </div>
+                        <div class="form-group">
+                            <label>氏名</label>
+                            <input id="account-name" class="form-control" placeholder="管理者名">
+                        </div>
+                        <div class="form-group">
+                            <label>ロール</label>
+                            <select id="account-role" class="form-control">
+                                <option value="admin">admin</option>
+                                <option value="editor">editor</option>
+                                <option value="viewer">viewer</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>権限（JSON）</label>
+                            <input id="account-permissions" class="form-control" placeholder='{"news":true,"surveys":true}'>
+                        </div>
+                    </div>
+                    <div class="form-actions">
+                        <button class="btn btn-primary" id="account-create-btn"><i class="fas fa-user-plus"></i> 作成/更新</button>
+                        <button class="btn btn-danger" id="account-delete-btn"><i class="fas fa-user-times"></i> 削除</button>
+                        <button class="btn btn-outline" id="account-debug-btn"><i class="fas fa-bug"></i> デバッグ</button>
                     </div>
                 </div>
             </section>
@@ -258,10 +240,7 @@
             <section class="admin-section" id="news-section">
                 <div class="section-header">
                     <h2><i class="fas fa-newspaper"></i> お知らせ管理</h2>
-                    <button class="btn btn-primary" id="add-news-btn">
-                        <i class="fas fa-plus"></i>
-                        新規作成
-                    </button>
+                    <button class="btn btn-primary" id="add-news-btn"><i class="fas fa-plus"></i> 新規作成</button>
                 </div>
                 <div class="admin-table-container">
                     <table class="admin-table">
@@ -273,9 +252,7 @@
                                 <th>操作</th>
                             </tr>
                         </thead>
-                        <tbody id="news-table-body">
-                            <!-- お知らせ一覧がここに表示されます -->
-                        </tbody>
+                        <tbody id="news-table-body"></tbody>
                     </table>
                 </div>
             </section>
@@ -284,10 +261,7 @@
             <section class="admin-section" id="surveys-section">
                 <div class="section-header">
                     <h2><i class="fas fa-poll"></i> アンケート管理</h2>
-                    <button class="btn btn-primary" id="add-survey-btn">
-                        <i class="fas fa-plus"></i>
-                        新規作成
-                    </button>
+                    <button class="btn btn-primary" id="add-survey-btn"><i class="fas fa-plus"></i> 新規作成</button>
                 </div>
                 <div class="admin-table-container">
                     <table class="admin-table">
@@ -300,9 +274,7 @@
                                 <th>操作</th>
                             </tr>
                         </thead>
-                        <tbody id="surveys-table-body">
-                            <!-- アンケート一覧がここに表示されます -->
-                        </tbody>
+                        <tbody id="surveys-table-body"></tbody>
                     </table>
                 </div>
             </section>
@@ -311,10 +283,7 @@
             <section class="admin-section" id="clubs-section">
                 <div class="section-header">
                     <h2><i class="fas fa-running"></i> 部活動管理</h2>
-                    <button class="btn btn-primary" id="add-club-btn">
-                        <i class="fas fa-plus"></i>
-                        新規追加
-                    </button>
+                    <button class="btn btn-primary" id="add-club-btn"><i class="fas fa-plus"></i> 新規追加</button>
                 </div>
                 <div class="admin-table-container">
                     <table class="admin-table">
@@ -327,9 +296,7 @@
                                 <th>操作</th>
                             </tr>
                         </thead>
-                        <tbody id="clubs-table-body">
-                            <!-- 部活動一覧がここに表示されます -->
-                        </tbody>
+                        <tbody id="clubs-table-body"></tbody>
                     </table>
                 </div>
             </section>
@@ -338,14 +305,9 @@
             <section class="admin-section" id="council-section">
                 <div class="section-header">
                     <h2><i class="fas fa-users"></i> 生徒会情報管理</h2>
-                    <button class="btn btn-primary" id="add-member-btn">
-                        <i class="fas fa-user-plus"></i>
-                        メンバー追加
-                    </button>
+                    <button class="btn btn-primary" id="add-member-btn"><i class="fas fa-user-plus"></i> メンバー追加</button>
                 </div>
-                <div class="members-grid" id="members-grid">
-                    <!-- 生徒会メンバー一覧がここに表示されます -->
-                </div>
+                <div class="members-grid" id="members-grid"></div>
             </section>
 
             <!-- 活動実績管理 -->
@@ -356,14 +318,9 @@
                         <select id="member-filter" class="form-control">
                             <option value="">メンバーを選択</option>
                         </select>
-                        <button class="btn btn-primary" id="add-achievement-btn">
-                            <i class="fas fa-plus"></i>
-                            実績追加
-                        </button>
+                        <button class="btn btn-primary" id="add-achievement-btn"><i class="fas fa-plus"></i> 実績追加</button>
                     </div>
                 </div>
-                
-                <!-- メンバー別フィルター -->
                 <div class="filter-section">
                     <label>表示フィルター：</label>
                     <div class="filter-controls">
@@ -374,18 +331,10 @@
                         </select>
                         <select id="achievement-month-filter" class="form-control">
                             <option value="">すべての月</option>
-                            <option value="1">1月</option>
-                            <option value="2">2月</option>
-                            <option value="3">3月</option>
-                            <option value="4">4月</option>
-                            <option value="5">5月</option>
-                            <option value="6">6月</option>
-                            <option value="7">7月</option>
-                            <option value="8">8月</option>
-                            <option value="9">9月</option>
-                            <option value="10">10月</option>
-                            <option value="11">11月</option>
-                            <option value="12">12月</option>
+                            <option value="1">1月</option><option value="2">2月</option><option value="3">3月</option>
+                            <option value="4">4月</option><option value="5">5月</option><option value="6">6月</option>
+                            <option value="7">7月</option><option value="8">8月</option><option value="9">9月</option>
+                            <option value="10">10月</option><option value="11">11月</option><option value="12">12月</option>
                         </select>
                         <select id="achievement-category-filter" class="form-control">
                             <option value="">すべてのカテゴリ</option>
@@ -397,13 +346,9 @@
                             <option value="volunteer">ボランティア</option>
                             <option value="event">イベント</option>
                         </select>
-                        <button class="btn btn-outline" id="clear-filters-btn">
-                            <i class="fas fa-times"></i>
-                            フィルタークリア
-                        </button>
+                        <button class="btn btn-outline" id="clear-filters-btn"><i class="fas fa-times"></i> フィルタークリア</button>
                     </div>
                 </div>
-
                 <div class="admin-table-container">
                     <table class="admin-table">
                         <thead>
@@ -417,9 +362,7 @@
                                 <th>操作</th>
                             </tr>
                         </thead>
-                        <tbody id="achievements-table-body">
-                            <!-- 活動実績一覧がここに表示されます -->
-                        </tbody>
+                        <tbody id="achievements-table-body"></tbody>
                     </table>
                 </div>
             </section>
@@ -430,14 +373,8 @@
                     <h2><i class="fas fa-bell"></i> 通知配信</h2>
                 </div>
                 <div class="notification-panel">
-                    <div class="notification-form">
-                        <h3>プッシュ通知を送信</h3>
-                        <div class="form-group">
-                            <label for="notification-template">テンプレート</label>
-                            <select id="notification-template" class="form-control">
-                                <option value="">（選択してください）</option>
-                            </select>
-                        </div>
+                    <div class="notification-form" id="notification-form">
+                        <h3>プッシュ通知を送信（自由形式）</h3>
                         <div class="form-group">
                             <label for="notification-title">通知タイトル</label>
                             <input type="text" id="notification-title" class="form-control" placeholder="通知のタイトルを入力">
@@ -460,40 +397,103 @@
                             </select>
                         </div>
                         <div class="form-actions">
-                            <button class="btn btn-primary" id="send-notification-btn">
-                                <i class="fas fa-paper-plane"></i>
-                                通知を送信
-                            </button>
-                            <button type="button" class="btn btn-outline" id="clear-notification-form">
-                                <i class="fas fa-eraser"></i>
-                                クリア
-                            </button>
+                            <button class="btn btn-primary" id="send-notification-btn"><i class="fas fa-paper-plane"></i> 通知を送信</button>
+                            <button type="button" class="btn btn-outline" id="clear-notification-form"><i class="fas fa-eraser"></i> クリア</button>
                         </div>
                     </div>
                     <div class="notification-history">
                         <h3>配信履歴</h3>
-                        <div class="history-list" id="notification-history">
-                            <!-- 配信履歴がここに表示されます -->
-                        </div>
+                        <div class="history-list" id="notification-history"></div>
                     </div>
                 </div>
             </section>
 
-            <!-- フォーラム管理（承認機能付き） -->
+            <!-- システム管理 -->
+            <section class="admin-section" id="system-section">
+                <div class="section-header">
+                    <h2><i class="fas fa-cog"></i> システム管理</h2>
+                </div>
+                
+                <!-- メンテナンスモード -->
+                <div class="admin-card">
+                    <h3><i class="fas fa-tools"></i> メンテナンスモード</h3>
+                    <div class="maintenance-controls">
+                        <div class="form-group">
+                            <label>メンテナンスメッセージ</label>
+                            <textarea id="maintenance-message" class="form-control" rows="3" placeholder="システムメンテナンス中です。しばらくお待ちください。"></textarea>
+                        </div>
+                        <div class="form-group">
+                            <label>終了予定時刻（任意）</label>
+                            <input type="datetime-local" id="maintenance-end-time" class="form-control">
+                        </div>
+                        <div class="maintenance-status" id="maintenance-status">
+                            <p><i class="fas fa-info-circle"></i> 状態を確認中...</p>
+                        </div>
+                        <div class="form-actions">
+                            <button class="btn btn-warning" id="enable-maintenance-btn">
+                                <i class="fas fa-toggle-on"></i> メンテナンスモードを有効化
+                            </button>
+                            <button class="btn btn-success" id="disable-maintenance-btn">
+                                <i class="fas fa-toggle-off"></i> メンテナンスモードを無効化
+                            </button>
+                            <button class="btn btn-outline" id="refresh-maintenance-status-btn">
+                                <i class="fas fa-sync"></i> 状態を更新
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- PWA管理 -->
+                <div class="admin-card">
+                    <h3><i class="fas fa-mobile-alt"></i> PWA（Progressive Web App）管理</h3>
+                    <div class="pwa-controls">
+                        <div class="pwa-status" id="pwa-status">
+                            <p><i class="fas fa-info-circle"></i> 状態を確認中...</p>
+                        </div>
+                        <div class="form-actions">
+                            <button class="btn btn-primary" id="pwa-check-updates-btn">
+                                <i class="fas fa-sync"></i> アップデートをチェック
+                            </button>
+                            <button class="btn btn-primary" id="pwa-show-module-btn">
+                                <i class="fas fa-info-circle"></i> 詳細を表示
+                            </button>
+                            <button class="btn btn-warning" id="pwa-clear-cache-btn">
+                                <i class="fas fa-trash"></i> キャッシュをクリア
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 通知システム管理 -->
+                <div class="admin-card">
+                    <h3><i class="fas fa-bell"></i> 通知システム管理</h3>
+                    <div class="notification-system-controls">
+                        <div class="notification-system-status" id="notification-system-status">
+                            <p><i class="fas fa-info-circle"></i> 状態を確認中...</p>
+                        </div>
+                        <div class="form-actions">
+                            <button class="btn btn-primary" id="notification-test-btn">
+                                <i class="fas fa-paper-plane"></i> テスト通知を送信
+                            </button>
+                            <button class="btn btn-outline" id="notification-refresh-status-btn">
+                                <i class="fas fa-sync"></i> 状態を更新
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </section>
+            
+            <!-- フォーラム管理 -->
             <section class="admin-section" id="forum-section">
                 <div class="section-header">
                     <h2><i class="fas fa-comments"></i> フォーラム管理・投稿承認</h2>
                 </div>
-                
-                <!-- 投稿承認待ちアラート -->
                 <div class="approval-alert" id="approval-alert" style="display: none;">
                     <div class="alert-content">
                         <i class="fas fa-exclamation-circle"></i>
                         <span id="pending-count">0</span>件の投稿が承認待ちです
                     </div>
                 </div>
-                
-                <!-- フィルター・検索バー -->
                 <div class="filter-section">
                     <div class="filter-controls">
                         <select id="forum-approval-filter" class="form-control">
@@ -509,13 +509,9 @@
                             <option value="resolved">解決済み</option>
                         </select>
                         <input type="text" id="forum-search" class="form-control" placeholder="内容で検索">
-                        <button class="btn btn-outline" id="forum-refresh-btn">
-                            <i class="fas fa-refresh"></i>
-                            更新
-                        </button>
+                        <button class="btn btn-outline" id="forum-refresh-btn"><i class="fas fa-refresh"></i> 更新</button>
                     </div>
                 </div>
-                
                 <div class="admin-table-container">
                     <table class="admin-table">
                         <thead>
@@ -529,9 +525,7 @@
                                 <th>操作</th>
                             </tr>
                         </thead>
-                        <tbody id="forum-table-body">
-                            <!-- フォーラム投稿一覧がここに表示されます -->
-                        </tbody>
+                        <tbody id="forum-table-body"></tbody>
                     </table>
                 </div>
             </section>
@@ -543,13 +537,9 @@
         <div class="modal" id="admin-modal">
             <div class="modal-header">
                 <h3 id="modal-title">タイトル</h3>
-                <button class="modal-close" id="modal-close">
-                    <i class="fas fa-times"></i>
-                </button>
+                <button class="modal-close" id="modal-close"><i class="fas fa-times"></i></button>
             </div>
-            <div class="modal-body" id="modal-body">
-                <!-- モーダルコンテンツがここに表示されます -->
-            </div>
+            <div class="modal-body" id="modal-body"></div>
             <div class="modal-footer">
                 <button class="btn btn-secondary" id="modal-cancel">キャンセル</button>
                 <button class="btn btn-primary" id="modal-save">保存</button>
@@ -571,8 +561,8 @@
             </div>
             <div class="footer-section">
                 <h4>システム情報</h4>
-                <p>バージョン: 1.0.0</p>
-                <p>最終更新: 2025年10月</p>
+                <p>バージョン: 2.0.0</p>
+                <p>最終更新: 2025年11月</p>
                 <p>&copy; 2025 市川学園生徒会</p>
             </div>
         </div>
@@ -585,5 +575,6 @@
     <script src="js/pwa-update.js"></script>
     <script src="js/maintenance-checker.js"></script>
     <script src="js/admin.js"></script>
+    <script src="js/admin-operations.js"></script>
 </body>
 </html>

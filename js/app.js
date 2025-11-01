@@ -207,7 +207,11 @@ class APIClient {
             window.gasCallbacks[callbackName] = (data) => {
                 clearTimeout(timeout);
                 
-                if (data.success) {
+                // verifyAdminSessionなど、validプロパティを使うAPIにも対応
+                const isSuccess = data.success === true || data.valid === true;
+                const isFailure = data.success === false || data.valid === false;
+                
+                if (isSuccess && !isFailure) {
                     // キャッシュに保存
                     if (options.useCache) {
                         this.cache.set(cacheKey, {
@@ -216,11 +220,20 @@ class APIClient {
                         });
                     }
                     resolve(data);
-                } else {
+                } else if (isFailure) {
                     // より詳細なエラーメッセージを提供
                     const errorMessage = data.error || CONFIG.MESSAGES.ERROR.SERVER;
                     console.error('API Error:', errorMessage, data);
-                    reject(new Error(errorMessage));
+                    // verifyAdminSessionの場合、エラーでも結果として返す（valid: false）
+                    if (data.valid !== undefined) {
+                        resolve(data);
+                    } else {
+                        reject(new Error(errorMessage));
+                    }
+                } else {
+                    // success/validプロパティがない場合も成功とみなす（後方互換性）
+                    console.warn('Response without success/valid property:', data);
+                    resolve(data);
                 }
                 
                 this.cleanup(callbackName);
@@ -509,8 +522,10 @@ function initSidebar() {
         link.addEventListener('click', (e) => {
             e.preventDefault();
             const href = link.getAttribute('href');
-            // ページトランジション: フェードアウト → 遷移
-            document.body.classList.add('page-exit');
+            // document.body.classList.add('page-exit'); // フェードアウトは抑制してローディングを表示
+            if (typeof showLoadingOverlay === 'function') {
+                showLoadingOverlay();
+            }
             closeSidebar();
             setTimeout(() => { window.location.href = href; }, 220);
         });
@@ -2003,7 +2018,8 @@ function initPWAInstall() {
 
 // 部活動フィルター初期化
 function initClubsFilter() {
-    const filterBtns = document.querySelectorAll('.filter-btn');
+    // 支持: ニュースと同じデザイン(.filter-tab)を優先、後方互換で.filter-btnも拾う
+    const filterBtns = document.querySelectorAll('.clubs-filter .filter-tab, .clubs-filter .filter-btn');
     const clubCards = document.querySelectorAll('.club-card');
     
     filterBtns.forEach(btn => {
@@ -2173,3 +2189,18 @@ if (CONFIG.APP.DEBUG) {
     window.checkAndMarkSessionVisit = checkAndMarkSessionVisit;
     console.log('Debug functions available: resetFirstVisit(), resetSession(), showOpeningScreen(), hideOpeningScreen(), checkAndMarkSessionVisit()');
 }
+
+// ================== Loading Overlay Utility ===================
+function showLoadingOverlay() {
+    if (document.getElementById('loading-overlay')) return;
+    const overlay = document.createElement('div');
+    overlay.id = 'loading-overlay';
+    overlay.className = 'loading-overlay';
+    overlay.innerHTML = '<div class="loading-spinner"></div>';
+    document.body.appendChild(overlay);
+}
+function hideLoadingOverlay() {
+    const overlay = document.getElementById('loading-overlay');
+    if (overlay) overlay.remove();
+}
+window.addEventListener('DOMContentLoaded', hideLoadingOverlay);
