@@ -12,138 +12,8 @@ if (!window.sha256) {
     window.sha256 = sha256;
 }
 
-// メンバーデータ（実際はSupabaseから取得）
-const membersData = {
-    '1': {
-        id: 1,
-        name: '会長 山田太郎',
-        role: '全体統括',
-        grade: '3年A組',
-        message: '皆さんの声を大切にし、より良い学校生活の実現に向けて全力で取り組みます。些細なことでもお気軽にご相談ください。',
-        longMessage: '生徒会長として、全校生徒の皆さんが充実した学校生活を送れるよう、日々努力しています。私たちの活動は、皆さん一人ひとりの声があってこそ成り立ちます。なずなフォーラムやアンケートを通じて、積極的にご意見をお聞かせください。一緒に素晴らしい学校を作っていきましょう。',
-        image: null,
-        responsibilities: [
-            '生徒会全体の統括・運営',
-            '学校行事の企画・調整',
-            '生徒総会の司会進行',
-            '学校側との連絡・調整',
-            '各委員会の活動支援'
-        ],
-        achievements: [
-            {
-                title: '体育祭の企画改革',
-                description: '昨年度の体育祭で新しい競技を導入し、参加率が20%向上',
-                date: '2024年6月'
-            },
-            {
-                title: '生徒会だよりのデジタル化',
-                description: 'ポータルサイトを活用した情報発信システムを構築',
-                date: '2024年4月'
-            },
-            {
-                title: '学食メニュー改善プロジェクト',
-                description: 'アンケート結果を基に新メニューを3品追加',
-                date: '2024年9月'
-            }
-        ],
-        hobbies: ['読書', 'バスケットボール', 'プログラミング'],
-        motto: '一歩ずつ、確実に前進する',
-        joinDate: '2023年4月'
-    },
-    '2': {
-        id: 2,
-        name: '副会長 田中花子',
-        role: '企画運営',
-        grade: '2年B組',
-        message: 'イベント企画を通じて、みんなが楽しめる学校生活を作ることが私の使命です。新しいアイデアをお待ちしています！',
-        longMessage: '副会長として、主に学校行事の企画・運営を担当しています。文化祭、体育祭、卒業式など、皆さんの思い出に残る素晴らしいイベントを作ることが私の目標です。創造力豊かなアイデアと実行力で、学校生活をより彩り豊かにしていきたいと思います。',
-        image: null,
-        responsibilities: [
-            '学校行事の企画・運営',
-            '委員会間の連絡調整',
-            'イベント予算の管理等',
-            '外部団体との連携',
-            '広報活動の企画'
-        ],
-        achievements: [
-            {
-                title: '文化祭来場者数記録更新',
-                description: '新しい企画により来場者数が過去最高を記録',
-                date: '2024年10月'
-            },
-            {
-                title: '生徒交流イベント開催',
-                description: '他校との交流イベントを企画・実施',
-                date: '2024年7月'
-            }
-        ],
-        hobbies: ['音楽', 'イラスト', '映画鑑賞'],
-        motto: '創造力で未来を切り開く',
-        joinDate: '2023年4月'
-    },
-    '3': {
-        id: 3,
-        name: '書記 鈴木一郎',
-        role: '議事録作成・情報管理',
-        grade: '2年C組',
-        message: '透明性のある活動を目指し、正確な情報管理に努めています。皆さんに分かりやすい情報発信を心がけています。',
-        longMessage: '書記として、生徒会の活動記録や情報管理を担当しています。会議の議事録作成、資料整理、情報の整理・発信など、生徒会活動の記録係として重要な役割を果たしています。透明性のある組織運営を支え、皆さんに正確で分かりやすい情報をお届けします。',
-        image: null,
-        responsibilities: [
-            '会議の議事録作成',
-            '資料・文書の管理',
-            '情報の整理・発信',
-            'ポータルサイトの更新',
-            '各種報告書の作成'
-        ],
-        achievements: [
-            {
-                title: '議事録システムの効率化',
-                description: 'デジタル化により議事録作成時間を50%短縮',
-                date: '2024年5月'
-            },
-            {
-                title: '情報公開制度の導入',
-                description: '生徒会活動の透明性を高める仕組みを構築',
-                date: '2024年8月'
-            }
-        ],
-        hobbies: ['写真', '文章執筆', 'パソコン'],
-        motto: '正確性と効率性の両立',
-        joinDate: '2023年9月'
-    },
-    '4': {
-        id: 4,
-        name: '会計 佐藤美咲',
-        role: '予算管理・会計',
-        grade: '1年D組',
-        message: '予算を有効活用し、生徒会活動をしっかりと支えます。お金の使い方について透明性を保ち、説明責任を果たします。',
-        longMessage: '会計として、生徒会の予算管理と会計業務を担当しています。限られた予算の中で最大の効果を得られるよう、計画的で効率的な資金運用を心がけています。また、予算の使途について透明性を保ち、定期的に収支報告を行っています。皆さんからの貴重な予算を大切に使わせていただきます。',
-        image: null,
-        responsibilities: [
-            '予算の策定・管理',
-            '収支の記録・報告',
-            '支出の承認・監査',
-            '会計資料の作成',
-            '予算執行の効率化'
-        ],
-        achievements: [
-            {
-                title: '予算管理システムの導入',
-                description: 'デジタル家計簿システムで収支管理を効率化',
-                date: '2024年11月'
-            },
-            {
-                title: '予算削減プロジェクト',
-                description: '無駄な支出を見直し、年間予算の10%を削減',
-                date: '2024年12月'
-            }
-        ],
-        hobbies: ['数学', '料理', 'ゲーム'],
-        motto: '一円を笑う者は一円に泣く',
-        joinDate: '2024年4月'
-    }
-};
+// メンバーデータ（実際はSupabaseから取得）:削除済み
+
 
 // URLパラメータからメンバーIDを取得
 function getMemberIdFromURL() {
@@ -292,7 +162,7 @@ async function loadMemberDetail() {
                         // hobbies のデフォルト設定
                         hobbies: ['準備中'],
                         motto: member.message || '準備中',
-                        joinDate: member.created_at || new Date().toISOString()
+                        joinDate: member.join_date || member.created_at || new Date().toISOString()
                     };
                     
                     console.log('Processed member data:', member);
@@ -321,6 +191,59 @@ async function loadMemberDetail() {
             return;
         }
         
+        // hobbiesとactivitiesをbioから復元
+        if (member.bio) {
+            try {
+                const bioData = JSON.parse(member.bio);
+                if (bioData.hobbies) {
+                    member.hobbies = bioData.hobbies;
+                }
+                if (bioData.activities) {
+                    member.activities = bioData.activities;
+                }
+            } catch (e) {
+                // bioがJSONでない場合は無視
+            }
+        }
+        
+        // join_dateが存在する場合はそれを使用、なければcreated_atを使用
+        if (member.join_date) {
+            member.joinDate = member.join_date;
+        } else if (!member.joinDate) {
+            member.joinDate = member.created_at || new Date().toISOString();
+        }
+        
+        // 活動実績をmember_achievementsテーブルから取得
+        if (window.supabaseQueries && window.supabaseQueries.isAvailable) {
+            try {
+                console.log('Loading achievements for member ID:', memberId);
+                const { data: achievements, error: achievementsError } = await window.supabaseQueries.getMemberAchievements(memberId, {
+                    includePublicOnly: true,
+                    limit: 100
+                });
+                
+                if (achievementsError) {
+                    console.error('Error loading achievements:', achievementsError);
+                } else if (achievements && achievements.length > 0) {
+                    console.log('Loaded achievements:', achievements.length);
+                    // member_achievementsテーブルから取得した活動実績を使用
+                    member.achievements = achievements;
+                } else {
+                    console.log('No achievements found in member_achievements table');
+                    // member_achievementsテーブルに活動実績がない場合は、council_membersのachievementsフィールドを使用（後方互換性のため）
+                    if (!member.achievements || member.achievements.length === 0) {
+                        member.achievements = [];
+                    }
+                }
+            } catch (error) {
+                console.error('Error fetching achievements:', error);
+                // エラーが発生しても、既存のachievementsフィールドを使用
+            }
+        }
+        
+        // 現在のメンバーデータを保存
+        setCurrentMember(member);
+        
         // ページタイトルを更新
         document.title = `${member.name} - なずなポータル`;
         
@@ -332,6 +255,9 @@ async function loadMemberDetail() {
         displayMemberMessage(member);
         displayMemberResponsibilities(member);
         displayMemberAchievements(member);
+        
+        // 活動予定を表示
+        displayActivities(member);
         
     } catch (error) {
         console.error('Error loading member detail:', error);
@@ -348,8 +274,8 @@ function displayMemberHero(member) {
     heroContainer.innerHTML = `
         <div class="member-hero-content">
             <div class="member-hero-avatar">
-                ${member.image ? 
-                    `<img src="${member.image}" alt="${member.name}" class="member-image">` :
+                ${member.image_url ? 
+                    `<img src="${member.image_url}" alt="${member.name}" class="member-image" onerror="this.onerror=null; this.parentElement.innerHTML='<div class=\\'member-placeholder\\'><i class=\\'fas fa-user\\'></i></div>';">` :
                     `<div class="member-placeholder">
                         <i class="fas fa-user"></i>
                     </div>`
@@ -374,45 +300,73 @@ function displayMemberHero(member) {
     `;
 }
 
+// 管理者チェック
+function isAdmin() {
+    const adminToken = sessionStorage.getItem('admin_token');
+    const adminEmail = sessionStorage.getItem('admin_email');
+    return !!(adminToken && adminEmail);
+}
+
 // プロフィール表示
 function displayMemberProfile(member) {
     const profileContainer = document.getElementById('profile-content');
     if (!profileContainer) return;
     
+    const canEdit = isAdmin();
+    const hobbiesText = Array.isArray(member.hobbies) ? member.hobbies.join(', ') : (member.hobbies || '');
+    
     profileContainer.innerHTML = `
-        <div class="profile-grid">
+        <div class="profile-grid" id="profile-grid">
             <div class="profile-item">
                 <div class="profile-label">
                     <i class="fas fa-graduation-cap"></i>
                     学年・クラス
                 </div>
-                <div class="profile-value">${member.grade}</div>
+                <div class="profile-value">${member.grade || '未設定'}</div>
             </div>
-            <div class="profile-item">
+            <div class="profile-item" id="profile-join-date">
                 <div class="profile-label">
                     <i class="fas fa-calendar-plus"></i>
                     活動開始
+                    ${canEdit ? '<button class="edit-btn-small" onclick="editJoinDate()" title="編集"><i class="fas fa-edit"></i></button>' : ''}
                 </div>
-                <div class="profile-value">${formatJoinDate(member.joinDate)}</div>
+                <div class="profile-value" id="join-date-value">${formatJoinDate(member.joinDate)}</div>
+                <div class="profile-edit" id="join-date-edit" style="display: none;">
+                    <input type="date" id="join-date-input" class="form-control" value="${member.join_date ? formatDateForInput(member.join_date) : formatDateForInput(member.joinDate)}">
+                    <button class="btn btn-sm btn-primary" onclick="saveJoinDate()">保存</button>
+                    <button class="btn btn-sm btn-secondary" onclick="cancelEditJoinDate()">キャンセル</button>
+                </div>
             </div>
-            <div class="profile-item">
+            <div class="profile-item" id="profile-hobbies">
                 <div class="profile-label">
                     <i class="fas fa-heart"></i>
                     趣味
-              </div>
-              <div class="profile-value">
-                  ${member.hobbies.map(hobby => `<span class="hobby-tag">${hobby}</span>`).join('')}
-              </div>
-          </div>
-          <div class="profile-item">
-              <div class="profile-label">
-                  <i class="fas fa-star"></i>
-                  座右の銘
-              </div>
-              <div class="profile-value">"${member.motto}"</div>
-          </div>
-      </div>
-  `;
+                    ${canEdit ? '<button class="edit-btn-small" onclick="editHobbies()" title="編集"><i class="fas fa-edit"></i></button>' : ''}
+                </div>
+                <div class="profile-value" id="hobbies-value">
+                    ${hobbiesText ? hobbiesText.split(',').map(hobby => `<span class="hobby-tag">${hobby.trim()}</span>`).join('') : '<span class="text-muted">未設定</span>'}
+                </div>
+                <div class="profile-edit" id="hobbies-edit" style="display: none;">
+                    <textarea id="hobbies-input" class="form-control" rows="2" placeholder="趣味をカンマ区切りで入力">${hobbiesText}</textarea>
+                    <button class="btn btn-sm btn-primary" onclick="saveHobbies()">保存</button>
+                    <button class="btn btn-sm btn-secondary" onclick="cancelEditHobbies()">キャンセル</button>
+                </div>
+            </div>
+            <div class="profile-item" id="profile-motto">
+                <div class="profile-label">
+                    <i class="fas fa-star"></i>
+                    座右の銘
+                    ${canEdit ? '<button class="edit-btn-small" onclick="editMotto()" title="編集"><i class="fas fa-edit"></i></button>' : ''}
+                </div>
+                <div class="profile-value" id="motto-value">"${member.motto || '未設定'}"</div>
+                <div class="profile-edit" id="motto-edit" style="display: none;">
+                    <input type="text" id="motto-input" class="form-control" value="${member.motto || ''}" placeholder="座右の銘を入力">
+                    <button class="btn btn-sm btn-primary" onclick="saveMotto()">保存</button>
+                    <button class="btn btn-sm btn-secondary" onclick="cancelEditMotto()">キャンセル</button>
+                </div>
+            </div>
+        </div>
+    `;
 }
 
 // メッセージ表示
@@ -580,8 +534,8 @@ async function loadOtherMembers() {
         otherMembersContainer.innerHTML = otherMembers.map(member => `
             <div class="other-member-item">
                 <div class="other-member-avatar">
-                    ${member.image ? 
-                        `<img src="${member.image}" alt="${member.name}">` :
+                    ${member.image_url ? 
+                        `<img src="${member.image_url}" alt="${member.name}" onerror="this.onerror=null; this.parentElement.innerHTML='<i class=\\'fas fa-user\\'></i>';" style="width: 60px; height: 60px; border-radius: 50%; object-fit: cover;">` :
                         `<i class="fas fa-user"></i>`
                     }
                 </div>
@@ -638,6 +592,432 @@ function formatJoinDate(dateString) {
     const date = new Date(dateString);
     return `${date.getFullYear()}年${date.getMonth() + 1}月`;
 }
+
+// 日付をinput type="date"用にフォーマット
+function formatDateForInput(dateString) {
+    const date = new Date(dateString);
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+}
+
+// 現在のメンバーIDを保持
+let currentMemberId = null;
+let currentMemberData = null;
+
+// メンバーデータを保存
+function setCurrentMember(member) {
+    currentMemberId = member.id;
+    currentMemberData = member;
+}
+
+// 活動開始の編集
+function editJoinDate() {
+    if (!isAdmin()) return;
+    document.getElementById('join-date-value').style.display = 'none';
+    document.getElementById('join-date-edit').style.display = 'block';
+}
+
+// 活動開始の保存
+async function saveJoinDate() {
+    if (!isAdmin()) return;
+    
+    const input = document.getElementById('join-date-input');
+    const newDate = input.value;
+    
+    if (!newDate) {
+        showErrorMessage('日付を入力してください。');
+        return;
+    }
+    
+    try {
+        const memberId = getMemberIdFromURL();
+        
+        if (window.supabaseClient) {
+            // join_dateカラムを更新
+            const { error } = await window.supabaseClient
+                .from('council_members')
+                .update({ join_date: newDate })
+                .eq('id', memberId);
+            
+            if (error) throw error;
+            
+            // キャッシュを更新
+            if (currentMemberData) {
+                currentMemberData.joinDate = newDate;
+                currentMemberData.join_date = newDate;
+                setCachedMemberDetail(memberId, currentMemberData);
+            }
+            
+            // 表示を更新
+            document.getElementById('join-date-value').textContent = formatJoinDate(newDate);
+            
+            showSuccessMessage('活動開始日を保存しました。');
+        } else {
+            showErrorMessage('データベースに接続できません。');
+        }
+    } catch (error) {
+        console.error('Error saving join date:', error);
+        showErrorMessage('保存に失敗しました。' + (error.message || ''));
+    }
+    
+    cancelEditJoinDate();
+}
+
+// 活動開始の編集キャンセル
+function cancelEditJoinDate() {
+    document.getElementById('join-date-value').style.display = 'block';
+    document.getElementById('join-date-edit').style.display = 'none';
+}
+
+// 趣味の編集
+function editHobbies() {
+    if (!isAdmin()) return;
+    document.getElementById('hobbies-value').style.display = 'none';
+    document.getElementById('hobbies-edit').style.display = 'block';
+}
+
+// 趣味の保存
+async function saveHobbies() {
+    if (!isAdmin()) return;
+    
+    const input = document.getElementById('hobbies-input');
+    const hobbiesText = input.value.trim();
+    
+    try {
+        const memberId = getMemberIdFromURL();
+        
+        if (window.supabaseClient) {
+            // hobbiesカラムが存在しない場合は、JSONBフィールドまたは別の方法で保存
+            // 一時的にachievementsに保存するか、データベーススキーマを変更する必要がある
+            // 現在はbioフィールドにJSONとして保存する方法を試行
+            const hobbiesArray = hobbiesText ? hobbiesText.split(',').map(h => h.trim()).filter(h => h) : [];
+            
+            // bioにJSONとして保存（一時的な対応）
+            const currentBio = currentMemberData?.bio || '';
+            let bioData = {};
+            try {
+                bioData = currentBio ? JSON.parse(currentBio) : {};
+            } catch (e) {
+                // bioがJSONでない場合は、既存のbioを保持
+                bioData = { original: currentBio, hobbies: hobbiesArray };
+            }
+            bioData.hobbies = hobbiesArray;
+            
+            const { error } = await window.supabaseClient
+                .from('council_members')
+                .update({ bio: JSON.stringify(bioData) })
+                .eq('id', memberId);
+            
+            if (error) throw error;
+            
+            // キャッシュを更新
+            if (currentMemberData) {
+                currentMemberData.hobbies = hobbiesArray;
+                currentMemberData.bio = JSON.stringify(bioData);
+                setCachedMemberDetail(memberId, currentMemberData);
+            }
+            
+            // 表示を更新
+            const hobbiesDisplay = hobbiesArray.length > 0 
+                ? hobbiesArray.map(hobby => `<span class="hobby-tag">${hobby}</span>`).join('')
+                : '<span class="text-muted">未設定</span>';
+            document.getElementById('hobbies-value').innerHTML = hobbiesDisplay;
+            
+            showSuccessMessage('趣味を保存しました。');
+        } else {
+            showErrorMessage('データベースに接続できません。');
+        }
+    } catch (error) {
+        console.error('Error saving hobbies:', error);
+        showErrorMessage('保存に失敗しました。');
+    }
+    
+    cancelEditHobbies();
+}
+
+// 趣味の編集キャンセル
+function cancelEditHobbies() {
+    document.getElementById('hobbies-value').style.display = 'block';
+    document.getElementById('hobbies-edit').style.display = 'none';
+}
+
+// 座右の銘の編集
+function editMotto() {
+    if (!isAdmin()) return;
+    document.getElementById('motto-value').style.display = 'none';
+    document.getElementById('motto-edit').style.display = 'block';
+}
+
+// 座右の銘の保存
+async function saveMotto() {
+    if (!isAdmin()) return;
+    
+    const input = document.getElementById('motto-input');
+    const motto = input.value.trim();
+    
+    try {
+        const memberId = getMemberIdFromURL();
+        
+        if (window.supabaseClient) {
+            // mottoはmessageカラムに保存（または別のカラムを追加）
+            // 現在はmessageカラムを更新
+            const { error } = await window.supabaseClient
+                .from('council_members')
+                .update({ message: motto })
+                .eq('id', memberId);
+            
+            if (error) throw error;
+            
+            // キャッシュを更新
+            if (currentMemberData) {
+                currentMemberData.motto = motto;
+                currentMemberData.message = motto;
+                setCachedMemberDetail(memberId, currentMemberData);
+            }
+            
+            // 表示を更新
+            document.getElementById('motto-value').textContent = `"${motto || '未設定'}"`;
+            
+            showSuccessMessage('座右の銘を保存しました。');
+        } else {
+            showErrorMessage('データベースに接続できません。');
+        }
+    } catch (error) {
+        console.error('Error saving motto:', error);
+        showErrorMessage('保存に失敗しました。');
+    }
+    
+    cancelEditMotto();
+}
+
+// 座右の銘の編集キャンセル
+function cancelEditMotto() {
+    document.getElementById('motto-value').style.display = 'block';
+    document.getElementById('motto-edit').style.display = 'none';
+}
+
+// 活動予定を表示
+function displayActivities(member) {
+    const activitiesContainer = document.getElementById('upcoming-activities');
+    if (!activitiesContainer) return;
+    
+    const canEdit = isAdmin();
+    const activities = member.activities || [];
+    
+    if (activities.length === 0) {
+        activitiesContainer.innerHTML = `
+            <div class="no-activities">
+                <p class="text-muted">活動予定が登録されていません</p>
+                ${canEdit ? '<button class="btn btn-sm btn-primary" onclick="editActivities()"><i class="fas fa-plus"></i> 活動予定を追加</button>' : ''}
+            </div>
+        `;
+        return;
+    }
+    
+    activitiesContainer.innerHTML = `
+        ${activities.map((activity, index) => `
+            <div class="activity-item" id="activity-${index}">
+                <div class="activity-date">${formatActivityDate(activity.date)}</div>
+                <div class="activity-info">
+                    <h5>${activity.title || '活動予定'}</h5>
+                    <p>${activity.description || ''}</p>
+                </div>
+                ${canEdit ? `
+                    <button class="edit-btn-small" onclick="deleteActivity(${index})" title="削除">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                ` : ''}
+            </div>
+        `).join('')}
+        ${canEdit ? '<button class="btn btn-sm btn-primary mt-2" onclick="editActivities()"><i class="fas fa-plus"></i> 活動予定を追加</button>' : ''}
+    `;
+}
+
+// 活動予定の日付をフォーマット
+function formatActivityDate(dateString) {
+    if (!dateString) return '';
+    const date = new Date(dateString);
+    const month = date.getMonth() + 1;
+    const day = date.getDate();
+    return `${month}/${day}`;
+}
+
+// 活動予定の編集
+function editActivities() {
+    if (!isAdmin()) return;
+    
+    const activities = currentMemberData?.activities || [];
+    const activitiesText = activities.map(a => {
+        const date = a.date ? formatDateForInput(a.date) : '';
+        return `${date}|${a.title || ''}|${a.description || ''}`;
+    }).join('\n');
+    
+    const modal = document.createElement('div');
+    modal.className = 'edit-modal';
+    modal.innerHTML = `
+        <div class="edit-modal-content">
+            <div class="edit-modal-header">
+                <h3>活動予定を編集</h3>
+                <button class="close-btn" onclick="closeEditActivitiesModal()">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="edit-modal-body">
+                <p class="text-muted mb-2">形式: 日付|タイトル|説明（1行に1つの活動予定）</p>
+                <textarea id="activities-input" class="form-control" rows="10" placeholder="例:&#10;2024-02-15|生徒会会議|定例会議&#10;2024-02-20|体育祭準備会|企画検討">${activitiesText}</textarea>
+            </div>
+            <div class="edit-modal-footer">
+                <button class="btn btn-primary" onclick="saveActivities()">保存</button>
+                <button class="btn btn-secondary" onclick="closeEditActivitiesModal()">キャンセル</button>
+            </div>
+        </div>
+    `;
+    modal.id = 'activities-edit-modal';
+    document.body.appendChild(modal);
+    setTimeout(() => modal.classList.add('show'), 10);
+}
+
+// 活動予定モーダルを閉じる
+function closeEditActivitiesModal() {
+    const modal = document.getElementById('activities-edit-modal');
+    if (modal) {
+        modal.classList.remove('show');
+        setTimeout(() => modal.remove(), 300);
+    }
+}
+
+// 活動予定を保存
+async function saveActivities() {
+    if (!isAdmin()) return;
+    
+    const input = document.getElementById('activities-input');
+    const activitiesText = input.value.trim();
+    
+    try {
+        const memberId = getMemberIdFromURL();
+        
+        // テキストをパースして活動予定配列を作成
+        const activities = [];
+        if (activitiesText) {
+            const lines = activitiesText.split('\n').filter(line => line.trim());
+            lines.forEach(line => {
+                const parts = line.split('|');
+                if (parts.length >= 2) {
+                    activities.push({
+                        date: parts[0].trim(),
+                        title: parts[1].trim(),
+                        description: parts[2] ? parts[2].trim() : ''
+                    });
+                }
+            });
+        }
+        
+        if (window.supabaseClient) {
+            // activitiesをbioにJSONとして保存
+            const currentBio = currentMemberData?.bio || '';
+            let bioData = {};
+            try {
+                bioData = currentBio ? JSON.parse(currentBio) : {};
+            } catch (e) {
+                // bioがJSONでない場合は、既存のbioを保持
+                bioData = { original: currentBio };
+            }
+            bioData.activities = activities;
+            
+            const { error } = await window.supabaseClient
+                .from('council_members')
+                .update({ bio: JSON.stringify(bioData) })
+                .eq('id', memberId);
+            
+            if (error) throw error;
+            
+            // キャッシュを更新
+            if (currentMemberData) {
+                currentMemberData.activities = activities;
+                currentMemberData.bio = JSON.stringify(bioData);
+                setCachedMemberDetail(memberId, currentMemberData);
+            }
+            
+            // 表示を更新
+            displayActivities(currentMemberData);
+            
+            showSuccessMessage('活動予定を保存しました。');
+        } else {
+            showErrorMessage('データベースに接続できません。');
+        }
+    } catch (error) {
+        console.error('Error saving activities:', error);
+        showErrorMessage('保存に失敗しました。');
+    }
+    
+    closeEditActivitiesModal();
+}
+
+// 活動予定を削除
+async function deleteActivity(index) {
+    if (!isAdmin()) return;
+    
+    if (!confirm('この活動予定を削除しますか？')) return;
+    
+    try {
+        const memberId = getMemberIdFromURL();
+        const activities = [...(currentMemberData?.activities || [])];
+        activities.splice(index, 1);
+        
+        if (window.supabaseClient) {
+            // activitiesをbioにJSONとして保存
+            const currentBio = currentMemberData?.bio || '';
+            let bioData = {};
+            try {
+                bioData = currentBio ? JSON.parse(currentBio) : {};
+            } catch (e) {
+                bioData = { original: currentBio };
+            }
+            bioData.activities = activities;
+            
+            const { error } = await window.supabaseClient
+                .from('council_members')
+                .update({ bio: JSON.stringify(bioData) })
+                .eq('id', memberId);
+            
+            if (error) throw error;
+            
+            // キャッシュを更新
+            if (currentMemberData) {
+                currentMemberData.activities = activities;
+                currentMemberData.bio = JSON.stringify(bioData);
+                setCachedMemberDetail(memberId, currentMemberData);
+            }
+            
+            // 表示を更新
+            displayActivities(currentMemberData);
+            
+            showSuccessMessage('活動予定を削除しました。');
+        } else {
+            showErrorMessage('データベースに接続できません。');
+        }
+    } catch (error) {
+        console.error('Error deleting activity:', error);
+        showErrorMessage('削除に失敗しました。');
+    }
+}
+
+// 編集関数をグローバルに公開
+window.editJoinDate = editJoinDate;
+window.saveJoinDate = saveJoinDate;
+window.cancelEditJoinDate = cancelEditJoinDate;
+window.editHobbies = editHobbies;
+window.saveHobbies = saveHobbies;
+window.cancelEditHobbies = cancelEditHobbies;
+window.editMotto = editMotto;
+window.saveMotto = saveMotto;
+window.cancelEditMotto = cancelEditMotto;
+window.editActivities = editActivities;
+window.saveActivities = saveActivities;
+window.closeEditActivitiesModal = closeEditActivitiesModal;
+window.deleteActivity = deleteActivity;
 
 // 生徒会ページでこの関数を呼び出すために、グローバルに公開
 window.makeCouncilMembersClickable = makeCouncilMembersClickable;

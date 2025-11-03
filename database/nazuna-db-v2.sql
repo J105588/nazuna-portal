@@ -158,6 +158,7 @@ CREATE TABLE IF NOT EXISTS council_members (
     email VARCHAR(200),
     responsibilities TEXT[],
     achievements TEXT[],
+    join_date DATE,
     is_active BOOLEAN DEFAULT true,
     display_order INTEGER DEFAULT 0,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),

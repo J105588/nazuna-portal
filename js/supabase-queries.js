@@ -52,7 +52,6 @@ class SupabaseQueries {
             let query = this.client
                 .from('clubs')
                 .select('*')
-                .order('display_order', { ascending: true })
                 .order('created_at', { ascending: false })
                 .range(offset, offset + limit - 1);
 
@@ -65,9 +64,40 @@ class SupabaseQueries {
             }
 
             const { data, error } = await query;
+            
+            // display_orderカラムが存在しない場合のエラーハンドリング
+            if (error && error.code === '42703' && error.message?.includes('display_order')) {
+                // フォールバック: created_atのみでソート
+                try {
+                    let fallbackQuery = this.client
+                        .from('clubs')
+                        .select('*')
+                        .order('created_at', { ascending: false })
+                        .range(offset, offset + limit - 1);
+                    
+                    if (activeOnly) {
+                        fallbackQuery = fallbackQuery.eq('is_active', true);
+                    }
+                    
+                    if (category) {
+                        fallbackQuery = fallbackQuery.eq('category', category);
+                    }
+                    
+                    const { data: fallbackData, error: fallbackError } = await fallbackQuery;
+                    return { data: fallbackData || [], error: fallbackError };
+                } catch (fallbackErr) {
+                    console.error('Fallback query failed:', fallbackErr);
+                    return { data: [], error: fallbackErr };
+                }
+            }
+            
             return { data: data || [], error };
         } catch (error) {
             console.error('Error fetching clubs:', error);
+            // display_orderエラーの場合は空データを返す（既に上で処理済み）
+            if (error.code === '42703' && error.message?.includes('display_order')) {
+                return { data: [], error: null };
+            }
             return { data: [], error };
         }
     }
@@ -129,6 +159,23 @@ class SupabaseQueries {
             return { data: [], error: null };
         }
 
+        // クライアントのURLを検証（可能な場合）
+        if (this.client && this.client.supabaseUrl && window.CONFIG?.SUPABASE?.URL) {
+            if (this.client.supabaseUrl !== window.CONFIG.SUPABASE.URL) {
+                console.error('Supabase client URL mismatch in getCouncilMembers!');
+                console.error('Client URL:', this.client.supabaseUrl);
+                console.error('Config URL:', window.CONFIG.SUPABASE.URL);
+                
+                // クライアントを再初期化
+                if (typeof window.clearSupabaseCacheAndReinit === 'function') {
+                    console.log('Attempting to reinitialize Supabase client...');
+                    window.clearSupabaseCacheAndReinit();
+                }
+                
+                return { data: [], error: { message: 'Supabase client URL mismatch' } };
+            }
+        }
+
         try {
             let query = this.client
                 .from('council_members')
@@ -144,6 +191,26 @@ class SupabaseQueries {
             
             if (error) {
                 console.error('Supabase query error:', error);
+                
+                // ERR_NAME_NOT_RESOLVED エラーを検出
+                const errorMsg = error.message || '';
+                const errorDetails = error.details || '';
+                const errorHint = error.hint || '';
+                
+                if (errorMsg.includes('ERR_NAME_NOT_RESOLVED') || 
+                    errorMsg.includes('Failed to fetch') ||
+                    errorDetails.includes('ERR_NAME_NOT_RESOLVED')) {
+                    console.error('DNS resolution failed in getCouncilMembers');
+                    console.error('Error details:', { errorMsg, errorDetails, errorHint });
+                    console.log('Current Supabase URL:', window.CONFIG?.SUPABASE?.URL);
+                    
+                    // クライアントを再初期化
+                    if (typeof window.clearSupabaseCacheAndReinit === 'function') {
+                        console.log('Attempting to reinitialize Supabase client...');
+                        window.clearSupabaseCacheAndReinit();
+                    }
+                }
+                
                 return { data: [], error };
             }
 

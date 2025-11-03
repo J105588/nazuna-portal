@@ -15,40 +15,102 @@ let currentUser = null;
 document.addEventListener('DOMContentLoaded', async () => {
     console.log('Admin panel initializing...');
     await waitForInitialization();
+    
+    // API Clientが初期化されていることを確認
+    if (!window.apiClient) {
+        console.error('API Client not initialized, cannot verify session');
+        showAccessDenied();
+        return;
+    }
+    
+    console.log('API Client ready, checking session...');
     await checkExistingSession();
     setupEventListeners();
 });
 
 // 初期化待機関数
 async function waitForInitialization() {
+    console.log('=== Waiting for initialization ===');
     let attempts = 0;
-    const maxAttempts = 10;
+    const maxAttempts = 20; // 10秒間待機（500ms × 20）
     
     while (attempts < maxAttempts) {
-        if (!window.apiClient && typeof APIClient !== 'undefined') {
+        // API Clientの初期化を試みる
+        if (!window.apiClient) {
+            // app.jsから読み込まれたAPIClientクラスを使用してインスタンスを作成
+            if (typeof APIClient !== 'undefined') {
                 try {
+                    console.log('Creating new API Client instance...');
                     window.apiClient = new APIClient();
-                console.log('API Client initialized');
+                    console.log('API Client initialized successfully');
                 } catch (error) {
                     console.error('API Client initialization failed:', error);
+                }
+            } else {
+                console.log(`Waiting for APIClient class... (attempt ${attempts + 1}/${maxAttempts})`);
             }
+        } else {
+            console.log('API Client already initialized');
         }
         
+        // Supabase Clientの初期化を試みる
         if (!window.supabaseClient && typeof supabase !== 'undefined' && window.CONFIG?.SUPABASE) {
-                try {
-                    window.supabaseClient = supabase.createClient(
-                        window.CONFIG.SUPABASE.URL, 
-                        window.CONFIG.SUPABASE.ANON_KEY,
-                        window.CONFIG.SUPABASE.OPTIONS || {}
-                    );
-                console.log('Supabase initialized');
-                } catch (error) {
-                    console.error('Supabase initialization failed:', error);
+            try {
+                const supabaseUrl = window.CONFIG.SUPABASE.URL;
+                const supabaseAnonKey = window.CONFIG.SUPABASE.ANON_KEY;
+                
+                // URLの検証
+                if (!supabaseUrl || !supabaseAnonKey) {
+                    console.warn('Supabase URL or key not configured');
+                } else {
+                    // URLが正しい形式か検証
+                    if (!supabaseUrl.startsWith('https://') || !supabaseUrl.includes('.supabase.co')) {
+                        console.error('Invalid Supabase URL format:', supabaseUrl);
+                    } else {
+                        // 古いURLを使用していないかチェック
+                        const oldInvalidUrls = ['jirppalacwwinwnsyauo', 'jffjacpedwldbgmggdcy'];
+                        const isOldUrl = oldInvalidUrls.some(oldUrl => supabaseUrl.includes(oldUrl));
+                        if (isOldUrl) {
+                            console.warn('Detected old/invalid Supabase URL:', supabaseUrl);
+                            console.log('Please update CONFIG.SUPABASE.URL in js/config.js');
+                        } else {
+                            // ストレージキャッシュをクリア（可能な場合）
+                            if (typeof window.clearSupabaseStorageCache === 'function') {
+                                window.clearSupabaseStorageCache();
+                            }
+                            
+                            console.log('Creating Supabase client with URL:', supabaseUrl);
+                            window.supabaseClient = supabase.createClient(
+                                supabaseUrl, 
+                                supabaseAnonKey,
+                                window.CONFIG.SUPABASE.OPTIONS || {}
+                            );
+                            
+                            // 作成されたクライアントのURLを検証（可能な場合）
+                            if (window.supabaseClient && window.supabaseClient.supabaseUrl) {
+                                if (window.supabaseClient.supabaseUrl !== supabaseUrl) {
+                                    console.error('Supabase client URL mismatch after creation!');
+                                    console.log('Expected URL:', supabaseUrl);
+                                    console.log('Client URL:', window.supabaseClient.supabaseUrl);
+                                    window.supabaseClient = null;
+                                } else {
+                                    console.log('Supabase initialized successfully');
+                                }
+                            } else {
+                                console.log('Supabase client created (URL verification skipped)');
+                            }
+                        }
+                    }
+                }
+            } catch (error) {
+                console.error('Supabase initialization failed:', error);
+                window.supabaseClient = null;
             }
         }
         
-        if (window.apiClient && window.supabaseClient) {
-            console.log('All components initialized');
+        // API Clientが初期化されていれば、Supabaseは必須ではない
+        if (window.apiClient) {
+            console.log('Initialization complete - API Client ready');
             break;
         }
         
@@ -56,9 +118,13 @@ async function waitForInitialization() {
         await new Promise(resolve => setTimeout(resolve, 500));
     }
     
+    // 最終確認
     if (!window.apiClient) {
-        console.error('API Client initialization failed');
-        showError('システムエラー: APIクライアントが初期化できませんでした');
+        console.error('API Client initialization failed after', maxAttempts, 'attempts');
+        console.error('APIClient class available:', typeof APIClient !== 'undefined');
+        console.error('window.apiClient exists:', !!window.apiClient);
+    } else {
+        console.log('API Client is ready');
     }
     
     if (!window.supabaseClient) {
@@ -67,52 +133,87 @@ async function waitForInitialization() {
 }
 
 // =====================================
-// セッション管理
+// セッション管理（トークン検証のみ）
 // =====================================
 async function checkExistingSession() {
+    console.log('=== Checking existing session ===');
     const adminToken = sessionStorage.getItem('admin_token');
     const adminEmail = sessionStorage.getItem('admin_email');
     
-    if (adminToken && adminEmail) {
-        console.log('Existing session found, verifying...');
-        try {
-            const isValid = await verifyAdminSession(adminToken, adminEmail);
-            if (isValid) {
-                isAuthenticated = true;
-                currentUser = { email: adminEmail };
-                showAdminPanel(currentUser);
-            } else {
-                clearSession();
-                showLoginScreen();
-            }
-        } catch (error) {
-            console.error('Session verification error:', error);
+    console.log('Token exists:', !!adminToken);
+    console.log('Email exists:', !!adminEmail);
+    
+    // トークンがない場合はアクセス拒否
+    if (!adminToken || !adminEmail) {
+        console.log('No token found, access denied');
+        showAccessDenied();
+        return;
+    }
+    
+    // API Clientが存在することを確認
+    if (!window.apiClient) {
+        console.error('API Client not available for token verification');
+        showAccessDenied();
+        return;
+    }
+    
+    // トークンを検証
+    console.log('Verifying token...');
+    console.log('Token (first 10 chars):', adminToken.substring(0, 10) + '...');
+    console.log('Email:', adminEmail);
+    
+    try {
+        const isValid = await verifyAdminSession(adminToken, adminEmail);
+        console.log('Token verification result:', isValid);
+        
+        if (isValid) {
+            console.log('Token is valid, showing admin panel');
+            isAuthenticated = true;
+            currentUser = { email: adminEmail };
+            showAdminPanel(currentUser);
+        } else {
+            // トークンが無効な場合はアクセス拒否
+            console.log('Token invalid, access denied');
             clearSession();
-            showLoginScreen();
+            showAccessDenied();
         }
-    } else {
-        showLoginScreen();
+    } catch (error) {
+        // 検証エラーでもアクセス拒否のみ表示
+        console.error('Session verification error:', error);
+        console.error('Error details:', error.message, error.stack);
+        clearSession();
+        showAccessDenied();
     }
 }
 
 async function verifyAdminSession(token, email) {
     try {
+        // API Clientが存在することを確認
+        if (!window.apiClient) {
+            console.error('API Client not available for verification');
+            return false;
+        }
+        
+        console.log('Sending verification request...');
         const result = await window.apiClient.sendRequest('verifyAdminSession', {
             token: token,
             email: email
         });
         
+        console.log('Verification response:', result);
+        
         // GASのverifyAdminSessionは{valid: true/false, user: ..., error: ...}形式で返す
         // app.jsがsuccessプロパティを期待するため、validをsuccessに変換する必要がある
         if (result && result.valid === true) {
             currentUser = result.user || { email: email };
+            console.log('Session verified successfully');
             return true;
         }
         
         // 無効なセッションの場合
         if (result && result.valid === false) {
             console.log('Session invalid:', result.error || 'Token expired or invalid');
-        return false;
+            return false;
         }
         
         // レスポンス形式が不明な場合
@@ -121,6 +222,8 @@ async function verifyAdminSession(token, email) {
     } catch (error) {
         // エラーの詳細をログに記録
         console.error('Session verification error:', error);
+        console.error('Error message:', error.message);
+        console.error('Error stack:', error.stack);
         // ネットワークエラーやAPIエラーの場合も無効とみなす
         return false;
     }
@@ -134,83 +237,75 @@ function clearSession() {
 }
 
 // =====================================
-// 認証
+// 認証（トークン検証のみ）
 // =====================================
-async function hashPassword(password) {
-    const encoder = new TextEncoder();
-    const data = encoder.encode(password);
-    const hashBuffer = await crypto.subtle.digest('SHA-256', data);
-    const hashArray = Array.from(new Uint8Array(hashBuffer));
-    return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
-}
-
-async function performLogin(email, password) {
-    const loginButton = document.getElementById('login-btn');
-    const loginError = document.getElementById('login-error');
-    
-    loginButton.disabled = true;
-    loginButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> ログイン中...';
-    loginError.style.display = 'none';
-    
-    try {
-        if (!window.apiClient) {
-            if (typeof APIClient !== 'undefined') {
-                window.apiClient = new APIClient();
-            } else {
-                throw new Error('API Clientが初期化されていません');
-            }
-        }
-        
-        const passwordHash = await hashPassword(password);
-        const result = await window.apiClient.sendRequest('adminLogin', {
-            email: email,
-            passwordHash: passwordHash
-        });
-        
-        if (result.success) {
-            sessionStorage.setItem('admin_token', result.token);
-            sessionStorage.setItem('admin_email', email);
-            isAuthenticated = true;
-            currentUser = result.user;
-            showAdminPanel(currentUser);
-        } else {
-            throw new Error(result.error || 'ログインに失敗しました');
-        }
-    } catch (error) {
-        console.error('Login error:', error);
-        const loginErrorText = document.getElementById('login-error-text');
-        if (loginErrorText) {
-            loginErrorText.textContent = error.message || 'ログインに失敗しました';
-        }
-        loginError.style.display = 'block';
-            loginButton.disabled = false;
-        loginButton.innerHTML = '<i class="fas fa-sign-in-alt"></i> ログイン';
-    }
-}
+// ログイン機能はlogin.htmlに移行しました
+// ここではトークン検証のみを行います
 
 function performLogout() {
     clearSession();
-    showLoginScreen();
+    // ログアウト後はlogin.htmlにリダイレクト
+    window.location.href = 'login.html';
 }
 
 // =====================================
 // UI表示制御
 // =====================================
-function showLoginScreen() {
-    document.getElementById('login-screen').style.display = 'block';
-    document.getElementById('admin-main').style.display = 'none';
+function showAccessDenied() {
+    // JSON形式で「not allowed」のみを返す
+    // ページ全体をクリアしてJSON文字列のみ表示
+    document.body.innerHTML = '';
+    document.body.style.cssText = 'margin: 0; padding: 0; font-family: monospace;';
+    
+    // JSON形式のレスポンスを設定
+    const jsonResponse = JSON.stringify({ error: 'not allowed' });
+    
+    // Content-TypeをJSONに設定（可能な範囲で）
+    const meta = document.createElement('meta');
+    meta.httpEquiv = 'Content-Type';
+    meta.content = 'application/json';
+    document.head.appendChild(meta);
+    
+    // JSON文字列のみを表示
+    const pre = document.createElement('pre');
+    pre.textContent = jsonResponse;
+    pre.style.cssText = 'margin: 0; padding: 20px; white-space: pre-wrap; word-wrap: break-word;';
+    document.body.appendChild(pre);
+    
+    // ページタイトルも変更
+    document.title = 'Access Denied';
+    
+    // コンソールにも出力（デバッグ用）
+    console.log('Access denied - JSON response:', jsonResponse);
 }
 
 function showAdminPanel(user) {
-    document.getElementById('login-screen').style.display = 'none';
-    document.getElementById('admin-main').style.display = 'block';
+    console.log('=== Showing admin panel ===');
+    console.log('User:', user);
+    
+    const adminMain = document.getElementById('admin-main');
+    console.log('admin-main element found:', !!adminMain);
+    
+    if (adminMain) {
+        adminMain.style.display = 'block';
+        console.log('Admin main panel displayed');
+    } else {
+        console.error('admin-main element not found!');
+        showError('管理画面の要素が見つかりませんでした');
+        return;
+    }
     
     const adminUserName = document.getElementById('admin-user-name');
     if (adminUserName && user) {
         adminUserName.textContent = user.email || user.name || '管理者';
+        console.log('Admin user name set:', adminUserName.textContent);
+    } else {
+        console.warn('admin-user-name element not found or user is null');
     }
     
+    console.log('Loading admin data...');
     loadAdminData();
+    console.log('Admin panel initialization complete');
 }
 
 function showError(message) {
@@ -249,20 +344,7 @@ function showSuccess(message) {
 // イベントリスナー設定
 // =====================================
 function setupEventListeners() {
-    // ログインフォーム
-    const loginForm = document.getElementById('login-form');
-    if (loginForm) {
-        loginForm.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const email = document.getElementById('admin-email').value.trim();
-            const password = document.getElementById('admin-password').value;
-            if (!email || !password) {
-                showError('メールアドレスとパスワードを入力してください');
-                return;
-            }
-            await performLogin(email, password);
-        });
-    }
+    // ログインフォームはlogin.htmlに移行しました
     
     // ログアウト
     const logoutButton = document.getElementById('logout-btn');

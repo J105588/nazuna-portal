@@ -422,11 +422,21 @@ function getClubs(params) {
     if (config.SUPABASE_URL && config.SUPABASE_URL !== 'YOUR_SUPABASE_URL_HERE') {
       try {
         const limit = params?.limit || 200;
-        const query = `clubs?order=display_order.asc&order=created_at.desc&limit=${limit}`;
+        // display_orderカラムは存在しないため、created_atのみでソート
+        const query = `clubs?order=created_at.desc&limit=${limit}`;
         const response = supabaseRequest('GET', query);
         
         if (!response.error && response.data) {
           return { success: true, clubs: response.data, data: response.data };
+        }
+        
+        // display_orderエラーが発生した場合のフォールバック（念のため）
+        if (response.error && response.error.code === '42703' && response.error.message && response.error.message.indexOf('display_order') !== -1) {
+          const fallbackQuery = `clubs?order=created_at.desc&limit=${limit}`;
+          const fallbackResponse = supabaseRequest('GET', fallbackQuery);
+          if (!fallbackResponse.error && fallbackResponse.data) {
+            return { success: true, clubs: fallbackResponse.data, data: fallbackResponse.data };
+          }
         }
       } catch (supabaseError) {
         console.warn('Supabase getClubs failed, trying Spreadsheet fallback:', supabaseError);
@@ -872,23 +882,43 @@ function verifyAdminSession(data) {
     const token = data.token || data.parameter?.token;
     const email = data.email || data.parameter?.email;
     
+    console.log('Verifying session:', { 
+      token: token ? token.substring(0, 20) + '...' : 'none',
+      email: email 
+    });
+    
     if (!token || !email) {
+      console.log('Missing token or email');
       return { valid: false, error: 'Missing token or email' };
     }
     
-    // トークンをデコード
-    const decoded = Utilities.base64Decode(token);
+    // トークンをデコード（バイト配列を文字列に変換）
+    const decodedBytes = Utilities.base64Decode(token);
+    const decoded = Utilities.newBlob(decodedBytes).getDataAsString();
+    
+    console.log('Decoded token:', decoded.substring(0, 50) + '...');
+    
     const parts = decoded.split(':');
     
+    console.log('Token parts:', parts.length);
+    
     if (parts.length !== 3) {
+      console.log('Invalid token format - expected 3 parts, got', parts.length);
       return { valid: false, error: 'Invalid token format' };
     }
     
     const tokenEmail = parts[0];
     const timestamp = parseInt(parts[1]);
+    const random = parts[2];
+    
+    console.log('Token email:', tokenEmail);
+    console.log('Provided email:', email);
+    console.log('Timestamp:', timestamp);
+    console.log('Current time:', new Date().getTime());
     
     // メールアドレスが一致するかチェック
     if (tokenEmail !== email) {
+      console.log('Token email mismatch');
       return { valid: false, error: 'Token email mismatch' };
     }
     
@@ -897,17 +927,32 @@ function verifyAdminSession(data) {
     const tokenAge = now - timestamp;
     const maxAge = 24 * 60 * 60 * 1000; // 24時間
     
+    console.log('Token age (ms):', tokenAge);
+    console.log('Max age (ms):', maxAge);
+    console.log('Token expired:', tokenAge > maxAge);
+    
     if (tokenAge > maxAge) {
+      console.log('Token expired');
       return { valid: false, error: 'Token expired' };
+    }
+    
+    if (tokenAge < 0) {
+      console.log('Token timestamp is in the future');
+      return { valid: false, error: 'Invalid token timestamp' };
     }
     
     // 管理者情報を取得
     const adminCredentials = getAdminCredentials();
     const admin = adminCredentials[email];
     
+    console.log('Admin found:', !!admin);
+    
     if (!admin) {
+      console.log('Admin not found in credentials');
       return { valid: false, error: 'Admin not found' };
     }
+    
+    console.log('Session verified successfully');
     
     return {
       valid: true,
@@ -921,7 +966,8 @@ function verifyAdminSession(data) {
     
   } catch (error) {
     console.error('Error verifying session:', error);
-    return { valid: false, error: 'Session verification failed' };
+    console.error('Error details:', error.toString());
+    return { valid: false, error: 'Session verification failed: ' + error.toString() };
   }
 }
 

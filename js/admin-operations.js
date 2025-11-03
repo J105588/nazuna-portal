@@ -540,14 +540,30 @@ window.loadAdminClubsList = async function() {
                 const { data: supaData, error } = await window.supabaseClient
                     .from('clubs')
                     .select('*')
-                    .order('display_order', { ascending: true })
                     .order('created_at', { ascending: false })
                     .limit(200);
                 if (error) throw error;
                 data = supaData || [];
             } catch (supaError) {
                 console.error('Supabase getClubs failed:', supaError);
-                throw supaError;
+                // display_orderカラムがない場合のフォールバック（既にcreated_atのみでソートしているので通常は発生しないが、念のため）
+                if (supaError.code === '42703' && supaError.message?.includes('display_order')) {
+                    try {
+                        console.warn('display_order column not found, using fallback query');
+                        const { data: fallbackData, error: fallbackError } = await window.supabaseClient
+                            .from('clubs')
+                            .select('*')
+                            .order('created_at', { ascending: false })
+                            .limit(200);
+                        if (fallbackError) throw fallbackError;
+                        data = fallbackData || [];
+                    } catch (e) {
+                        console.error('Fallback query also failed:', e);
+                        throw supaError; // 元のエラーを再スロー
+                    }
+                } else {
+                    throw supaError;
+                }
             }
         }
 
@@ -589,7 +605,12 @@ window.loadAdminClubsList = async function() {
         });
     } catch (e) {
         console.error('Failed to load clubs:', e);
-        tbody.innerHTML = '<tr><td colspan="5" class="error-state">読み込みに失敗しました</td></tr>';
+        // display_orderエラーの場合は特別なメッセージを表示
+        if (e.code === '42703' && e.message?.includes('display_order')) {
+            tbody.innerHTML = '<tr><td colspan="5" class="error-state">データベースのカラム構成に問題があります。管理者にお問い合わせください。</td></tr>';
+        } else {
+            tbody.innerHTML = '<tr><td colspan="5" class="error-state">読み込みに失敗しました</td></tr>';
+        }
     }
 };
 
@@ -689,9 +710,73 @@ async function deleteClub(id) {
 // モーダル表示
 // =====================================
 function showModal(title, content) {
-    document.getElementById('modal-title').textContent = title;
-    document.getElementById('modal-body').innerHTML = content;
-    document.getElementById('modal-overlay').classList.add('active');
+    // まず既存のモーダルを探す
+    let modalOverlay = document.getElementById('modal-overlay');
+    let modalTitle = modalOverlay ? modalOverlay.querySelector('#modal-title') : null;
+    let modalBody = modalOverlay ? modalOverlay.querySelector('#modal-body') : null;
+    
+    // モーダル要素が存在しない場合は動的に作成
+    if (!modalOverlay) {
+        modalOverlay = document.createElement('div');
+        modalOverlay.id = 'modal-overlay';
+        modalOverlay.className = 'modal-overlay';
+        modalOverlay.innerHTML = `
+            <div class="modal" id="admin-modal">
+                <div class="modal-header">
+                    <h3 id="modal-title">タイトル</h3>
+                    <button class="modal-close" id="modal-close"><i class="fas fa-times"></i></button>
+                </div>
+                <div class="modal-body" id="modal-body"></div>
+                <div class="modal-footer">
+                    <button class="btn btn-secondary" id="modal-cancel">キャンセル</button>
+                    <button class="btn btn-primary" id="modal-save">保存</button>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(modalOverlay);
+        
+        // 閉じるボタンのイベントリスナーを設定
+        const closeBtn = modalOverlay.querySelector('#modal-close');
+        const cancelBtn = modalOverlay.querySelector('#modal-cancel');
+        
+        if (closeBtn) {
+            closeBtn.addEventListener('click', () => {
+                modalOverlay.classList.remove('active');
+            });
+        }
+        
+        if (cancelBtn) {
+            cancelBtn.addEventListener('click', () => {
+                modalOverlay.classList.remove('active');
+            });
+        }
+        
+        modalOverlay.addEventListener('click', (e) => {
+            if (e.target === modalOverlay) {
+                modalOverlay.classList.remove('active');
+            }
+        });
+        
+        // 要素を再取得
+        modalTitle = modalOverlay.querySelector('#modal-title');
+        modalBody = modalOverlay.querySelector('#modal-body');
+    }
+    
+    // タイトルと本文を設定（nullチェック付き）
+    if (modalTitle) {
+        modalTitle.textContent = title || '';
+    } else {
+        console.error('Modal title element not found');
+    }
+    
+    if (modalBody) {
+        modalBody.innerHTML = content || '';
+    } else {
+        console.error('Modal body element not found');
+    }
+    
+    // モーダルを表示
+    modalOverlay.classList.add('active');
 }
 
 // =====================================
@@ -776,60 +861,225 @@ window.loadAdminCouncilMembersList = async function() {
 function openMemberModal(item = null) {
     const isEdit = !!item;
     const title = isEdit ? 'メンバーを編集' : 'メンバーを追加';
+    
+    // responsibilitiesを配列から改行区切りの文字列に変換
+    const responsibilitiesText = Array.isArray(item?.responsibilities) 
+        ? item.responsibilities.join('\n') 
+        : (item?.responsibilities || '');
+    
     const content = `
-        <div class="form-group">
-            <label>氏名</label>
-            <input id="member-name" class="form-control" value="${window.adminPanel?.escapeHtml(item?.name || '')}" />
+        ${!isEdit ? `
+        <div class="form-row">
+            <div class="form-group">
+                <label>ID（任意）</label>
+                <input id="member-id" type="number" class="form-control" value="" min="1" placeholder="空欄の場合は自動生成" />
+                <small class="form-text">IDを指定する場合は、既存のIDと重複しないようにしてください</small>
+            </div>
+        </div>
+        ` : ''}
+        <div class="form-row">
+            <div class="form-group">
+                <label>氏名 <span class="required">*</span></label>
+                <input id="member-name" class="form-control" value="${window.adminPanel?.escapeHtml(item?.name || '')}" placeholder="例: 山田太郎" required />
+            </div>
+            <div class="form-group">
+                <label>役職 <span class="required">*</span></label>
+                <input id="member-role" class="form-control" value="${window.adminPanel?.escapeHtml(item?.role || '')}" placeholder="例: 生徒会長" required />
+            </div>
+        </div>
+        <div class="form-row">
+            <div class="form-group">
+                <label>学年・クラス</label>
+                <input id="member-grade" class="form-control" value="${window.adminPanel?.escapeHtml(item?.grade || '')}" placeholder="例: 3年A組" />
+            </div>
+            <div class="form-group">
+                <label>メールアドレス</label>
+                <input id="member-email" type="email" class="form-control" value="${window.adminPanel?.escapeHtml(item?.email || '')}" placeholder="example@school.ac.jp" />
+            </div>
         </div>
         <div class="form-group">
-            <label>役職</label>
-            <input id="member-role" class="form-control" value="${window.adminPanel?.escapeHtml(item?.role || '')}" />
+            <label>画像URL</label>
+            <input id="member-image-url" class="form-control" value="${window.adminPanel?.escapeHtml(item?.image_url || '')}" placeholder="https://example.com/image.jpg" />
+            <small class="form-text">画像のURLを入力してください（任意）</small>
         </div>
         <div class="form-group">
-            <label>表示順</label>
-            <input id="member-order" type="number" class="form-control" value="${item?.display_order ?? 0}" />
+            <label>短いメッセージ</label>
+            <textarea id="member-message" class="form-control" rows="2" placeholder="メンバーカードに表示される短いメッセージを入力してください（任意）">${window.adminPanel?.escapeHtml(item?.message || '')}</textarea>
         </div>
         <div class="form-group">
-            <label>公開</label>
-            <select id="member-active" class="form-control">
-                <option value="true" ${(item?.is_active ?? true) ? 'selected' : ''}>公開</option>
-                <option value="false" ${(item?.is_active === false) ? 'selected' : ''}>非公開</option>
-            </select>
+            <label>詳細メッセージ（自己紹介）</label>
+            <textarea id="member-bio" class="form-control" rows="4" placeholder="member-detail.htmlで表示される詳細な自己紹介文を入力してください（任意）">${window.adminPanel?.escapeHtml(item?.bio || '')}</textarea>
+        </div>
+        <div class="form-group">
+            <label>担当業務</label>
+            <textarea id="member-responsibilities" class="form-control" rows="5" placeholder="担当業務を1行ずつ入力してください（例：&#10;生徒会全体の統括・運営&#10;学校行事の企画・調整&#10;生徒総会の司会進行）">${window.adminPanel?.escapeHtml(responsibilitiesText)}</textarea>
+            <small class="form-text">各行が1つの担当業務として登録されます</small>
+        </div>
+        <div class="form-row">
+            <div class="form-group">
+                <label>表示順</label>
+                <input id="member-order" type="number" class="form-control" value="${item?.display_order ?? 0}" min="0" />
+                <small class="form-text">数値が小さいほど上に表示されます</small>
+            </div>
+            <div class="form-group">
+                <label>公開設定</label>
+                <select id="member-active" class="form-control">
+                    <option value="true" ${(item?.is_active ?? true) ? 'selected' : ''}>公開</option>
+                    <option value="false" ${(item?.is_active === false) ? 'selected' : ''}>非公開</option>
+                </select>
+            </div>
+        </div>
+        <div class="form-info">
+            <i class="fas fa-info-circle"></i>
+            <small>活動実績は「活動実績管理」セクションから別途登録できます</small>
         </div>
     `;
     showModal(title, content);
 
     const saveBtn = document.getElementById('modal-save');
     saveBtn.onclick = async () => {
+        const name = document.getElementById('member-name').value.trim();
+        const role = document.getElementById('member-role').value.trim();
+        
+        if (!name || !role) {
+            window.adminPanel?.showError('氏名と役職は必須項目です');
+            return;
+        }
+        
+        // responsibilitiesを改行区切りの文字列から配列に変換
+        const responsibilitiesText = document.getElementById('member-responsibilities').value.trim();
+        const responsibilities = responsibilitiesText 
+            ? responsibilitiesText.split('\n')
+                .map(line => line.trim())
+                .filter(line => line.length > 0)
+            : [];
+        
         const payload = {
-            name: document.getElementById('member-name').value.trim(),
-            role: document.getElementById('member-role').value.trim(),
+            name: name,
+            role: role,
+            grade: document.getElementById('member-grade').value.trim() || null,
+            email: document.getElementById('member-email').value.trim() || null,
+            image_url: document.getElementById('member-image-url').value.trim() || null,
+            message: document.getElementById('member-message').value.trim() || null,
+            bio: document.getElementById('member-bio').value.trim() || null,
+            responsibilities: responsibilities.length > 0 ? responsibilities : null,
             display_order: Number(document.getElementById('member-order').value) || 0,
             is_active: document.getElementById('member-active').value === 'true'
         };
-        if (!payload.name) {
-            window.adminPanel?.showError('氏名を入力してください');
-            return;
+        
+        // 新規追加時にIDが指定されている場合は取得
+        let specifiedId = null;
+        if (!isEdit) {
+            const idInput = document.getElementById('member-id');
+            if (idInput && idInput.value.trim()) {
+                specifiedId = Number(idInput.value.trim());
+                if (specifiedId > 0) {
+                    payload.id = specifiedId;
+                }
+            }
         }
-        await saveMember(item?.id || null, payload);
+        
+        await saveMember(item?.id || specifiedId || null, payload);
     };
 }
 
 async function saveMember(id, payload) {
     try {
-        if (id) {
-            const { error } = await window.supabaseClient.from('council_members').update(payload).eq('id', id);
-            if (error) throw error;
-        } else {
-            const { error } = await window.supabaseClient.from('council_members').insert([payload]);
-            if (error) throw error;
+        // 空の文字列をnullに変換（データベースの整合性のため）
+        const cleanPayload = {};
+        for (const [key, value] of Object.entries(payload)) {
+            if (value === '' || value === null || (Array.isArray(value) && value.length === 0)) {
+                cleanPayload[key] = null;
+            } else {
+                cleanPayload[key] = value;
+            }
         }
+        
+        // responsibilitiesがnullの場合は空配列として扱う
+        if (cleanPayload.responsibilities === null) {
+            cleanPayload.responsibilities = [];
+        }
+        
+        console.log('Saving member:', { id, payload: cleanPayload });
+        
+        if (id) {
+            const { error } = await window.supabaseClient
+                .from('council_members')
+                .update(cleanPayload)
+                .eq('id', id);
+            if (error) throw error;
+            window.adminPanel?.showSuccess('メンバーを更新しました');
+        } else {
+            // 新規追加の場合、IDが指定されているかチェック
+            if (cleanPayload.id) {
+                // 既存のIDとの衝突をチェック
+                const { data: existing, error: checkError } = await window.supabaseClient
+                    .from('council_members')
+                    .select('id')
+                    .eq('id', cleanPayload.id)
+                    .maybeSingle();
+                
+                if (checkError) throw checkError;
+                
+                if (existing) {
+                    throw new Error(`ID ${cleanPayload.id} は既に使用されています。別のIDを指定してください。`);
+                }
+                
+                // シーケンスを更新（PostgreSQLの場合）
+                // 注: Supabaseでは直接シーケンスを操作できないため、
+                // IDを明示的に指定する場合は、データベース側でシーケンスを更新する必要があります
+                const specifiedId = cleanPayload.id;
+                delete cleanPayload.id; // 一旦削除
+                
+                // IDを含めてinsert（PostgreSQLではこれで動作するはずですが、
+                // SERIAL型のシーケンスが更新されない可能性があります）
+                const { data: insertedData, error: insertError } = await window.supabaseClient
+                    .from('council_members')
+                    .insert([{ ...cleanPayload, id: specifiedId }])
+                    .select();
+                
+                if (insertError) {
+                    // 重複エラーの場合、より詳細なメッセージを表示
+                    if (insertError.code === '23505') {
+                        throw new Error(`ID ${specifiedId} は既に使用されています。別のIDを指定してください。`);
+                    }
+                    throw insertError;
+                }
+                
+                // シーケンスを更新（SQLクエリを実行）
+                // 注: SupabaseのRPCまたはSQLクエリで実行する必要があります
+                // ここでは警告のみ表示
+                if (insertedData && insertedData.length > 0) {
+                    console.warn(`ID ${specifiedId} を手動で指定しました。シーケンスが自動更新されない場合があります。`);
+                }
+            } else {
+                const { error } = await window.supabaseClient
+                    .from('council_members')
+                    .insert([cleanPayload]);
+                if (error) throw error;
+            }
+            
+            window.adminPanel?.showSuccess('メンバーを追加しました');
+        }
+        
         document.getElementById('modal-overlay').classList.remove('active');
-        window.adminPanel?.showSuccess('メンバーを保存しました');
         await window.loadAdminCouncilMembersList();
     } catch (err) {
         console.error('Failed to save member:', err);
-        window.adminPanel?.showError('メンバーの保存に失敗しました');
+        
+        // RLSポリシーエラーの場合、より詳細なメッセージを表示
+        let errorMessage = 'メンバーの保存に失敗しました';
+        if (err.code === '42501') {
+            errorMessage = '権限エラー: council_membersテーブルのRow Level Securityポリシーによって操作が拒否されました。SupabaseのRLS設定を確認してください。';
+        } else if (err.code === '23505') {
+            errorMessage = '重複エラー: 同じデータが既に存在します。';
+        } else if (err.code === 'PGRST116') {
+            errorMessage = 'エラー: リクエストが大きすぎます。担当業務の項目数を減らしてください。';
+        } else if (err.message) {
+            errorMessage = `エラー: ${err.message}`;
+        }
+        
+        window.adminPanel?.showError(errorMessage);
     }
 }
 
@@ -1049,7 +1299,16 @@ async function sendNotification() {
         }
     } catch (error) {
         console.error('Notification send error:', error);
-        window.adminPanel?.showError(error.message || '通知の送信に失敗しました');
+        // より詳細なエラーメッセージを表示
+        let errorMessage = '通知の送信に失敗しました';
+        if (error.message) {
+            if (error.message.includes('ネットワークエラー') || error.message.includes('NETWORK')) {
+                errorMessage = 'ネットワークエラーが発生しました。しばらく待ってから再試行してください。';
+            } else {
+                errorMessage = error.message;
+            }
+        }
+        window.adminPanel?.showError(errorMessage);
     } finally {
         if (sendButton) { sendButton.disabled = false; sendButton.innerHTML = '<i class="fas fa-paper-plane"></i> 通知を送信'; }
     }

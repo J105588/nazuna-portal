@@ -17,37 +17,6 @@
     <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-messaging-compat.js"></script>
 </head>
 <body>
-    <!-- ログイン画面 -->
-    <div class="login-screen" id="login-screen">
-        <div class="login-container">
-            <div class="login-header">
-                <div class="login-logo">
-                    <i class="fas fa-shield-alt"></i>
-                </div>
-                <h1>管理画面ログイン</h1>
-                <p>なずなポータル管理システム</p>
-            </div>
-            <form class="login-form" id="login-form" autocomplete="off">
-                <div class="form-group">
-                    <label for="admin-email">メールアドレス</label>
-                    <input type="email" id="admin-email" class="form-control" placeholder="example@school.ac.jp" required autocomplete="off" maxlength="100">
-                </div>
-                <div class="form-group">
-                    <label for="admin-password">パスワード</label>
-                    <input type="password" id="admin-password" class="form-control" placeholder="パスワードを入力" required autocomplete="off" minlength="6" maxlength="50">
-                </div>
-                <button type="submit" class="btn btn-primary btn-login" id="login-btn">
-                    <i class="fas fa-sign-in-alt"></i>
-                    ログイン
-                </button>
-                <div class="login-error" id="login-error" style="display: none;">
-                    <i class="fas fa-exclamation-triangle"></i>
-                    <span id="login-error-text">ログインに失敗しました。認証情報を確認してください。</span>
-                </div>
-            </form>
-        </div>
-    </div>
-
     <!-- 管理画面メイン -->
     <div class="admin-main" id="admin-main" style="display: none;">
         <!-- ヘッダー -->

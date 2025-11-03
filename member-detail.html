@@ -23,7 +23,7 @@
     <meta name="msapplication-square310x310logo" content="https://lh3.googleusercontent.com/pw/AP1GczPtDAtqRlRZY8yBF0ajASVZzyEDa1uq1vlm3Dw7a7TIXMQUzwOjquumsabe_DDWZiM6tg2Ruxgtb-kvWibkkbxvcklHnPPqCat1N8H4mKJp3QPpmvyEyJxObatEQq4xD2zu0AQ8yBYZf7GePeGIoEEF=w1033-h1033-s-no-gm?authuser=0">
 
 </head>
-<body>
+<body class="member-detail-page">
     <!-- サイドバー -->
     <div class="sidebar" id="sidebar">
         <div class="sidebar-header">
@@ -80,11 +80,9 @@
     <header>
         <nav class="navbar">
             <div class="nav-container">
-                <button class="hamburger" id="hamburger" aria-label="メニューを開く" aria-expanded="false">
-                    <span aria-hidden="true"></span>
-                    <span aria-hidden="true"></span>
-                    <span aria-hidden="true"></span>
-                </button>
+                <a href="council.html" class="back-button" aria-label="生徒会紹介に戻る">
+                    <i class="fas fa-arrow-left"></i>
+                </a>
                 <h1 class="logo">なずなポータル</h1>
                 <div class="nav-spacer"></div>
             </div>
@@ -92,20 +90,8 @@
     </header>
 
     <main>
-        <!-- 戻るボタン -->
-        <section class="breadcrumb-section">
-            <div class="container">
-                <div class="breadcrumb">
-                    <a href="council.html" class="breadcrumb-link">
-                        <i class="fas fa-arrow-left"></i>
-                        生徒会紹介に戻る
-                    </a>
-                </div>
-            </div>
-        </section>
-
-        <!-- メンバー詳細ヘッダー -->
-        <section class="member-detail-header">
+        <!-- ページヘッダー -->
+        <section class="page-header">
             <div class="container">
                 <div class="member-hero" id="member-hero">
                     <!-- メンバー情報がJavaScriptで動的に生成されます -->
@@ -166,28 +152,8 @@
 
                         <div class="sidebar-card">
                             <h4><i class="fas fa-calendar"></i> 活動予定</h4>
-                            <div class="upcoming-activities">
-                                <div class="activity-item">
-                                    <div class="activity-date">2/15</div>
-                                    <div class="activity-info">
-                                        <h5>生徒会会議</h5>
-                                        <p>定例会議</p>
-                                    </div>
-                                </div>
-                                <div class="activity-item">
-                                    <div class="activity-date">2/20</div>
-                                    <div class="activity-info">
-                                        <h5>体育祭準備会</h5>
-                                        <p>企画検討</p>
-                                    </div>
-                                </div>
-                                <div class="activity-item">
-                                    <div class="activity-date">2/25</div>
-                                    <div class="activity-info">
-                                        <h5>文化祭実行委員会</h5>
-                                        <p>実行委員との打ち合わせ</p>
-                                    </div>
-                                </div>
+                            <div class="upcoming-activities" id="upcoming-activities">
+                                <!-- 活動予定がここに表示されます -->
                             </div>
                         </div>
                     </div>

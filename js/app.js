@@ -4,6 +4,13 @@ let supabaseQueries = null;
 
 // Supabaseクライアントを初期化
 function initSupabase() {
+    // CONFIGが読み込まれているか確認
+    if (typeof CONFIG === 'undefined' || !CONFIG.SUPABASE) {
+        console.warn('CONFIG not loaded yet, waiting...');
+        setTimeout(initSupabase, 100);
+        return;
+    }
+    
     if (typeof supabase !== 'undefined' && 
         CONFIG.SUPABASE.URL && 
         CONFIG.SUPABASE.ANON_KEY &&
@@ -11,14 +18,83 @@ function initSupabase() {
         CONFIG.SUPABASE.ANON_KEY !== 'YOUR_SUPABASE_ANON_KEY_HERE') {
         
         try {
-            // 古いクライアントをクリア
+            // 古いURLを使用しているクライアントを検出してクリア
+            const currentUrl = CONFIG.SUPABASE.URL;
+            
+            // 既存のクライアントを完全にクリア
             if (window.supabaseClient) {
+                try {
+                    // SupabaseクライアントのURLを確認（可能な場合）
+                    if (window.supabaseClient.supabaseUrl) {
+                        const clientUrl = window.supabaseClient.supabaseUrl;
+                        if (clientUrl !== currentUrl) {
+                            console.warn('Supabase client URL mismatch detected!');
+                            console.log('Client URL:', clientUrl);
+                            console.log('Config URL:', currentUrl);
+                            console.log('Clearing old client...');
+                        }
+                    }
+                } catch (e) {
+                    // URLプロパティにアクセスできない場合もクリア
+                }
                 window.supabaseClient = null;
+                supabaseClient = null;
             }
+            
+            if (window.supabaseQueries) {
+                window.supabaseQueries = null;
+                supabaseQueries = null;
+            }
+            
+            // ストレージから古いSupabaseキャッシュをクリア
+            clearSupabaseStorageCache();
             
             // 新しいクライアントを作成（CORS設定を含む）
             const supabaseOptions = CONFIG.SUPABASE.OPTIONS || {};
-            supabaseClient = supabase.createClient(CONFIG.SUPABASE.URL, CONFIG.SUPABASE.ANON_KEY, supabaseOptions);
+            
+            // URLが正しい形式か検証
+            if (!currentUrl.startsWith('https://') || !currentUrl.includes('.supabase.co')) {
+                throw new Error('Invalid Supabase URL format: ' + currentUrl);
+            }
+            
+            // 古いURLを完全にチェック（厳格な検証）
+            const oldInvalidUrls = ['jirppalacwwinwnsyauo', 'jffjacpedwldbgmggdcy'];
+            const containsOldUrl = oldInvalidUrls.some(oldUrl => currentUrl.toLowerCase().includes(oldUrl.toLowerCase()));
+            if (containsOldUrl) {
+                console.error('ERROR: Old/invalid Supabase URL detected in CONFIG!');
+                console.error('Invalid URL:', currentUrl);
+                console.error('Please update CONFIG.SUPABASE.URL in js/config.js');
+                throw new Error('Invalid Supabase URL configuration');
+            }
+            
+            console.log('Creating Supabase client with URL:', currentUrl);
+            supabaseClient = supabase.createClient(currentUrl, CONFIG.SUPABASE.ANON_KEY, supabaseOptions);
+            
+            // 作成されたクライアントのURLを検証（可能な場合）
+            if (supabaseClient) {
+                // Supabaseクライアントの内部URLを確認
+                try {
+                    // @supabase/supabase-js v2の内部構造を確認
+                    const clientUrl = supabaseClient.supabaseUrl || supabaseClient._supabaseUrl || null;
+                    if (clientUrl && clientUrl !== currentUrl) {
+                        console.error('Supabase client URL mismatch after creation!');
+                        console.error('Expected URL:', currentUrl);
+                        console.error('Client URL:', clientUrl);
+                        
+                        // 古いURLを含んでいる場合はエラー
+                        const containsOldInClient = oldInvalidUrls.some(oldUrl => clientUrl.toLowerCase().includes(oldUrl.toLowerCase()));
+                        if (containsOldInClient) {
+                            console.error('CRITICAL: Client contains old URL! Clearing and aborting...');
+                            window.supabaseClient = null;
+                            supabaseClient = null;
+                            throw new Error('Supabase client created with old/invalid URL');
+                        }
+                    }
+                } catch (e) {
+                    console.warn('Could not verify client URL (this is normal for some Supabase versions):', e);
+                }
+            }
+            
             window.supabaseClient = supabaseClient; // グローバルに公開
             
             if (typeof SupabaseQueries === 'undefined') {
@@ -28,12 +104,28 @@ function initSupabase() {
             window.supabaseQueries = supabaseQueries; // グローバルに公開
             
             console.log('Supabase client and queries initialized successfully');
-            console.log('Supabase URL:', CONFIG.SUPABASE.URL);
+            console.log('Supabase URL:', currentUrl);
             
             // 接続テスト
             testSupabaseConnection();
         } catch (error) {
             console.error('Failed to initialize Supabase client:', error);
+            console.log('Error details:', error.message);
+            
+            // エラーの詳細を表示
+            if (error.message && error.message.includes('ERR_NAME_NOT_RESOLVED')) {
+                console.error('DNS resolution failed. Possible causes:');
+                console.error('1. Invalid Supabase URL in config.js');
+                console.error('2. Network connectivity issues');
+                console.error('3. Supabase project may be deleted or suspended');
+                console.log('Attempting to clear cache and reinitialize...');
+                clearSupabaseStorageCache();
+                setTimeout(() => {
+                    console.log('Retrying Supabase initialization...');
+                    initSupabase();
+                }, 2000);
+            }
+            
             console.log('Continuing with demo mode...');
             supabaseClient = null;
             supabaseQueries = null;
@@ -42,6 +134,11 @@ function initSupabase() {
         }
     } else {
         console.warn('Supabase not available or not configured properly');
+        console.log('Config check:', {
+            supabaseLoaded: typeof supabase !== 'undefined',
+            url: CONFIG?.SUPABASE?.URL,
+            anonKey: CONFIG?.SUPABASE?.ANON_KEY ? '***' : 'missing'
+        });
         console.log('Using demo mode with fallback data');
         supabaseClient = null;
         supabaseQueries = null;
@@ -52,23 +149,64 @@ function initSupabase() {
 
 // Supabase接続テスト
 async function testSupabaseConnection() {
-    if (!supabaseClient) return;
+    const client = window.supabaseClient;
+    if (!client) return;
     
     try {
+        // クライアントのURLを検証（可能な場合）
+        if (client.supabaseUrl && CONFIG.SUPABASE.URL) {
+            if (client.supabaseUrl !== CONFIG.SUPABASE.URL) {
+                console.error('Supabase URL mismatch in connection test!');
+                console.error('Client URL:', client.supabaseUrl);
+                console.error('Config URL:', CONFIG.SUPABASE.URL);
+                console.log('Clearing cache and reinitializing...');
+                clearSupabaseCacheAndReinit();
+                return;
+            }
+        }
+        
+        
+        // 古いURLを使用していないか最終チェック
+        const OLD_INVALID_URLS = ['jirppalacwwinwnsyauo', 'jffjacpedwldbgmggdcy'];
+        const currentUrl = CONFIG.SUPABASE.URL;
+        if (currentUrl && OLD_INVALID_URLS.some(oldUrl => currentUrl.toLowerCase().includes(oldUrl.toLowerCase()))) {
+            console.error('CRITICAL: Old URL detected in CONFIG during connection test!');
+            console.error('Current URL:', currentUrl);
+            throw new Error('Invalid Supabase URL configuration');
+        }
+        
         // 簡単な接続テスト（council_membersテーブルの存在確認）
-        const { data, error } = await supabaseClient
+        const { data, error } = await client
             .from('council_members')
             .select('id')
             .limit(1);
             
         if (error) {
             console.error('Supabase connection test failed:', error);
-            if (error.message.includes('410') || error.message.includes('Gone')) {
+            
+            // エラーメッセージから詳細を確認
+            const errorMsg = error.message || '';
+            const errorDetails = error.details || '';
+            const errorHint = error.hint || '';
+            
+            // ERR_NAME_NOT_RESOLVED エラーを検出
+            if (errorMsg.includes('ERR_NAME_NOT_RESOLVED') || 
+                errorMsg.includes('Failed to fetch') ||
+                errorDetails.includes('ERR_NAME_NOT_RESOLVED')) {
+                console.error('DNS resolution failed - Supabase URL may be invalid or project deleted');
+                console.log('Current Supabase URL:', CONFIG.SUPABASE.URL);
+                console.log('Attempting to clear cache and reinitialize...');
+                clearSupabaseCacheAndReinit();
+                showConnectionError('Supabaseプロジェクトに接続できません。URLが正しいか確認してください。');
+                return;
+            }
+            
+            if (errorMsg.includes('410') || errorMsg.includes('Gone')) {
                 console.error('Supabase project appears to be deleted or unavailable');
                 console.log('Attempting to clear cache and reinitialize...');
                 clearSupabaseCacheAndReinit();
                 showConnectionError('Supabaseプロジェクトが削除されているか、利用できません。キャッシュをクリアして再試行します。');
-            } else if (error.message.includes('CORS')) {
+            } else if (errorMsg.includes('CORS')) {
                 console.error('CORS error detected');
                 console.log('Attempting to clear cache and reinitialize...');
                 clearSupabaseCacheAndReinit();
@@ -79,6 +217,17 @@ async function testSupabaseConnection() {
         }
     } catch (error) {
         console.error('Supabase connection test error:', error);
+        
+        // ネットワークエラーの場合
+        if (error.message && (
+            error.message.includes('ERR_NAME_NOT_RESOLVED') ||
+            error.message.includes('Failed to fetch') ||
+            error.message.includes('NetworkError')
+        )) {
+            console.error('Network error detected - may be using wrong Supabase URL');
+            console.log('Attempting to clear cache and reinitialize...');
+            clearSupabaseCacheAndReinit();
+        }
     }
 }
 
@@ -96,30 +245,51 @@ function showConnectionError(message) {
     }
 }
 
-// キャッシュクリアとSupabase再初期化
-function clearSupabaseCacheAndReinit() {
+// Supabaseストレージキャッシュをクリア（クライアント再初期化前の補助関数）
+function clearSupabaseStorageCache() {
     try {
         // ローカルストレージからSupabase関連のキャッシュをクリア
         const keysToRemove = [];
         for (let i = 0; i < localStorage.length; i++) {
             const key = localStorage.key(i);
-            if (key && (key.includes('supabase') || key.includes('sb-'))) {
+            if (key && (key.includes('supabase') || key.includes('sb-') || key.includes('supabase.'))) {
                 keysToRemove.push(key);
             }
         }
-        keysToRemove.forEach(key => localStorage.removeItem(key));
+        keysToRemove.forEach(key => {
+            localStorage.removeItem(key);
+            console.log('Cleared localStorage key:', key);
+        });
         
         // セッションストレージからもクリア
         const sessionKeysToRemove = [];
         for (let i = 0; i < sessionStorage.length; i++) {
             const key = sessionStorage.key(i);
-            if (key && (key.includes('supabase') || key.includes('sb-'))) {
+            if (key && (key.includes('supabase') || key.includes('sb-') || key.includes('supabase.'))) {
                 sessionKeysToRemove.push(key);
             }
         }
-        sessionKeysToRemove.forEach(key => sessionStorage.removeItem(key));
+        sessionKeysToRemove.forEach(key => {
+            sessionStorage.removeItem(key);
+            console.log('Cleared sessionStorage key:', key);
+        });
         
-        console.log('Supabase cache cleared');
+        if (keysToRemove.length > 0 || sessionKeysToRemove.length > 0) {
+            console.log('Supabase storage cache cleared:', {
+                localStorage: keysToRemove.length,
+                sessionStorage: sessionKeysToRemove.length
+            });
+        }
+    } catch (error) {
+        console.error('Error clearing Supabase storage cache:', error);
+    }
+}
+
+// キャッシュクリアとSupabase再初期化
+function clearSupabaseCacheAndReinit() {
+    try {
+        // ストレージキャッシュをクリア
+        clearSupabaseStorageCache();
         
         // Supabaseクライアントを再初期化
         initSupabase();
@@ -131,6 +301,7 @@ function clearSupabaseCacheAndReinit() {
 
 // グローバルに公開（デバッグ用）
 window.clearSupabaseCacheAndReinit = clearSupabaseCacheAndReinit;
+window.clearSupabaseStorageCache = clearSupabaseStorageCache;
 
 // API Client初期化関数
 function initializeAPIClient() {
@@ -198,45 +369,68 @@ class APIClient {
     const callbackName = 'callback_' + Date.now() + '_' + Math.random().toString(36).substr(2);
             
             // タイムアウト設定
+            let timeoutCleared = false;
             const timeout = setTimeout(() => {
+                timeoutCleared = true;
                 this.cleanup(callbackName);
-                reject(new Error(CONFIG.MESSAGES.ERROR.NETWORK));
+                // コールバックがまだ存在する場合のみreject
+                if (window.gasCallbacks && window.gasCallbacks[callbackName]) {
+                    reject(new Error(CONFIG.MESSAGES.ERROR.NETWORK));
+                }
             }, options.timeout || 10000);
     
     // グローバルコールバック関数を設定
             window.gasCallbacks[callbackName] = (data) => {
-                clearTimeout(timeout);
-                
-                // verifyAdminSessionなど、validプロパティを使うAPIにも対応
-                const isSuccess = data.success === true || data.valid === true;
-                const isFailure = data.success === false || data.valid === false;
-                
-                if (isSuccess && !isFailure) {
-                    // キャッシュに保存
-                    if (options.useCache) {
-                        this.cache.set(cacheKey, {
-                            data: data,
-                            timestamp: Date.now()
-                        });
+                try {
+                    // タイムアウトが既に発生している場合は無視
+                    if (timeoutCleared) {
+                        console.warn('Response received after timeout, ignoring');
+                        return;
                     }
-                    resolve(data);
-                } else if (isFailure) {
-                    // より詳細なエラーメッセージを提供
-                    const errorMessage = data.error || CONFIG.MESSAGES.ERROR.SERVER;
-                    console.error('API Error:', errorMessage, data);
-                    // verifyAdminSessionの場合、エラーでも結果として返す（valid: false）
-                    if (data.valid !== undefined) {
+                    
+                    // コールバックが既に削除されている場合（タイムアウト後の呼び出しなど）は無視
+                    if (!window.gasCallbacks || !window.gasCallbacks[callbackName]) {
+                        console.warn('Callback already cleaned up, ignoring response');
+                        return;
+                    }
+                    
+                    clearTimeout(timeout);
+                    timeoutCleared = true;
+                    
+                    // verifyAdminSessionなど、validプロパティを使うAPIにも対応
+                    const isSuccess = data && (data.success === true || data.valid === true);
+                    const isFailure = data && (data.success === false || data.valid === false);
+                    
+                    if (isSuccess && !isFailure) {
+                        // キャッシュに保存
+                        if (options.useCache) {
+                            this.cache.set(cacheKey, {
+                                data: data,
+                                timestamp: Date.now()
+                            });
+                        }
                         resolve(data);
+                    } else if (isFailure) {
+                        // より詳細なエラーメッセージを提供
+                        const errorMessage = (data && data.error) || CONFIG.MESSAGES.ERROR.SERVER;
+                        console.error('API Error:', errorMessage, data);
+                        // verifyAdminSessionの場合、エラーでも結果として返す（valid: false）
+                        if (data && data.valid !== undefined) {
+                            resolve(data);
+                        } else {
+                            reject(new Error(errorMessage));
+                        }
                     } else {
-                        reject(new Error(errorMessage));
+                        // success/validプロパティがない場合も成功とみなす（後方互換性）
+                        console.warn('Response without success/valid property:', data);
+                        resolve(data || {});
                     }
-                } else {
-                    // success/validプロパティがない場合も成功とみなす（後方互換性）
-                    console.warn('Response without success/valid property:', data);
-                    resolve(data);
+                } catch (error) {
+                    console.error('Error in callback:', error);
+                    reject(error);
+                } finally {
+                    this.cleanup(callbackName);
                 }
-                
-                this.cleanup(callbackName);
     };
     
     // パラメータをURLエンコード
@@ -252,7 +446,9 @@ class APIClient {
     script.id = 'jsonp_' + callbackName;
             script.src = `${this.baseURL}?${queryParams}`;
             script.onerror = () => {
-                clearTimeout(timeout);
+                if (!timeoutCleared) {
+                    clearTimeout(timeout);
+                }
                 this.cleanup(callbackName);
                 reject(new Error(CONFIG.MESSAGES.ERROR.NETWORK));
             };
@@ -775,7 +971,15 @@ async function loadCouncilMembers() {
     
     const renderMember = (member) => `
         <div class="member-card clickable" data-member-id="${member.id}" tabindex="0" role="button" aria-label="${member.name}の詳細を見る">
-            <div class="member-image" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); height: 150px; border-radius: 50%; width: 150px; margin: 0 auto 1rem;"></div>
+            <div class="member-image-wrapper">
+                ${member.image_url ? 
+                    `<img src="${member.image_url}" alt="${member.name}" class="member-image" onerror="this.onerror=null; this.style.display='none'; this.nextElementSibling.style.display='flex';">` :
+                    ''
+                }
+                <div class="member-image-placeholder" style="display: ${member.image_url ? 'none' : 'flex'}; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); height: 150px; border-radius: 50%; width: 150px; margin: 0 auto 1rem; align-items: center; justify-content: center;">
+                    <i class="fas fa-user" style="font-size: 3rem; color: rgba(255, 255, 255, 0.8);"></i>
+                </div>
+            </div>
             <h3>${member.name}</h3>
             <p class="member-role">${member.role}</p>
             <p class="member-message">"${member.message || 'よろしくお願いします'}"</p>
@@ -797,9 +1001,10 @@ async function loadCouncilMembers() {
             return;
         }
         
-        if (supabaseQueries) {
+        const queries = window.supabaseQueries;
+        if (queries) {
             console.log('Loading council members from Supabase...');
-            const { data, error } = await supabaseQueries.getCouncilMembers({ activeOnly: true });
+            const { data, error } = await queries.getCouncilMembers({ activeOnly: true });
             
             if (error) {
                 console.error('Supabase error loading council members:', error);
@@ -862,7 +1067,7 @@ async function loadCouncilMembers() {
                         <p>現在、生徒会メンバーの情報が登録されていません。</p>
                         <details>
                             <summary>デバッグ情報</summary>
-                            <pre>Status: ${supabaseQueries?.isAvailable ? 'Supabase connected' : 'Supabase unavailable'}
+                            <pre>Status: ${(window.supabaseQueries && window.supabaseQueries.isAvailable) ? 'Supabase connected' : 'Supabase unavailable'}
 RLS Policy: Public read access on council_members WHERE is_active = true
 Query: SELECT * FROM council_members WHERE is_active = true ORDER BY display_order ASC</pre>
                         </details>
@@ -948,14 +1153,15 @@ async function loadFromSupabase(table, container, renderFunction, fallbackData =
     if (loadingEl) loadingEl.style.display = 'block';
     
     try {
-        if (supabaseQueries) {
-            const { data, error } = await supabaseQueries.getTableData(table, options);
+        const queries = window.supabaseQueries;
+        if (queries) {
+            const { data, error } = await queries.getTableData(table, options);
             
             if (loadingEl) loadingEl.style.display = 'none';
             
             if (error) {
                 console.error('Supabase error:', error);
-                showNoDataMessage(container, supabaseQueries.getErrorMessage(error, `${table}の読み込み`));
+                showNoDataMessage(container, queries.getErrorMessage(error, `${table}の読み込み`));
                 return;
             }
             
@@ -1252,19 +1458,36 @@ async function initForum() {
     // チャット送信
     if (chatSend && chatText) {
         chatSend.addEventListener('click', async () => {
-            const auth = getAuth();
-            if (!auth) { openAuthModal(); return; }
-            const message = chatText.value.trim();
-            if (!message) return;
             try {
+                const auth = getAuth();
+                if (!auth) { openAuthModal(); return; }
+                const message = chatText.value.trim();
+                if (!message) return;
+                
+                const queries = window.supabaseQueries;
+                if (!queries) {
+                    alert('データベース接続エラーが発生しました。ページを再読み込みしてください。');
+                    return;
+                }
+                
                 // 簡易: 直近の投稿に紐づけて送る（将来はユーザーごとのスレッド化）
                 const latest = await getLatestUserPostId(auth.student_number);
-                if (!latest) { alert('まず投稿してください。'); return; }
-                await supabaseQueries.sendChat({ post_id: latest, sender: auth.student_number, message, is_admin: false });
+                if (!latest) { 
+                    alert('まず投稿してください。'); 
+                    return; 
+                }
+                
+                await queries.sendChat({ 
+                    post_id: latest, 
+                    sender: auth.student_number, 
+                    message: message, 
+                    is_admin: false 
+                });
                 chatText.value = '';
                 await renderChat(latest);
             } catch (e) {
                 console.error('Chat send error', e);
+                alert('チャットの送信に失敗しました。');
             }
         });
     }
@@ -1310,21 +1533,32 @@ async function loadPosts() {
     }
 
     // データ取得
-    if (supabaseQueries) {
+    const queries = window.supabaseQueries;
+    const client = window.supabaseClient;
+    if (queries && client) {
         try {
             // リスト取得
-            const { data, error } = await supabaseQueries.getTableData('posts', options);
+            const { data, error } = await queries.getTableData('posts', options);
             if (error) {
-                showNoDataMessage(container, supabaseQueries.getErrorMessage(error, '投稿の読み込み'));
+                showNoDataMessage(container, queries.getErrorMessage(error, '投稿の読み込み'));
                 return;
             }
             // 件数取得（HEADだと環境により失敗するため非HEADでcount取得）
-            let countQuery = supabaseClient.from('posts').select('id', { count: 'exact' });
+            if (!client) {
+                console.error('supabaseClient is not initialized');
+                showNoDataMessage(container, 'データベース接続エラーが発生しました。');
+                return;
+            }
+            let countQuery = client.from('posts').select('id', { count: 'exact' });
             if (state.status && state.status !== 'all') countQuery = countQuery.eq('status', state.status);
             if (state.search) countQuery = countQuery.ilike('content', `%${state.search}%`);
             countQuery = countQuery.limit(0);
-            const { count } = await countQuery;
-            const total = count || 0;
+            const { count, error: countError } = await countQuery;
+            if (countError) {
+                console.warn('Count query error:', countError);
+                // カウント取得に失敗しても、データが取得できていれば続行
+            }
+            const total = count || (data ? data.length : 0);
             window.forumState.totalPages = Math.max(1, Math.ceil(total / state.pageSize));
 
             if (data && data.length > 0) {
@@ -1338,6 +1572,7 @@ async function loadPosts() {
         }
     } else {
         // フォールバック
+        console.warn('Supabase not available, showing fallback data');
         container.innerHTML = fallbackPosts.map(renderPost).join('');
         window.forumState.totalPages = 1;
     }
@@ -1355,56 +1590,100 @@ async function loadPosts() {
 
 async function getLatestUserPostId(student_number) {
     try {
-        if (!supabaseQueries) return null;
-        const { data, error } = await supabaseClient
+        const queries = window.supabaseQueries;
+        const client = window.supabaseClient;
+        if (!queries || !client) {
+            console.warn('Supabase not initialized in getLatestUserPostId');
+            return null;
+        }
+        if (!student_number) {
+            console.warn('student_number is required');
+            return null;
+        }
+        const { data, error } = await client
             .from('posts')
             .select('id')
             .eq('student_number', student_number)
             .order('created_at', { ascending: false })
             .limit(1)
             .maybeSingle();
-        if (error) return null;
-        return data?.id || null;
-    } catch { return null; }
+        if (error) {
+            console.error('Error getting latest post ID:', error);
+            return null;
+        }
+        return (data && data.id) ? data.id : null;
+    } catch (error) {
+        console.error('Exception in getLatestUserPostId:', error);
+        return null;
+    }
 }
 
 async function renderChat(post_id) {
     const chatPanel = document.getElementById('chat-panel');
     const chatMessages = document.getElementById('chat-messages');
     if (!chatPanel || !chatMessages) return;
-    const { data, error } = await supabaseQueries.listChats(post_id, { limit: 200 });
-    if (error) return;
-    chatPanel.style.display = '';
-    chatMessages.innerHTML = (data || []).map(m => `
-        <div class="chat-message" style="margin:6px 0; ${m.is_admin ? 'text-align:right;' : ''}">
-            <span class="bubble" style="display:inline-block; padding:8px 12px; border-radius:16px; background:${m.is_admin ? '#eef5ff' : '#f2f2f2'};">
-                ${escapeHtml(m.message)}
-            </span>
-        </div>
-    `).join('');
-    chatMessages.scrollTop = chatMessages.scrollHeight;
+    
+    const queries = window.supabaseQueries;
+    if (!queries) {
+        console.warn('supabaseQueries not initialized in renderChat');
+        return;
+    }
+    
+    try {
+        const { data, error } = await queries.listChats(post_id, { limit: 200 });
+        if (error) {
+            console.error('Error loading chat:', error);
+            return;
+        }
+        chatPanel.style.display = '';
+        const messages = (data && Array.isArray(data)) ? data : [];
+        chatMessages.innerHTML = messages.map(m => {
+            const message = (m && m.message) ? m.message : '';
+            const isAdmin = (m && m.is_admin === true) ? true : false;
+            return `
+                <div class="chat-message" style="margin:6px 0; ${isAdmin ? 'text-align:right;' : ''}">
+                    <span class="bubble" style="display:inline-block; padding:8px 12px; border-radius:16px; background:${isAdmin ? '#eef5ff' : '#f2f2f2'};">
+                        ${escapeHtml(message)}
+                    </span>
+                </div>
+            `;
+        }).join('');
+        chatMessages.scrollTop = chatMessages.scrollHeight;
+    } catch (error) {
+        console.error('Exception in renderChat:', error);
+    }
 }
 
 // Supabaseに投稿を送信（統一版）
 async function submitToSupabase(content, student_number, category = 'general') {
     try {
-        if (supabaseQueries) {
-            const result = await supabaseQueries.createPost({ content, student_number, category });
-            
-            if (result.error) {
-                console.error('Supabase insert error:', result.error);
-                return false;
-            }
-            
-            return true;
-        } else {
-            // Supabaseが利用できない場合はエラー
+        const queries = window.supabaseQueries;
+        if (!queries) {
             console.error('Supabase is not available. Post submission failed.');
             showErrorMessage('投稿の送信に失敗しました。データベースに接続できません。');
             return false;
         }
+        
+        if (!content || !student_number) {
+            console.error('Missing required parameters for post submission');
+            return false;
+        }
+        
+        const result = await queries.createPost({ 
+            content: content, 
+            student_number: student_number, 
+            category: category || 'general' 
+        });
+        
+        if (result && result.error) {
+            console.error('Supabase insert error:', result.error);
+            return false;
+        }
+        
+        return true;
     } catch (error) {
         console.error('Error submitting post:', error);
+        showErrorMessage('投稿の送信中にエラーが発生しました。');
         return false;
     }
 }
@@ -1538,10 +1817,11 @@ function openAuthModal() {
     const doCheck = async () => {
         const sn = numberInput.value.trim();
         if (!sn) { showAuthError('生徒番号を入力してください'); return; }
-        if (!supabaseQueries) { showAuthError('Supabase未設定'); return; }
+        const queries = window.supabaseQueries;
+        if (!queries) { showAuthError('Supabase未設定'); return; }
         err.style.display = 'none';
         
-        const { data, error } = await supabaseQueries.getStudentByNumber(sn);
+        const { data, error } = await queries.getStudentByNumber(sn);
         if (error) { showAuthError('確認に失敗しました'); return; }
         
         if (!data) {
@@ -1583,8 +1863,10 @@ function openAuthModal() {
                             const pwConfirm = passConfirmInput.value;
                             if (!pw || pw.length < 6) { showAuthError('6文字以上のパスワードを入力してください'); return; }
                             if (pw !== pwConfirm) { showAuthError('パスワードが一致しません'); return; }
+                            const updateQueries = window.supabaseQueries;
+                            if (!updateQueries) { showAuthError('Supabase未設定'); return; }
                             const password_hash = await window.sha256(pw);
-                            const { error: updErr } = await supabaseQueries.updateStudentPassword({
+                            const { error: updErr } = await updateQueries.updateStudentPassword({
                                 student_number: data.student_number,
                                 password_hash
                             });
@@ -1636,8 +1918,11 @@ function openAuthModal() {
             if (!pw || pw.length < 6) { showAuthError('6文字以上のパスワードを入力してください'); return; }
             if (pw !== pwConfirm) { showAuthError('パスワードが一致しません'); return; }
             
+            const registerQueries = window.supabaseQueries;
+            if (!registerQueries) { showAuthError('Supabase未設定'); return; }
+            
             const password_hash = await window.sha256(pw);
-            const { data: created, error: insErr } = await supabaseQueries.registerStudent({ 
+            const { data: created, error: insErr } = await registerQueries.registerStudent({ 
                 student_number: sn, 
                 name, 
                 password_hash 
@@ -1813,25 +2098,30 @@ async function loadLatestNews() {
         
         // Supabaseから最新のお知らせを取得
         if (window.supabaseQueries) {
-            const { data, error } = await window.supabaseQueries.getNews({
-                limit: 5,
-                offset: 0,
-                publishedOnly: true
-            });
-            
-            if (error) {
-                console.error('Error loading latest news:', error);
-                throw error;
-            }
-            
-            if (data && data.length > 0) {
-                latestNews = data.map(item => ({
-                    id: item.id,
-                    title: item.title,
-                    category: item.category || item.type || 'general',
-                    date: item.date || item.created_at,
-                    summary: item.summary || item.content?.substring(0, 100) || ''
-                }));
+            try {
+                const { data, error } = await window.supabaseQueries.getNews({
+                    limit: 5,
+                    offset: 0,
+                    publishedOnly: true
+                });
+                
+                if (error) {
+                    console.error('Error loading latest news:', error);
+                    throw error;
+                }
+                
+                if (data && Array.isArray(data) && data.length > 0) {
+                    latestNews = data.map(item => ({
+                        id: (item && item.id) ? item.id : null,
+                        title: (item && item.title) ? item.title : '',
+                        category: (item && item.category) ? item.category : ((item && item.type) ? item.type : 'general'),
+                        date: (item && item.date) ? item.date : ((item && item.created_at) ? item.created_at : null),
+                        summary: (item && item.summary) ? item.summary : ((item && item.content) ? item.content.substring(0, 100) : '')
+                    })).filter(item => item.id); // idが無いアイテムを除外
+                }
+            } catch (error) {
+                console.error('Exception in getNews:', error);
+                // エラーが発生しても続行（空のリストで表示）
             }
         }
         
@@ -1894,33 +2184,42 @@ async function loadLatestPosts() {
         
         // Supabaseから最新の投稿を取得（承認済みのみ）
         if (window.supabaseQueries) {
-            // RLSポリシーにより、一般ユーザーは承認済み投稿のみ閲覧可能
-            // さらにフィルターとしてapproval_status='approved'も指定（二重チェック）
-            const { data, error } = await window.supabaseQueries.getTableData('posts', {
-                limit: 5,
-                offset: 0,
-                orderBy: 'created_at',
-                orderDirection: 'desc',
-                filters: {
-                    approval_status: 'approved' // 承認済みのみ表示
-                }
-            });
-            
-            // approval_statusカラムが存在しない場合（古いデータベース）のフォールバック
-            if (error || !data || data.length === 0) {
-                // フィルターなしで再試行（RLSポリシーに任せる）
-                const fallbackResult = await window.supabaseQueries.getTableData('posts', {
+            try {
+                // RLSポリシーにより、一般ユーザーは承認済み投稿のみ閲覧可能
+                // さらにフィルターとしてapproval_status='approved'も指定（二重チェック）
+                const { data, error } = await window.supabaseQueries.getTableData('posts', {
                     limit: 5,
                     offset: 0,
                     orderBy: 'created_at',
-                    orderDirection: 'desc'
+                    orderDirection: 'desc',
+                    filters: {
+                        approval_status: 'approved' // 承認済みのみ表示
+                    }
                 });
                 
-                if (!fallbackResult.error && fallbackResult.data) {
-                    latestPosts = fallbackResult.data;
+                // approval_statusカラムが存在しない場合（古いデータベース）のフォールバック
+                if (error || !data || !Array.isArray(data) || data.length === 0) {
+                    // フィルターなしで再試行（RLSポリシーに任せる）
+                    try {
+                        const fallbackResult = await window.supabaseQueries.getTableData('posts', {
+                            limit: 5,
+                            offset: 0,
+                            orderBy: 'created_at',
+                            orderDirection: 'desc'
+                        });
+                        
+                        if (fallbackResult && !fallbackResult.error && fallbackResult.data && Array.isArray(fallbackResult.data)) {
+                            latestPosts = fallbackResult.data;
+                        }
+                    } catch (fallbackError) {
+                        console.error('Fallback query failed:', fallbackError);
+                    }
+                } else {
+                    latestPosts = data;
                 }
-            } else {
-                latestPosts = data;
+            } catch (error) {
+                console.error('Exception in getTableData for posts:', error);
+                // エラーが発生しても続行（空のリストで表示）
             }
         }
         
@@ -2140,7 +2439,7 @@ async function loadSurveys() {
 // アンケートフォーム初期化
 function initSurveyForm() {
     const form = document.querySelector('.survey-content');
-    const submitBtn = form?.querySelector('.btn-primary');
+    const submitBtn = (form && form.querySelector) ? form.querySelector('.btn-primary') : null;
     
     if (!submitBtn) return;
     

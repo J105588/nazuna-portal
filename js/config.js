@@ -24,7 +24,7 @@ const CONFIG = {
     
     // Google Apps Script WebApp URL
     // デプロイ後にこのURLを更新してください
-    GAS_URL: 'https://script.google.com/macros/s/AKfycbwrHLd7ijr1I8I9fBrWZcjTG0o_yFpRb-n8YyVoqHVIWaoT4dkGj0xmucDGjbEahjLe/exec',
+    GAS_URL: 'https://script.google.com/macros/s/AKfycbxpmHJfKdc0nmAI3dG8-1-qlex9Sr9iy5LPZ1ri2EXkG1y5oFVlfrXs6Cy8QlbjgWQI/exec',
     
     // Firebase設定（通知システム用）
     FIREBASE: {
@@ -62,7 +62,7 @@ const CONFIG = {
     // アプリケーション設定
     APP: {
         NAME: 'なずなポータル',
-        VERSION: '2.0.0',
+        VERSION: '1.0.0',
         DESCRIPTION: 'みんなでつくる学校生活',
         
         // ページネーション
@@ -84,7 +84,7 @@ const CONFIG = {
             'clubs': true,
             'forum': true,
             'news': true,
-            'survey': false,
+            'survey': true,
             'member-detail': true,
             'admin': true,
             '404': true

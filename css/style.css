@@ -825,7 +825,39 @@ body {
 }
 
 .nav-spacer {
-    width: 50px; /* Same as hamburger width */
+    width: 50px; /* Same as back button width */
+}
+
+/* 戻るボタン */
+.back-button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    border-radius: 0.5rem;
+    background: var(--background-color);
+    color: var(--primary-color);
+    text-decoration: none;
+    transition: all 0.3s ease;
+    border: 1px solid var(--border-color);
+    box-shadow: var(--shadow-sm);
+}
+
+.back-button:hover {
+    background: var(--primary-color);
+    color: white;
+    transform: translateX(-3px);
+    box-shadow: var(--shadow-md);
+}
+
+.back-button i {
+    font-size: 1.2rem;
+}
+
+/* member-detail.htmlでのハンバーガーメニュー非表示 */
+.member-detail-page .hamburger {
+    display: none;
 }
 
 .logo:hover {
@@ -2974,35 +3006,84 @@ footer {
 
 .member-card {
     background: var(--background-color);
-    padding: 2rem;
-    border-radius: 1rem;
+    padding: 2.5rem;
+    border-radius: 1.25rem;
     text-align: center;
-    box-shadow: var(--shadow-sm);
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
     border: 1px solid var(--border-color);
     transition: all 0.3s ease;
     opacity: 0;
     animation: fadeInUp 0.45s ease forwards;
+    position: relative;
+    overflow: hidden;
+}
+
+.member-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: var(--gradient-primary);
+    transform: scaleX(0);
+    transition: transform 0.3s ease;
+}
+
+.member-card:hover::before {
+    transform: scaleX(1);
 }
 
 .member-card:hover {
-    transform: translateY(-5px);
-    box-shadow: var(--shadow-md);
+    transform: translateY(-8px);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+}
+
+.member-image-wrapper {
+    position: relative;
+    margin-bottom: 1rem;
+}
+
+.member-image-wrapper .member-image {
+    width: 150px;
+    height: 150px;
+    border-radius: 50%;
+    object-fit: cover;
+    margin: 0 auto;
+    display: block;
+    border: 4px solid var(--surface-color);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    transition: transform 0.3s ease;
+}
+
+.member-card:hover .member-image-wrapper .member-image {
+    transform: scale(1.05);
 }
 
 .member-card h3 {
-    margin-bottom: 0.5rem;
+    margin-bottom: 0.75rem;
     color: var(--primary-color);
+    font-size: 1.5rem;
+    font-weight: 700;
 }
 
 .member-role {
     color: var(--secondary-color);
-    font-weight: 500;
+    font-weight: 600;
+    font-size: 1.05rem;
     margin-bottom: 1rem;
+    padding: 0.5rem 1rem;
+    background: rgba(102, 126, 234, 0.1);
+    border-radius: 1rem;
+    display: inline-block;
 }
 
 .member-message {
-    color: var(--text-light);
+    color: var(--text-color);
     font-style: italic;
+    font-size: 0.95rem;
+    line-height: 1.6;
+    margin-top: 1rem;
 }
 
 /* 活動内容 */
@@ -4246,7 +4327,7 @@ textarea.form-control {
 /* メンバー詳細ページ */
 .breadcrumb-section {
     padding: 100px 0 20px;
-    background: var(--background-color);
+    background: var(--surface-color);
 }
 
 .breadcrumb {
@@ -4267,17 +4348,35 @@ textarea.form-control {
     color: var(--secondary-color);
 }
 
-.member-detail-header {
-    background: var(--gradient-primary);
+.page-header .breadcrumb {
+    margin-bottom: 2rem;
+}
+
+.page-header .breadcrumb-link {
+    color: rgba(255, 255, 255, 0.9);
+    transition: color 0.3s ease;
+}
+
+.page-header .breadcrumb-link:hover {
     color: white;
-    padding: 60px 0;
 }
 
 .member-hero-content {
-    display: grid;
-    grid-template-columns: auto 1fr;
-    gap: 3rem;
+    display: flex;
+    flex-direction: column;
     align-items: center;
+    gap: 2rem;
+    position: relative;
+    z-index: 1;
+    max-width: 800px;
+    margin: 0 auto;
+    text-align: center;
+}
+
+@media (max-width: 768px) {
+    .member-hero-content {
+        gap: 1.5rem;
+    }
 }
 
 .member-hero-avatar {
@@ -4285,53 +4384,59 @@ textarea.form-control {
 }
 
 .member-hero-avatar .member-image {
-    width: 200px;
-    height: 200px;
+    width: 180px;
+    height: 180px;
     border-radius: 50%;
     object-fit: cover;
-    border: 4px solid rgba(255, 255, 255, 0.2);
-    box-shadow: var(--shadow-lg);
+    border: 5px solid rgba(255, 255, 255, 0.3);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
 }
 
 .member-hero-avatar .member-placeholder {
-    width: 200px;
-    height: 200px;
+    width: 180px;
+    height: 180px;
     border-radius: 50%;
-    background: rgba(255, 255, 255, 0.1);
+    background: rgba(255, 255, 255, 0.15);
     display: flex;
     align-items: center;
     justify-content: center;
-    border: 4px solid rgba(255, 255, 255, 0.2);
+    border: 5px solid rgba(255, 255, 255, 0.3);
     backdrop-filter: blur(10px);
 }
 
 .member-hero-avatar .member-placeholder i {
     font-size: 4rem;
-    color: rgba(255, 255, 255, 0.8);
+    color: rgba(255, 255, 255, 0.9);
 }
 
 .member-hero-info {
     min-width: 0;
+    text-align: center;
 }
 
 .member-name {
     font-size: 2.5rem;
     font-weight: 700;
-    margin-bottom: 0.5rem;
+    margin-bottom: 0.75rem;
     line-height: 1.2;
+    text-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
 }
 
 .member-role {
-    font-size: 1.25rem;
-    opacity: 0.9;
-    margin-bottom: 0.5rem;
-    font-weight: 500;
+    font-size: 1.5rem;
+    opacity: 1;
+    margin-bottom: 0.75rem;
+    font-weight: 700;
+    text-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+    color: rgba(255, 255, 255, 0.98);
+    letter-spacing: 0.05em;
 }
 
 .member-grade {
-    font-size: 1rem;
-    opacity: 0.8;
-    margin-bottom: 1.5rem;
+    font-size: 1.1rem;
+    opacity: 0.85;
+    margin-bottom: 2rem;
+    font-weight: 500;
 }
 
 .member-meta {
@@ -4351,6 +4456,7 @@ textarea.form-control {
 
 .member-detail-content {
     padding: 80px 0;
+    background: var(--surface-color);
 }
 
 .detail-grid {
@@ -4366,19 +4472,33 @@ textarea.form-control {
 }
 
 .detail-section {
-    background: var(--surface-color);
+    background: var(--background-color);
     border-radius: 1rem;
-    padding: 2rem;
+    padding: 2.5rem;
     box-shadow: var(--shadow-sm);
     border: 1px solid var(--border-color);
+    transition: all 0.3s ease;
+}
+
+.detail-section:hover {
+    box-shadow: var(--shadow-md);
+    transform: translateY(-2px);
 }
 
 .detail-section h3 {
     color: var(--primary-color);
-    margin-bottom: 1.5rem;
+    margin-bottom: 2rem;
     display: flex;
     align-items: center;
     gap: 0.75rem;
+    font-size: 1.5rem;
+    font-weight: 700;
+    padding-bottom: 1rem;
+    border-bottom: 3px solid var(--secondary-color);
+}
+
+.detail-section h3 i {
+    color: var(--secondary-color);
     font-size: 1.25rem;
 }
 
@@ -4397,20 +4517,65 @@ textarea.form-control {
 .profile-label {
     display: flex;
     align-items: center;
-    gap: 0.5rem;
-    font-weight: 500;
-    color: var(--text-light);
-    font-size: 0.9rem;
+    gap: 0.75rem;
+    font-weight: 600;
+    color: var(--text-color);
+    font-size: 0.95rem;
+    margin-bottom: 0.5rem;
 }
 
 .profile-label i {
-    width: 16px;
+    width: 20px;
     text-align: center;
+    color: var(--secondary-color);
+    font-size: 1rem;
 }
 
 .profile-value {
     color: var(--text-color);
     font-weight: 500;
+    font-size: 1.05rem;
+    line-height: 1.6;
+    padding: 0.5rem 0;
+}
+
+.profile-edit {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    margin-top: 0.5rem;
+}
+
+.profile-edit .form-control {
+    padding: 0.5rem;
+    border: 1px solid var(--border-color);
+    border-radius: 0.5rem;
+    font-size: 0.9rem;
+}
+
+.profile-edit .btn {
+    align-self: flex-start;
+    padding: 0.5rem 1rem;
+    font-size: 0.85rem;
+}
+
+.edit-btn-small {
+    background: none;
+    border: none;
+    color: var(--primary-color);
+    cursor: pointer;
+    padding: 0.25rem 0.5rem;
+    border-radius: 0.25rem;
+    transition: background-color 0.2s;
+    margin-left: auto;
+}
+
+.edit-btn-small:hover {
+    background: var(--background-color);
+}
+
+.edit-btn-small i {
+    font-size: 0.85rem;
 }
 
 .hobby-tag {
@@ -4427,23 +4592,35 @@ textarea.form-control {
 
 .message-card {
     display: flex;
-    gap: 1.5rem;
+    gap: 2rem;
     align-items: flex-start;
+    padding: 2rem;
+    background: var(--surface-color);
+    border-radius: 1rem;
+    border-left: 4px solid var(--secondary-color);
+    transition: all 0.3s ease;
+    box-shadow: var(--shadow-sm);
+}
+
+.message-card:hover {
+    transform: translateX(5px);
+    box-shadow: var(--shadow-md);
 }
 
 .message-icon {
-    width: 50px;
-    height: 50px;
+    width: 60px;
+    height: 60px;
     background: var(--gradient-primary);
     border-radius: 50%;
     display: flex;
     align-items: center;
     justify-content: center;
     flex-shrink: 0;
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
 }
 
 .message-icon i {
-    font-size: 1.25rem;
+    font-size: 1.5rem;
     color: white;
 }
 
@@ -4452,9 +4629,10 @@ textarea.form-control {
 }
 
 .message-text p {
-    line-height: 1.7;
+    line-height: 1.8;
     color: var(--text-color);
-    font-size: 1.1rem;
+    font-size: 1.15rem;
+    margin: 0;
 }
 
 .responsibilities-list {
@@ -4467,15 +4645,23 @@ textarea.form-control {
     display: flex;
     align-items: center;
     gap: 1rem;
-    padding: 0.75rem;
-    background: var(--background-color);
-    border-radius: 0.5rem;
-    border-left: 3px solid var(--secondary-color);
+    padding: 1rem;
+    background: var(--surface-color);
+    border-radius: 0.75rem;
+    border-left: 4px solid var(--secondary-color);
+    box-shadow: var(--shadow-sm);
+    transition: all 0.3s ease;
+}
+
+.responsibility-item:hover {
+    transform: translateX(3px);
+    box-shadow: var(--shadow-sm);
 }
 
 .responsibility-item i {
     color: var(--success-color);
     font-size: 1.1rem;
+    flex-shrink: 0;
 }
 
 .achievements-timeline {
@@ -4521,15 +4707,16 @@ textarea.form-control {
 
 .achievement-item {
     position: relative;
-    background: var(--surface-color);
+    background: var(--background-color);
     border: 1px solid var(--border-color);
-    border-radius: 0.75rem;
-    padding: 1rem;
-    margin-bottom: 0.75rem;
+    border-radius: 1rem;
+    padding: 1.5rem;
+    margin-bottom: 1rem;
     box-shadow: var(--shadow-sm);
-    transition: all 0.2s ease;
+    transition: all 0.3s ease;
     opacity: 0;
     animation: fadeInUp 0.4s ease forwards;
+    border-left: 4px solid var(--secondary-color);
 }
 
 .achievement-item:nth-child(odd) {
@@ -4637,12 +4824,16 @@ textarea.form-control {
 
 .achievement-content h4 {
     color: var(--primary-color);
-    margin-bottom: 0.5rem;
+    margin-bottom: 0.75rem;
+    font-size: 1.15rem;
+    font-weight: 700;
 }
 
 .achievement-content p {
-    color: var(--text-light);
-    line-height: 1.6;
+    color: var(--text-color);
+    line-height: 1.7;
+    font-size: 0.95rem;
+    margin-bottom: 0.5rem;
 }
 
 .no-achievements {
@@ -4664,27 +4855,43 @@ textarea.form-control {
 }
 
 .sidebar-card {
-    background: var(--surface-color);
+    background: var(--background-color);
     border-radius: 1rem;
     padding: 2rem;
     box-shadow: var(--shadow-sm);
     border: 1px solid var(--border-color);
     opacity: 0;
     animation: fadeInUp 0.45s ease forwards;
+    transition: all 0.3s ease;
+}
+
+.sidebar-card:hover {
+    box-shadow: var(--shadow-md);
+    transform: translateY(-2px);
 }
 
 .sidebar-card h4 {
     color: var(--primary-color);
-    margin-bottom: 1rem;
+    margin-bottom: 1.5rem;
     display: flex;
     align-items: center;
     gap: 0.75rem;
+    font-size: 1.25rem;
+    font-weight: 700;
+    padding-bottom: 1rem;
+    border-bottom: 2px solid var(--secondary-color);
+}
+
+.sidebar-card h4 i {
+    color: var(--secondary-color);
+    font-size: 1.1rem;
 }
 
 .sidebar-card p {
     color: var(--text-light);
-    line-height: 1.6;
+    line-height: 1.7;
     margin-bottom: 1.5rem;
+    font-size: 0.95rem;
 }
 
 .other-members {
@@ -4696,21 +4903,23 @@ textarea.form-control {
 .other-member-item {
     display: flex;
     align-items: center;
-    gap: 1rem;
-    padding: 1rem;
+    gap: 1.25rem;
+    padding: 1.25rem;
     background: var(--background-color);
-    border-radius: 0.5rem;
+    border-radius: 1rem;
     transition: all 0.3s ease;
+    border: 1px solid var(--border-color);
 }
 
 .other-member-item:hover {
-    transform: translateY(-2px);
-    box-shadow: var(--shadow-sm);
+    transform: translateY(-3px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    border-color: var(--secondary-color);
 }
 
 .other-member-avatar {
-    width: 50px;
-    height: 50px;
+    width: 60px;
+    height: 60px;
     border-radius: 50%;
     background: var(--gradient-primary);
     display: flex;
@@ -4718,6 +4927,7 @@ textarea.form-control {
     justify-content: center;
     flex-shrink: 0;
     overflow: hidden;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
 }
 
 .other-member-avatar img {
@@ -4728,38 +4938,41 @@ textarea.form-control {
 
 .other-member-avatar i {
     color: white;
-    font-size: 1.25rem;
+    font-size: 1.5rem;
 }
 
 .other-member-info {
     flex: 1;
+    min-width: 0;
 }
 
 .other-member-info h5 {
     color: var(--text-color);
-    margin-bottom: 0.25rem;
-    font-size: 0.9rem;
+    margin-bottom: 0.5rem;
+    font-size: 1rem;
+    font-weight: 600;
 }
 
 .other-member-info p {
     color: var(--text-light);
-    font-size: 0.8rem;
-    margin-bottom: 0.5rem;
+    font-size: 0.85rem;
+    margin-bottom: 0.75rem;
 }
 
 .other-member-link {
     color: var(--secondary-color);
     text-decoration: none;
-    font-size: 0.8rem;
-    font-weight: 500;
+    font-size: 0.9rem;
+    font-weight: 600;
     display: flex;
     align-items: center;
-    gap: 0.25rem;
-    transition: color 0.3s ease;
+    gap: 0.5rem;
+    transition: all 0.3s ease;
 }
 
 .other-member-link:hover {
     color: var(--primary-color);
+    transform: translateX(3px);
 }
 
 .upcoming-activities {
@@ -4772,24 +4985,126 @@ textarea.form-control {
     display: flex;
     gap: 1rem;
     align-items: flex-start;
+    padding: 1rem;
+    background: var(--surface-color);
+    border-radius: 0.75rem;
+    border-left: 3px solid var(--secondary-color);
+    box-shadow: var(--shadow-sm);
+    transition: all 0.3s ease;
+}
+
+.activity-item:hover {
+    transform: translateX(3px);
+    box-shadow: var(--shadow-sm);
 }
 
 .activity-date {
-    background: var(--secondary-color);
+    background: var(--gradient-primary);
     color: white;
-    padding: 0.5rem;
-    border-radius: 0.5rem;
-    font-weight: 600;
-    font-size: 0.8rem;
+    padding: 0.75rem 1rem;
+    border-radius: 0.75rem;
+    font-weight: 700;
+    font-size: 0.9rem;
     text-align: center;
-    min-width: 40px;
+    min-width: 50px;
     flex-shrink: 0;
+    box-shadow: var(--shadow-sm);
 }
 
 .activity-info h5 {
     color: var(--text-color);
     margin-bottom: 0.25rem;
     font-size: 0.9rem;
+}
+
+.upcoming-activities .activity-item {
+    position: relative;
+}
+
+.upcoming-activities .activity-item .edit-btn-small {
+    position: absolute;
+    top: 0.5rem;
+    right: 0.5rem;
+}
+
+.no-activities {
+    text-align: center;
+    padding: 1rem;
+}
+
+/* 編集モーダル */
+.edit-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10000;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.3s, visibility 0.3s;
+}
+
+.edit-modal.show {
+    opacity: 1;
+    visibility: visible;
+}
+
+.edit-modal-content {
+    background: var(--surface-color);
+    border-radius: 0.5rem;
+    padding: 1.5rem;
+    max-width: 600px;
+    width: 90%;
+    max-height: 90vh;
+    overflow-y: auto;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+}
+
+.edit-modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+}
+
+.edit-modal-header h3 {
+    margin: 0;
+    font-size: 1.2rem;
+}
+
+.edit-modal-header .close-btn {
+    background: none;
+    border: none;
+    font-size: 1.5rem;
+    color: var(--text-light);
+    cursor: pointer;
+    padding: 0;
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 0.25rem;
+    transition: background-color 0.2s;
+}
+
+.edit-modal-header .close-btn:hover {
+    background: var(--background-color);
+}
+
+.edit-modal-body {
+    margin-bottom: 1rem;
+}
+
+.edit-modal-footer {
+    display: flex;
+    gap: 0.5rem;
+    justify-content: flex-end;
 }
 
 .activity-info p {
@@ -4800,7 +5115,7 @@ textarea.form-control {
 
 .related-info {
     padding: 80px 0;
-    background: var(--background-color);
+    background: var(--surface-color);
 }
 
 .related-grid {

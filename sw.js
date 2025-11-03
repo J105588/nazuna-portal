@@ -7,7 +7,7 @@
 // キャッシュ設定
 // =====================================
 
-const CACHE_VERSION = 30;
+const CACHE_VERSION = 32;
 const CACHE_NAME = `nazuna-portal-v${CACHE_VERSION}`;
 const CACHE_PREFIX = 'nazuna-portal-v';
 
@@ -314,20 +314,36 @@ async function handleResourceRequest(request) {
 
 /**
  * バックグラウンドでキャッシュを更新
+ * 同じURLの更新を制限してログの過剰出力を防止
  */
+const updateCacheThrottle = new Map();
+
 async function updateCacheInBackground(request) {
+  const url = request.url;
+  const now = Date.now();
+  const lastUpdate = updateCacheThrottle.get(url) || 0;
+  
+  // 同じURLは60秒以内に複数回更新しない
+  if (now - lastUpdate < 60000) {
+    return;
+  }
+  
   try {
     const networkResponse = await fetch(request);
     
     if (networkResponse && networkResponse.ok) {
       const cache = await caches.open(CACHE_NAME);
       await cache.put(request, networkResponse);
-      console.log('[SW] Cache updated in background:', request.url);
+      updateCacheThrottle.set(url, now);
+      
+      // ログは開発時のみ（本番環境では削減）
+      if (CACHE_VERSION <= 100) {
+        console.log('[SW] Cache updated in background:', request.url);
+      }
     }
     
   } catch (error) {
-    // バックグラウンド更新の失敗は無視
-    console.log('[SW] Background update failed:', request.url);
+    // バックグラウンド更新の失敗は無視（ログも出力しない）
   }
 }
 
