@@ -539,7 +539,7 @@ document.addEventListener('DOMContentLoaded', function() {
             // フォールバック
             indicator.src = 'images/icon.png';
         };
-        document.body.appendChild(indicator);
+        document.documentElement.appendChild(indicator);
 
         // 即時: URL文字列をキャッシュ（CORS回避・次回即時表示用）
         try {
@@ -819,6 +819,23 @@ function initSidebar() {
             closeSidebar();
         }
     });
+
+    // 画面回転/リサイズ時の挙動を安定化
+    const handleResponsiveSidebar = () => {
+        const vw = window.innerWidth || document.documentElement.clientWidth;
+        const vh = window.innerHeight || document.documentElement.clientHeight;
+        // 狭い高さの横向きやデスクトップ切替時は閉じて状態をリセット
+        if (vw >= 769 || vh <= 480) {
+            closeSidebar();
+        } else {
+            // モバイル縦向き時はオーバーフローを解除（閉じていれば）
+            if (!sidebar?.classList.contains('active')) {
+                document.body.style.overflow = '';
+            }
+        }
+    };
+    window.addEventListener('resize', handleResponsiveSidebar);
+    window.addEventListener('orientationchange', handleResponsiveSidebar);
 }
 
 // サイドバーを開閉
