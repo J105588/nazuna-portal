@@ -137,17 +137,44 @@ async function waitForInitialization() {
 // =====================================
 async function checkExistingSession() {
     console.log('=== Checking existing session ===');
+    // 右下インジケータ表示開始
+    try { document.getElementById('processing-indicator')?.classList.add('show'); } catch (_) {}
     const adminToken = sessionStorage.getItem('admin_token');
     const adminEmail = sessionStorage.getItem('admin_email');
+    const adminExp = Number(sessionStorage.getItem('admin_token_exp') || 0);
     
     console.log('Token exists:', !!adminToken);
     console.log('Email exists:', !!adminEmail);
     
-    // トークンがない場合はアクセス拒否
+    // トークン・メールがない場合は即時拒否
     if (!adminToken || !adminEmail) {
-        console.log('No token found, access denied');
+        console.log('No token/email, access denied');
         showAccessDenied();
         return;
+    }
+
+    // 有効期限が無い/切れている場合でも一度検証を試みる（後方互換）
+    if (!adminExp || Date.now() >= adminExp) {
+        console.log('Token exp missing/expired, attempting verification...');
+        try {
+            const isStillValid = await verifyAdminSession(adminToken, adminEmail);
+            if (isStillValid) {
+                // 検証に通った場合は新しい有効期限を付与
+                const renewMs = 8 * 60 * 60 * 1000; // 8時間
+                sessionStorage.setItem('admin_token_exp', String(Date.now() + renewMs));
+                console.log('Session renewed with new expiration');
+            } else {
+                console.log('Token verification failed after exp check');
+                clearSession();
+                showAccessDenied();
+                return;
+            }
+        } catch (e) {
+            console.error('Verification error during exp check:', e);
+            clearSession();
+            showAccessDenied();
+            return;
+        }
     }
     
     // API Clientが存在することを確認
@@ -183,6 +210,10 @@ async function checkExistingSession() {
         console.error('Error details:', error.message, error.stack);
         clearSession();
         showAccessDenied();
+    }
+    finally {
+        // 右下インジケータ非表示
+        try { document.getElementById('processing-indicator')?.classList.remove('show'); } catch (_) {}
     }
 }
 
@@ -232,6 +263,7 @@ async function verifyAdminSession(token, email) {
 function clearSession() {
     sessionStorage.removeItem('admin_token');
     sessionStorage.removeItem('admin_email');
+    sessionStorage.removeItem('admin_token_exp');
     isAuthenticated = false;
     currentUser = null;
 }

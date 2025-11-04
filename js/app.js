@@ -459,11 +459,18 @@ class APIClient {
     
     // クリーンアップ処理
     cleanup(callbackName) {
-        delete window.gasCallbacks[callbackName];
+        // 後から遅延で呼ばれてもエラーにしないためのノップ
+        window.gasCallbacks[callbackName] = function noop() {};
         const script = document.getElementById('jsonp_' + callbackName);
         if (script) {
             script.remove();
         }
+        // 一定時間後に完全削除（GAS遅延呼び出し対策）
+        setTimeout(() => {
+            if (window.gasCallbacks && window.gasCallbacks[callbackName]) {
+                delete window.gasCallbacks[callbackName];
+            }
+        }, 30000);
     }
     
     // キューに溜まったリクエストを処理
@@ -513,6 +520,78 @@ document.addEventListener('DOMContentLoaded', function() {
     // API Client初期化
     initializeAPIClient();
     
+    // 処理中インジケータを準備
+    try {
+        // アイコンをローカルキャッシュから取得（次回以降即時表示）
+        const ICON_URL = 'https://lh3.googleusercontent.com/pw/AP1GczPtDAtqRlRZY8yBF0ajASVZzyEDa1uq1vlm3Dw7a7TIXMQUzwOjquumsabe_DDWZiM6tg2Ruxgtb-kvWibkkbxvcklHnPPqCat1N8H4mKJp3QPpmvyEyJxObatEQq4xD2zu0AQ8yBYZf7GePeGIoEEF=w1033-h1033-s-no-gm?authuser=0';
+        const cachedKey = 'processing_indicator_img_v2';
+        const cached = localStorage.getItem(cachedKey);
+
+        const indicator = document.createElement('img');
+        indicator.className = 'processing-indicator';
+        indicator.id = 'processing-indicator';
+        indicator.alt = '';
+        indicator.decoding = 'async';
+        indicator.referrerPolicy = 'no-referrer';
+        indicator.crossOrigin = 'anonymous';
+        indicator.src = cached || ICON_URL;
+        indicator.onerror = function() {
+            // フォールバック
+            indicator.src = 'images/icon.png';
+        };
+        document.body.appendChild(indicator);
+
+        // 即時: URL文字列をキャッシュ（CORS回避・次回即時表示用）
+        try {
+            if (!cached) {
+                localStorage.setItem(cachedKey, ICON_URL);
+            }
+        } catch (_) {}
+
+        const showIndicator = () => indicator.classList.add('show');
+        const hideIndicator = () => indicator.classList.remove('show');
+
+        // すべてのアンカー遷移で表示
+        document.addEventListener('click', (e) => {
+            const anchor = e.target.closest && e.target.closest('a[href]');
+            if (!anchor) return;
+            const href = anchor.getAttribute('href') || '';
+            if (href.startsWith('#') || href.startsWith('javascript:')) return;
+            showIndicator();
+            setTimeout(hideIndicator, 5000);
+        }, true);
+
+        // すべてのフォーム送信で表示
+        document.addEventListener('submit', () => {
+            showIndicator();
+            setTimeout(hideIndicator, 5000);
+        }, true);
+
+        // 画面遷移開始時
+        window.addEventListener('beforeunload', () => {
+            showIndicator();
+        });
+
+        // すべてのAPIClientインスタンスで表示（プロトタイプをパッチ）
+        if (typeof APIClient !== 'undefined' && !APIClient.__indicatorPatched) {
+            const originalSend = APIClient.prototype.sendRequest;
+            if (typeof originalSend === 'function') {
+                APIClient.prototype.sendRequest = function(...args) {
+                    try { showIndicator(); } catch (e) {}
+                    const p = originalSend.apply(this, args);
+                    try {
+                        return Promise.resolve(p).finally(() => hideIndicator());
+                    } catch (_) {
+                        // 非Promiseが返ってきた場合にも対応
+                        hideIndicator();
+                        return p;
+                    }
+                };
+                APIClient.__indicatorPatched = true;
+            }
+        }
+    } catch (_) {}
+
     // 基本機能を初期化
     initNavigation();
     initSidebar();
@@ -1523,10 +1602,12 @@ async function loadPosts() {
         orderBy: state.orderBy,
         orderDirection: state.orderDirection,
         limit: state.pageSize,
-        offset: (state.page - 1) * state.pageSize
+        offset: (state.page - 1) * state.pageSize,
+        // フォーラム表示は承認済みのみ
+        filters: { approval_status: 'approved' }
     };
     if (state.status && state.status !== 'all') {
-        options.filters = { status: state.status };
+        options.filters = { ...options.filters, status: state.status };
     }
     if (state.search) {
         options.search = state.search;
@@ -1550,6 +1631,8 @@ async function loadPosts() {
                 return;
             }
             let countQuery = client.from('posts').select('id', { count: 'exact' });
+            // 承認済みのみをカウント
+            countQuery = countQuery.eq('approval_status', 'approved');
             if (state.status && state.status !== 'all') countQuery = countQuery.eq('status', state.status);
             if (state.search) countQuery = countQuery.ilike('content', `%${state.search}%`);
             countQuery = countQuery.limit(0);

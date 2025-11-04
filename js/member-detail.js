@@ -201,6 +201,9 @@ async function loadMemberDetail() {
                 if (bioData.activities) {
                     member.activities = bioData.activities;
                 }
+                if (bioData.text) {
+                    member.longMessage = bioData.text;
+                }
             } catch (e) {
                 // bioがJSONでない場合は無視
             }
@@ -307,12 +310,18 @@ function isAdmin() {
     return !!(adminToken && adminEmail);
 }
 
+function isAdminPage() {
+    const pathname = (window.location && window.location.pathname || '').toLowerCase();
+    const href = (window.location && window.location.href || '').toLowerCase();
+    return pathname.includes('admin.html') || href.includes('admin.html');
+}
+
 // プロフィール表示
 function displayMemberProfile(member) {
     const profileContainer = document.getElementById('profile-content');
     if (!profileContainer) return;
     
-    const canEdit = isAdmin();
+    const canEdit = isAdmin() && isAdminPage();
     const hobbiesText = Array.isArray(member.hobbies) ? member.hobbies.join(', ') : (member.hobbies || '');
     
     profileContainer.innerHTML = `
@@ -614,14 +623,20 @@ function setCurrentMember(member) {
 
 // 活動開始の編集
 function editJoinDate() {
-    if (!isAdmin()) return;
+    if (!isAdmin() || !isAdminPage()) {
+        showErrorMessage('プロフィール編集は管理画面からのみ可能です。');
+        return;
+    }
     document.getElementById('join-date-value').style.display = 'none';
     document.getElementById('join-date-edit').style.display = 'block';
 }
 
 // 活動開始の保存
 async function saveJoinDate() {
-    if (!isAdmin()) return;
+    if (!isAdmin() || !isAdminPage()) {
+        showErrorMessage('プロフィール編集は管理画面からのみ可能です。');
+        return;
+    }
     
     const input = document.getElementById('join-date-input');
     const newDate = input.value;
@@ -673,14 +688,20 @@ function cancelEditJoinDate() {
 
 // 趣味の編集
 function editHobbies() {
-    if (!isAdmin()) return;
+    if (!isAdmin() || !isAdminPage()) {
+        showErrorMessage('プロフィール編集は管理画面からのみ可能です。');
+        return;
+    }
     document.getElementById('hobbies-value').style.display = 'none';
     document.getElementById('hobbies-edit').style.display = 'block';
 }
 
 // 趣味の保存
 async function saveHobbies() {
-    if (!isAdmin()) return;
+    if (!isAdmin() || !isAdminPage()) {
+        showErrorMessage('プロフィール編集は管理画面からのみ可能です。');
+        return;
+    }
     
     const input = document.getElementById('hobbies-input');
     const hobbiesText = input.value.trim();
@@ -745,14 +766,20 @@ function cancelEditHobbies() {
 
 // 座右の銘の編集
 function editMotto() {
-    if (!isAdmin()) return;
+    if (!isAdmin() || !isAdminPage()) {
+        showErrorMessage('プロフィール編集は管理画面からのみ可能です。');
+        return;
+    }
     document.getElementById('motto-value').style.display = 'none';
     document.getElementById('motto-edit').style.display = 'block';
 }
 
 // 座右の銘の保存
 async function saveMotto() {
-    if (!isAdmin()) return;
+    if (!isAdmin() || !isAdminPage()) {
+        showErrorMessage('プロフィール編集は管理画面からのみ可能です。');
+        return;
+    }
     
     const input = document.getElementById('motto-input');
     const motto = input.value.trim();
@@ -803,7 +830,7 @@ function displayActivities(member) {
     const activitiesContainer = document.getElementById('upcoming-activities');
     if (!activitiesContainer) return;
     
-    const canEdit = isAdmin();
+    const canEdit = isAdmin() && isAdminPage();
     const activities = member.activities || [];
     
     if (activities.length === 0) {
@@ -846,7 +873,10 @@ function formatActivityDate(dateString) {
 
 // 活動予定の編集
 function editActivities() {
-    if (!isAdmin()) return;
+    if (!isAdmin() || !isAdminPage()) {
+        showErrorMessage('活動予定の編集は管理画面からのみ可能です。');
+        return;
+    }
     
     const activities = currentMemberData?.activities || [];
     const activitiesText = activities.map(a => {
@@ -890,7 +920,10 @@ function closeEditActivitiesModal() {
 
 // 活動予定を保存
 async function saveActivities() {
-    if (!isAdmin()) return;
+    if (!isAdmin() || !isAdminPage()) {
+        showErrorMessage('活動予定の編集は管理画面からのみ可能です。');
+        return;
+    }
     
     const input = document.getElementById('activities-input');
     const activitiesText = input.value.trim();
@@ -957,7 +990,10 @@ async function saveActivities() {
 
 // 活動予定を削除
 async function deleteActivity(index) {
-    if (!isAdmin()) return;
+    if (!isAdmin() || !isAdminPage()) {
+        showErrorMessage('活動予定の編集は管理画面からのみ可能です。');
+        return;
+    }
     
     if (!confirm('この活動予定を削除しますか？')) return;
     

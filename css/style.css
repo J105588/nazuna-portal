@@ -1,3 +1,88 @@
+/* Section reveal (1回のフェード+スライド) */
+@keyframes revealUp {
+    0% { opacity: 0; transform: translateY(12px); }
+    100% { opacity: 1; transform: translateY(0); }
+}
+
+.section-reveal {
+    opacity: 0;
+    animation: revealUp .6s ease-out .05s both;
+}
+
+/* 役職カードの並びとアニメーション */
+.roles-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 1rem;
+}
+.role-card {
+    background: #fff;
+    border-radius: 12px;
+    box-shadow: 0 10px 24px rgba(0,0,0,0.06);
+    padding: 1rem 1.1rem;
+    transition: transform .18s ease, box-shadow .18s ease;
+}
+.role-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 14px 30px rgba(0,0,0,0.1);
+}
+.role-card h3 { margin-bottom: .4rem; }
+.role-card h3 i { color: var(--primary-color); margin-right: .4rem; }
+
+/* 段階的にふわっと見せる（簡易ステッガー） */
+.roles-grid .role-card:nth-child(1) { animation: revealUp .5s ease-out .06s both; }
+.roles-grid .role-card:nth-child(2) { animation: revealUp .5s ease-out .12s both; }
+.roles-grid .role-card:nth-child(3) { animation: revealUp .5s ease-out .18s both; }
+.roles-grid .role-card:nth-child(4) { animation: revealUp .5s ease-out .24s both; }
+.roles-grid .role-card:nth-child(5) { animation: revealUp .5s ease-out .30s both; }
+
+/* プロセス／ポリシー／FAQの整え */
+.process-steps { padding-left: 1.2rem; line-height: 1.9; }
+.policy-list { padding-left: 1.2rem; line-height: 1.9; }
+.faq-list details { background:#fff; border-radius: 10px; padding:.8rem 1rem; margin:.6rem 0; box-shadow: 0 4px 16px rgba(0,0,0,0.05); }
+.faq-list summary { cursor: pointer; font-weight: 600; }
+
+/* 新規詳細セクションの縦間隔調整 */
+.council-roles,
+.council-process,
+.council-policy,
+.council-faq {
+    margin-top: 2.2rem;
+    margin-bottom: 2.2rem;
+}
+
+/* タイトル下の間隔をやや短めに */
+.council-roles .section-title,
+.council-process .section-title,
+.council-policy .section-title,
+.council-faq .section-title {
+    margin-bottom: 1.2rem;
+}
+/* 超小型処理中インジケータ */
+.processing-indicator {
+    position: fixed;
+    right: 12px;
+    bottom: 12px;
+    width: 40px;
+    height: 40px;
+    border-radius: 6px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.18);
+    z-index: 99999;
+    opacity: 0;
+    transform: translateY(0);
+    pointer-events: none;
+    display: block;
+}
+
+.processing-indicator.show {
+    opacity: 0.9;
+    animation: tiny-bounce 0.8s ease-in-out infinite;
+}
+
+@keyframes tiny-bounce {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-3px); }
+}
 /* Modal positioning enforcement - Viewport center */
 .modal-overlay{
     position: fixed !important; 
@@ -411,6 +496,32 @@ html {
 @keyframes heroIconPulse {
     0%, 100% { transform: scale(1); }
     50% { transform: scale(1.15); }
+}
+
+/* 控えめな浮遊アニメーション（画像用） */
+@keyframes heroFloatSoft {
+    0%, 100% { transform: translateY(0) rotate(0deg); }
+    50% { transform: translateY(-6px) rotate(0.5deg); }
+}
+
+/* ホバー時の小刻みな震え */
+@keyframes heroTremble {
+    0% { transform: translate(0, 0) rotate(0deg); }
+    20% { transform: translate(-1px, 0.5px) rotate(-0.2deg); }
+    40% { transform: translate(1px, -0.5px) rotate(0.2deg); }
+    60% { transform: translate(-1px, 0.5px) rotate(-0.2deg); }
+    80% { transform: translate(1px, -0.5px) rotate(0.2deg); }
+    100% { transform: translate(0, 0) rotate(0deg); }
+}
+
+/* 一度だけ大きめに震える */
+@keyframes heroTrembleBig {
+    0% { transform: translate(0, 0) rotate(0deg); }
+    15% { transform: translate(-4px, 1.5px) rotate(-0.6deg); }
+    35% { transform: translate(4px, -1.5px) rotate(0.6deg); }
+    55% { transform: translate(-3px, 1px) rotate(-0.5deg); }
+    75% { transform: translate(3px, -1px) rotate(0.5deg); }
+    100% { transform: translate(0, 0) rotate(0deg); }
 }
 
 /* 豪華なオープニングアニメーション */
@@ -2312,6 +2423,36 @@ main.page-ready {
     animation: heroIconPulse 2.5s ease-in-out infinite;
 }
 
+/* 画像版ヒーローアイコン（丸く馴染ませる） */
+.hero-graphic img {
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    object-fit: cover;
+    display: block;
+    margin: 0 auto;
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.14);
+    outline: none;
+    will-change: transform;
+    animation: heroFloatSoft 6s ease-in-out infinite;
+}
+
+/* ヒーロー背景の円装飾を無効化し、画像をフルサイズで表示 */
+.hero-graphic {
+    background: none !important;
+    box-shadow: none !important;
+    animation: none !important;
+}
+.hero-graphic::before {
+    content: none !important;
+    display: none !important;
+}
+
+/* ホバー時に小刻みに震える（元の浮遊は維持） */
+.hero-graphic:hover img {
+    animation: heroFloatSoft 6s ease-in-out infinite, heroTrembleBig 0.6s ease-out 1;
+}
+
 /* 部活動グリッド */
 .clubs-grid {
     display: grid;
@@ -3068,8 +3209,8 @@ footer {
 }
 
 .member-role {
-    color: var(--secondary-color);
-    font-weight: 600;
+    color: var(--primary-color);
+    font-weight: 700;
     font-size: 1.05rem;
     margin-bottom: 1rem;
     padding: 0.5rem 1rem;
@@ -4422,7 +4563,7 @@ textarea.form-control {
     text-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
 }
 
-.member-role {
+.member-detail-page .member-role {
     font-size: 1.5rem;
     opacity: 1;
     margin-bottom: 0.75rem;
@@ -4730,14 +4871,15 @@ textarea.form-control {
 .achievement-item::before {
     content: '';
     position: absolute;
-    left: -2rem;
-    top: 1.5rem;
-    width: 10px;
-    height: 10px;
+    left: -2.17rem;
+    top: 1.9rem;
+    width: 12px;
+    height: 12px;
     background: var(--accent-color);
     border-radius: 50%;
     border: 2px solid var(--surface-color);
     box-shadow: 0 0 0 2px var(--accent-color);
+    transform: translateX(-50%);
 }
 
 .achievement-item:hover {

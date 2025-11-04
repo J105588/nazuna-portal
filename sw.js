@@ -63,7 +63,8 @@ const NO_CACHE_PATTERNS = [
 // Service Workerを通さないパターン（完全にブラウザに処理させる）
 const BYPASS_SW_PATTERNS = [
   /supabase\.co/,
-  /googleapis\.com/
+  /googleapis\.com/,
+  /googleusercontent\.com/
 ];
 
 // =====================================

@@ -398,13 +398,12 @@
                         <div class="maintenance-status" id="maintenance-status">
                             <p><i class="fas fa-info-circle"></i> 状態を確認中...</p>
                         </div>
-                        <div class="form-actions">
-                            <button class="btn btn-warning" id="enable-maintenance-btn">
-                                <i class="fas fa-toggle-on"></i> メンテナンスモードを有効化
-                            </button>
-                            <button class="btn btn-success" id="disable-maintenance-btn">
-                                <i class="fas fa-toggle-off"></i> メンテナンスモードを無効化
-                            </button>
+                        <div class="form-actions" style="display: flex; align-items: center; gap: 12px;">
+                            <label class="toggle-switch" aria-label="メンテナンスモード">
+                                <input type="checkbox" id="maintenance-toggle">
+                                <span class="switch" aria-hidden="true"></span>
+                                <span class="toggle-label">メンテナンスモード</span>
+                            </label>
                             <button class="btn btn-outline" id="refresh-maintenance-status-btn">
                                 <i class="fas fa-sync"></i> 状態を更新
                             </button>

@@ -117,6 +117,21 @@ if (typeof window.setupAdminDataOperations === 'undefined') {
             refreshMaintenanceStatusBtn.addEventListener('click', loadMaintenanceStatus);
         }
         
+        const maintenanceToggle = document.getElementById('maintenance-toggle');
+        if (maintenanceToggle) {
+            maintenanceToggle.addEventListener('change', async (e) => {
+                try {
+                    if (e.target.checked) {
+                        await enableMaintenanceMode();
+                    } else {
+                        await disableMaintenanceMode();
+                    }
+                } finally {
+                    await loadMaintenanceStatus();
+                }
+            });
+        }
+        
         // PWA管理
         const pwaCheckUpdatesBtn = document.getElementById('pwa-check-updates-btn');
         if (pwaCheckUpdatesBtn) {
@@ -867,6 +882,28 @@ function openMemberModal(item = null) {
         ? item.responsibilities.join('\n') 
         : (item?.responsibilities || '');
     
+    // bio から構造化データを抽出（text/hobbies/activities）
+    let bioText = item?.bio || '';
+    let hobbiesText = '';
+    let activitiesText = '';
+    try {
+        const bioData = item?.bio ? JSON.parse(item.bio) : null;
+        if (bioData && typeof bioData === 'object') {
+            bioText = bioData.text || '';
+            if (Array.isArray(bioData.hobbies)) {
+                hobbiesText = bioData.hobbies.join(', ');
+            }
+            if (Array.isArray(bioData.activities)) {
+                activitiesText = bioData.activities.map(a => {
+                    const date = a.date || '';
+                    const title = a.title || '';
+                    const description = a.description || '';
+                    return `${date}|${title}|${description}`;
+                }).join('\n');
+            }
+        }
+    } catch (_) {}
+    
     const content = `
         ${!isEdit ? `
         <div class="form-row">
@@ -902,13 +939,33 @@ function openMemberModal(item = null) {
             <input id="member-image-url" class="form-control" value="${window.adminPanel?.escapeHtml(item?.image_url || '')}" placeholder="https://example.com/image.jpg" />
             <small class="form-text">画像のURLを入力してください（任意）</small>
         </div>
+        <div class="form-row">
+            <div class="form-group">
+                <label>活動開始日（join_date）</label>
+                <input id="member-join-date" type="date" class="form-control" value="${item?.join_date ? new Date(item.join_date).toISOString().slice(0,10) : ''}" />
+            </div>
+            <div class="form-group">
+                <label>短いメッセージ</label>
+                <textarea id="member-message" class="form-control" rows="2" placeholder="メンバーカードに表示される短いメッセージを入力してください（任意）">${window.adminPanel?.escapeHtml(item?.message || '')}</textarea>
+            </div>
+        </div>
         <div class="form-group">
             <label>短いメッセージ</label>
-            <textarea id="member-message" class="form-control" rows="2" placeholder="メンバーカードに表示される短いメッセージを入力してください（任意）">${window.adminPanel?.escapeHtml(item?.message || '')}</textarea>
+            <small class="form-text">すでに上で入力済みです。</small>
         </div>
         <div class="form-group">
             <label>詳細メッセージ（自己紹介）</label>
-            <textarea id="member-bio" class="form-control" rows="4" placeholder="member-detail.htmlで表示される詳細な自己紹介文を入力してください（任意）">${window.adminPanel?.escapeHtml(item?.bio || '')}</textarea>
+            <textarea id="member-bio" class="form-control" rows="4" placeholder="member-detail.htmlで表示される詳細な自己紹介文を入力してください（任意）">${window.adminPanel?.escapeHtml(bioText)}</textarea>
+        </div>
+        <div class="form-group">
+            <label>趣味（カンマ区切り）</label>
+            <input id="member-hobbies" class="form-control" value="${window.adminPanel?.escapeHtml(hobbiesText)}" placeholder="音楽, 読書, サッカー" />
+            <small class="form-text">member-detailでタグ表示されます</small>
+        </div>
+        <div class="form-group">
+            <label>活動予定（1行1件: 日付|タイトル|説明）</label>
+            <textarea id="member-activities" class="form-control" rows="5" placeholder="例:\n2025-02-15|生徒会会議|定例会議\n2025-02-20|体育祭準備会|企画検討">${window.adminPanel?.escapeHtml(activitiesText)}</textarea>
+            <small class="form-text">member-detailのサイドバーに表示されます</small>
         </div>
         <div class="form-group">
             <label>担当業務</label>
@@ -961,11 +1018,38 @@ function openMemberModal(item = null) {
             email: document.getElementById('member-email').value.trim() || null,
             image_url: document.getElementById('member-image-url').value.trim() || null,
             message: document.getElementById('member-message').value.trim() || null,
-            bio: document.getElementById('member-bio').value.trim() || null,
+            // bioは構造化JSONとして保存（text/hobbies/activities）
+            bio: (() => {
+                const text = document.getElementById('member-bio').value.trim();
+                const hobbiesRaw = document.getElementById('member-hobbies').value.trim();
+                const hobbies = hobbiesRaw ? hobbiesRaw.split(',').map(h => h.trim()).filter(h => h) : [];
+                const activitiesRaw = document.getElementById('member-activities').value.trim();
+                const activities = [];
+                if (activitiesRaw) {
+                    activitiesRaw.split('\n').forEach(line => {
+                        const parts = line.split('|');
+                        if (parts.length >= 2) {
+                            activities.push({
+                                date: (parts[0] || '').trim(),
+                                title: (parts[1] || '').trim(),
+                                description: (parts[2] || '').trim()
+                            });
+                        }
+                    });
+                }
+                try {
+                    return JSON.stringify({ text, hobbies, activities });
+                } catch (_) {
+                    return text;
+                }
+            })(),
             responsibilities: responsibilities.length > 0 ? responsibilities : null,
             display_order: Number(document.getElementById('member-order').value) || 0,
             is_active: document.getElementById('member-active').value === 'true'
         };
+        // join_date
+        const joinDate = document.getElementById('member-join-date').value;
+        if (joinDate) payload.join_date = joinDate;
         
         // 新規追加時にIDが指定されている場合は取得
         let specifiedId = null;
@@ -1511,7 +1595,7 @@ window.loadAdminForumPosts = async function() {
         if (data && data.length > 0) {
             container.innerHTML = data.map(post => renderForumPostRow(post)).join('');
             
-            // 承認・却下ボタンのイベントリスナー
+            // 承認・却下・保留ボタンのイベントリスナー
             container.querySelectorAll('button[data-action="approve"]').forEach(btn => {
                 btn.addEventListener('click', () => {
                     const id = btn.getAttribute('data-id');
@@ -1523,6 +1607,13 @@ window.loadAdminForumPosts = async function() {
                 btn.addEventListener('click', () => {
                     const id = btn.getAttribute('data-id');
                     rejectPostPrompt(id);
+                });
+            });
+            
+            container.querySelectorAll('button[data-action="set-pending"]').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const id = btn.getAttribute('data-id');
+                    setPendingStatus(id);
                 });
             });
             
@@ -1550,16 +1641,35 @@ function renderForumPostRow(post) {
         : post.content;
     const createdDate = window.adminPanel?.formatDateTime(post.created_at);
     
-    const actionButtons = post.approval_status === 'pending'
-        ? `
+    let actionButtons = '';
+    if (post.approval_status === 'pending') {
+        actionButtons = `
             <button class="btn btn-success btn-sm" data-action="approve" data-id="${post.id}">
                 <i class="fas fa-check"></i> 承認
             </button>
             <button class="btn btn-danger btn-sm" data-action="reject" data-id="${post.id}">
                 <i class="fas fa-times"></i> 却下
             </button>
-        `
-        : '';
+        `;
+    } else if (post.approval_status === 'approved') {
+        actionButtons = `
+            <button class="btn btn-outline btn-sm" data-action="set-pending" data-id="${post.id}">
+                <i class="fas fa-undo"></i> 保留に戻す
+            </button>
+            <button class="btn btn-danger btn-sm" data-action="reject" data-id="${post.id}">
+                <i class="fas fa-times"></i> 却下
+            </button>
+        `;
+    } else if (post.approval_status === 'rejected') {
+        actionButtons = `
+            <button class="btn btn-outline btn-sm" data-action="set-pending" data-id="${post.id}">
+                <i class="fas fa-undo"></i> 保留に戻す
+            </button>
+            <button class="btn btn-success btn-sm" data-action="approve" data-id="${post.id}">
+                <i class="fas fa-check"></i> 承認
+            </button>
+        `;
+    }
     
     return `
         <tr>
@@ -1640,6 +1750,28 @@ function rejectPostPrompt(postId) {
     const reason = prompt('却下理由を入力してください（任意）');
     if (reason !== null) {
         rejectPost(postId, reason);
+    }
+}
+
+async function setPendingStatus(postId) {
+    if (!confirm('この投稿を承認待ち（保留）に戻しますか？')) return;
+    try {
+        const currentUserEmail = window.adminPanel?.getCurrentUserEmail?.() || null;
+        const { error } = await window.supabaseClient
+            .from('posts')
+            .update({
+                approval_status: 'pending',
+                approval_admin_email: currentUserEmail,
+                approval_date: null,
+                rejection_reason: null
+            })
+            .eq('id', postId);
+        if (error) throw error;
+        window.adminPanel?.showSuccess('承認待ちに戻しました');
+        loadForumPosts();
+    } catch (error) {
+        console.error('Error setting pending status:', error);
+        window.adminPanel?.showError('保留への変更に失敗しました');
     }
 }
 
@@ -1781,6 +1913,11 @@ async function loadMaintenanceStatus() {
         const message = result.message || '';
         const endTime = result.endTime || null;
         
+        const maintenanceToggle = document.getElementById('maintenance-toggle');
+        if (maintenanceToggle) {
+            maintenanceToggle.checked = !!isEnabled;
+        }
+
         if (isEnabled) {
             statusDiv.innerHTML = `
                 <div class="alert alert-warning">
