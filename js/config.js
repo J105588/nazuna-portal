@@ -72,7 +72,7 @@ const CONFIG = {
         CACHE_DURATION: 5 * 60 * 1000, // 5分
         
         // 通知設定
-        NOTIFICATION_ICON: 'https://raw.githubusercontent.com/J105588/nazuna-portal/main/images/icon-192x192.png',
+        NOTIFICATION_ICON: 'https://lh3.googleusercontent.com/pw/AP1GczPtDAtqRlRZY8yBF0ajASVZzyEDa1uq1vlm3Dw7a7TIXMQUzwOjquumsabe_DDWZiM6tg2Ruxgtb-kvWibkkbxvcklHnPPqCat1N8H4mKJp3QPpmvyEyJxObatEQq4xD2zu0AQ8yBYZf7GePeGIoEEF=w1033-h1033-s-no-gm?authuser=0',
         
         // デバッグモード
         DEBUG: true,
@@ -87,7 +87,40 @@ const CONFIG = {
             'survey': true,
             'member-detail': true,
             'admin': true,
-            '404': true
+            '404': true,
+            'location-denied': true
+        }
+    },
+
+    // セキュリティ設定（位置情報ガード）
+    SECURITY: {
+        GEO_GUARD: {
+            // ページごとの有効/無効設定
+            ENABLED_PAGES: {
+                // 例: 特定ページでのみ有効化する
+                'admin': false,
+                'forum': false,
+                'index': false,
+                'council': false,
+                'clubs': true,
+                'news': false,
+                'survey': false,
+                'member-detail': false
+            },
+            // 許可ゾーン（円形）複数可：{ lat, lng, radiusMeters }
+            ALLOWED_ZONES: [
+                // 必要に応じて座標を設定してください
+                // { lat: 35.7099, lng: 139.8107, radiusMeters: 500 } // サンプル
+                { lat: 35.677798, lng: 139.863654, radiusMeters: 500 },
+            ],
+            // 判定に失敗/拒否/範囲外時のリダイレクト先
+            REDIRECT_PATH: 'location-denied.html',
+            // 取得タイムアウト（ms）
+            TIMEOUT_MS: 6000,
+            // 高精度要求フラグ
+            ENABLE_HIGH_ACCURACY: false,
+            // 許可リクエスト時にユーザーへ表示する目的説明（同意取得用）
+            CONSENT_MESSAGE: '個人情報保護の観点より、本ページは校内限定配信に設定されています。データ流出を防止するため、位置情報の取得を行います。取得した位置情報は、校内滞在の判定のみに用い、保存・記録はいたしません。'
         }
     },
     

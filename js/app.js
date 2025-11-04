@@ -2597,9 +2597,203 @@ function showLoadingOverlay() {
     overlay.className = 'loading-overlay';
     overlay.innerHTML = '<div class="loading-spinner"></div>';
     document.body.appendChild(overlay);
+    // fade-in
+    requestAnimationFrame(() => {
+        overlay.classList.add('show');
+    });
 }
 function hideLoadingOverlay() {
     const overlay = document.getElementById('loading-overlay');
-    if (overlay) overlay.remove();
+    if (!overlay) return;
+    // fade-out then remove
+    overlay.classList.remove('show');
+    setTimeout(() => {
+        overlay.remove();
+    }, 220);
 }
 window.addEventListener('DOMContentLoaded', hideLoadingOverlay);
+
+// ================== Geolocation Security Guard ===================
+(function setupGeoGuard() {
+    // CONFIGの読み込みを待つ
+    const checkAndRun = () => {
+        try {
+            const guard = window.CONFIG?.SECURITY?.GEO_GUARD;
+            if (!guard) {
+                // CONFIGがまだ読み込まれていない場合は少し待つ
+                if (document.readyState === 'loading') {
+                    setTimeout(checkAndRun, 100);
+                    return;
+                }
+                try { console.log('Geo guard: Config not found'); } catch {}
+                return;
+            }
+        // 現在ページ名を推定（例: /forum.html -> forum）
+        const path = (window.location.pathname || '').toLowerCase();
+        const file = path.split('/').pop() || '';
+        const page = file.replace(/\.html?$/, '') || 'index';
+        const enabled = guard.ENABLED_PAGES?.[page] === true;
+        try {
+            console.log('Geo guard: Page check', { page, enabled, enabledPages: guard.ENABLED_PAGES });
+        } catch {}
+        if (!enabled) return;
+        
+        try {
+            console.log('Geo guard: Starting...', { page, zones: guard.ALLOWED_ZONES });
+        } catch {}
+
+        const zones = Array.isArray(guard.ALLOWED_ZONES) ? guard.ALLOWED_ZONES : [];
+        const redirectTo = guard.REDIRECT_PATH || 'location-denied.html';
+        
+        // リダイレクト関数を先に定義（許可ゾーン未設定チェックで使用）
+        const redirectToError = (errorType, lat, lng) => {
+            const url = new URL(redirectTo, window.location.origin);
+            if (errorType) {
+                url.searchParams.set('error', errorType);
+            }
+            if (lat != null && lng != null && !isNaN(lat) && !isNaN(lng)) {
+                url.searchParams.set('lat', lat.toString());
+                url.searchParams.set('lng', lng.toString());
+            }
+            window.location.replace(url.toString());
+        };
+
+        if (zones.length === 0) {
+            // 許可ゾーン未設定なら即リダイレクト（安全側）
+            redirectToError('unavailable', null, null);
+            return;
+        }
+
+        const isWithinAnyZone = (lat, lng) => {
+            const toRad = (d) => d * Math.PI / 180;
+            const R = 6371000; // 地球半径[m]
+            for (const z of zones) {
+                if (typeof z?.lat !== 'number' || typeof z?.lng !== 'number' || typeof z?.radiusMeters !== 'number') {
+                    try { console.warn('Geo guard: Invalid zone config:', z); } catch {}
+                    continue;
+                }
+                const dLat = toRad(z.lat - lat);
+                const dLng = toRad(z.lng - lng);
+                const a = Math.sin(dLat/2)**2 + Math.cos(toRad(lat)) * Math.cos(toRad(z.lat)) * Math.sin(dLng/2)**2;
+                const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+                const distance = R * c;
+                try {
+                    console.log('Geo guard: Zone check', {
+                        zone: { lat: z.lat, lng: z.lng, radius: z.radiusMeters },
+                        current: { lat, lng },
+                        distance: distance.toFixed(2) + 'm',
+                        within: distance <= z.radiusMeters,
+                        message: distance <= z.radiusMeters 
+                            ? `✓ 範囲内（距離: ${distance.toFixed(2)}m ≤ 半径: ${z.radiusMeters}m）`
+                            : `✗ 範囲外（距離: ${distance.toFixed(2)}m > 半径: ${z.radiusMeters}m）`
+                    });
+                } catch {}
+                if (distance <= z.radiusMeters) return true;
+            }
+            return false;
+        };
+
+        const onDenied = (errorType, lat, lng) => {
+            try { console.warn('Geolocation denied or unavailable; redirecting.'); } catch {}
+            redirectToError(errorType, lat, lng);
+        };
+
+        if (!('geolocation' in navigator)) {
+            onDenied('unavailable', null, null);
+            return;
+        }
+
+        const maybeRequestConsent = async () => {
+            const consentText = guard.CONSENT_MESSAGE || '';
+            // iOS Safari等ではPermissions APIが未対応または制限があるため、フォールバック処理
+            if (!('permissions' in navigator)) {
+                // Permissions APIなし→同意ダイアログを表示（許可後にブラウザの許可ダイアログが表示される）
+                if (consentText) {
+                    return window.confirm(consentText);
+                }
+                return true;
+            }
+            try {
+                const status = await navigator.permissions.query({ name: 'geolocation' });
+                if (status.state === 'denied') return false; // 既にブロック
+                if (status.state === 'prompt') {
+                    if (consentText) {
+                        return window.confirm(consentText);
+                    }
+                }
+                // granted の場合はそのまま実行
+                return true;
+            } catch (e) {
+                // Permissions APIのエラー（iOS等で発生）→同意ダイアログを表示
+                if (consentText) {
+                    return window.confirm(consentText);
+                }
+                return true;
+            }
+        };
+
+        // 同意確認（iOS等でも動作するよう改善）
+        maybeRequestConsent().then((ok) => {
+            if (!ok) { onDenied('denied', null, null); return; }
+            const options = {
+                enableHighAccuracy: !!guard.ENABLE_HIGH_ACCURACY,
+                timeout: Math.max(1000, Number(guard.TIMEOUT_MS) || 6000),
+                maximumAge: 0
+            };
+            navigator.geolocation.getCurrentPosition((pos) => {
+                try {
+                    const lat = pos.coords.latitude;
+                    const lng = pos.coords.longitude;
+                    try {
+                        console.log('Geo guard: Position obtained', { lat, lng });
+                    } catch {}
+                    const within = isWithinAnyZone(lat, lng);
+                    try {
+                        console.log('Geo guard: Zone check result', { within });
+                    } catch {}
+                    if (!within) {
+                        // 範囲外：座標情報を渡してリダイレクト
+                        try {
+                            console.warn('Geo guard: Out of zone, redirecting...', { lat, lng });
+                        } catch {}
+                        redirectToError('out_of_zone', lat, lng);
+                    } else {
+                        try {
+                            console.log('Geo guard: Access granted (within zone)');
+                        } catch {}
+                    }
+                } catch (e) {
+                    try {
+                        console.error('Geo guard: Error processing position', e);
+                    } catch {}
+                    onDenied('unavailable', null, null);
+                }
+            }, (err) => {
+                // エラーの詳細を処理（iOS等でも適切に動作）
+                // err.code: 1=PERMISSION_DENIED, 2=POSITION_UNAVAILABLE, 3=TIMEOUT
+                let errorType = 'unavailable';
+                if (err.code === 1) {
+                    // ユーザーが許可を拒否
+                    errorType = 'denied';
+                    try { console.warn('Geolocation permission denied by user'); } catch {}
+                } else if (err.code === 2) {
+                    // 位置情報が取得できない（GPSオフ等）
+                    errorType = 'unavailable';
+                    try { console.warn('Geolocation position unavailable'); } catch {}
+                } else if (err.code === 3) {
+                    // タイムアウト
+                    errorType = 'timeout';
+                    try { console.warn('Geolocation request timeout'); } catch {}
+                }
+                // エラー時は座標が取得できていないため、エラー種別のみを渡す
+                onDenied(errorType, null, null);
+            }, options);
+        });
+        } catch (e) {
+            try { console.error('Geo guard error:', e); } catch {}
+        }
+    };
+    
+    // 初期実行
+    checkAndRun();
+})();

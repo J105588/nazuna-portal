@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>アクセス不可 - なずなポータル</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <meta name="theme-color" content="#4a7c59">
+    <link rel="icon" type="image/png" href="https://lh3.googleusercontent.com/pw/AP1GczPtDAtqRlRZY8yBF0ajASVZzyEDa1uq1vlm3Dw7a7TIXMQUzwOjquumsabe_DDWZiM6tg2Ruxgtb-kvWibkkbxvcklHnPPqCat1N8H4mKJp3QPpmvyEyJxObatEQq4xD2zu0AQ8yBYZf7GePeGIoEEF=w1033-h1033-s-no-gm?authuser=0">
+    <style>
+        .denied-wrapper {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 40px 20px;
+            background: linear-gradient(135deg, #66eabc 0%, #d79769 100%);
+        }
+        .denied-card {
+            background: var(--surface-color);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            box-shadow: var(--shadow-xl);
+            max-width: 600px;
+            width: 100%;
+            padding: 32px;
+            text-align: center;
+        }
+        .denied-icon {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 16px;
+        }
+        .denied-icon i {
+            color: #fff;
+            font-size: 2rem;
+        }
+        .denied-card h1 {
+            margin: 0 0 8px;
+            color: var(--primary-color);
+            font-size: 1.5rem;
+        }
+        .denied-card p {
+            color: var(--text-light);
+            margin: 0 0 16px;
+            line-height: 1.6;
+        }
+        .location-info {
+            background: var(--background-color);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 16px;
+            margin: 16px 0;
+            text-align: left;
+        }
+        .location-info h3 {
+            margin: 0 0 8px;
+            font-size: 1rem;
+            color: var(--text-color);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .location-info h3 i {
+            color: var(--primary-color);
+        }
+        .location-coords {
+            font-family: 'Courier New', monospace;
+            font-size: 0.9rem;
+            color: var(--text-color);
+            margin: 8px 0 0 0;
+            padding: 8px;
+            background: rgba(0, 0, 0, 0.02);
+            border-radius: 4px;
+        }
+        .location-coords span {
+            display: block;
+            margin: 4px 0;
+        }
+        .location-coords .label {
+            font-weight: 600;
+            color: var(--text-light);
+            margin-right: 8px;
+        }
+        .denied-actions {
+            display: flex;
+            gap: 8px;
+            justify-content: center;
+            flex-wrap: wrap;
+            margin-top: 24px;
+        }
+        .error-message {
+            color: #e74c3c;
+            font-size: 0.9rem;
+            margin-top: 8px;
+        }
+    </style>
+</head>
+<body>
+    <div class="denied-wrapper">
+        <div class="denied-card">
+            <div class="denied-icon">
+                <i class="fas fa-map-marker-alt"></i>
+            </div>
+            <h1>アクセスできません</h1>
+            <p>このページは位置情報の確認により、アクセスが許可されていません。</p>
+            <p style="font-size: 0.9rem; color: var(--text-light);">
+                位置情報の取得が拒否されたか、許可ゾーン外からのアクセスである可能性があります。
+            </p>
+            
+            <div class="location-info" id="location-info" style="display: none;">
+                <h3>
+                    <i class="fas fa-location-dot"></i>
+                    現在地の座標
+                </h3>
+                <div class="location-coords" id="location-coords">
+                    <span><span class="label">緯度:</span> <span id="lat-value">-</span></span>
+                    <span><span class="label">経度:</span> <span id="lng-value">-</span></span>
+                </div>
+            </div>
+            
+            <div class="error-message" id="error-message" style="display: none;"></div>
+            
+            <div class="denied-actions">
+                <a href="index.html" class="btn btn-primary">
+                    <i class="fas fa-home"></i> ホームへ戻る
+                </a>
+                <a href="javascript:history.back()" class="btn btn-secondary">
+                    <i class="fas fa-arrow-left"></i> 前のページ
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const params = new URLSearchParams(window.location.search);
+            const lat = params.get('lat');
+            const lng = params.get('lng');
+            const error = params.get('error');
+            
+            const locationInfo = document.getElementById('location-info');
+            const locationCoords = document.getElementById('location-coords');
+            const latValue = document.getElementById('lat-value');
+            const lngValue = document.getElementById('lng-value');
+            const errorMessage = document.getElementById('error-message');
+            
+            // URLパラメータから座標を取得して表示
+            if (lat && lng) {
+                try {
+                    const latNum = parseFloat(lat);
+                    const lngNum = parseFloat(lng);
+                    if (!isNaN(latNum) && !isNaN(lngNum)) {
+                        latValue.textContent = latNum.toFixed(6);
+                        lngValue.textContent = lngNum.toFixed(6);
+                        locationInfo.style.display = 'block';
+                    }
+                } catch (e) {
+                    console.warn('Failed to parse location coordinates:', e);
+                }
+            }
+            
+            // エラーメッセージを表示
+            if (error) {
+                let message = '';
+                switch (error) {
+                    case 'denied':
+                        message = '位置情報の取得が拒否されました。';
+                        break;
+                    case 'unavailable':
+                        message = '位置情報が取得できませんでした（GPSがオフの可能性があります）。';
+                        break;
+                    case 'timeout':
+                        message = '位置情報の取得がタイムアウトしました。';
+                        break;
+                    case 'out_of_zone':
+                        message = '許可ゾーン外からのアクセスです。';
+                        break;
+                    default:
+                        message = '位置情報の確認に失敗しました。';
+                }
+                errorMessage.textContent = message;
+                errorMessage.style.display = 'block';
+            }
+            
+            // 位置情報が取得できていない場合、再度取得を試みる（ユーザーが許可した場合）
+            if (!lat || !lng) {
+                if ('geolocation' in navigator) {
+                    navigator.geolocation.getCurrentPosition(
+                        function(position) {
+                            const currentLat = position.coords.latitude;
+                            const currentLng = position.coords.longitude;
+                            latValue.textContent = currentLat.toFixed(6);
+                            lngValue.textContent = currentLng.toFixed(6);
+                            locationInfo.style.display = 'block';
+                        },
+                        function(err) {
+                            // エラーは無視（既にエラーメッセージが表示されている可能性がある）
+                        },
+                        {
+                            enableHighAccuracy: false,
+                            timeout: 5000,
+                            maximumAge: 0
+                        }
+                    );
+                }
+            }
+        });
+    </script>
+</body>
+</html>
+
