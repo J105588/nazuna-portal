@@ -906,7 +906,7 @@ async function showOpeningScreen() {
     }
     
     // 画像をプリロード
-    const iconUrl = 'https://raw.githubusercontent.com/J105588/nazuna-portal/main/images/icon.png';
+    const iconUrl = 'https://lh3.googleusercontent.com/pw/AP1GczPtDAtqRlRZY8yBF0ajASVZzyEDa1uq1vlm3Dw7a7TIXMQUzwOjquumsabe_DDWZiM6tg2Ruxgtb-kvWibkkbxvcklHnPPqCat1N8H4mKJp3QPpmvyEyJxObatEQq4xD2zu0AQ8yBYZf7GePeGIoEEF=w1033-h1033-s-no-gm?authuser=0';
     let imageLoaded = false;
     
     try {

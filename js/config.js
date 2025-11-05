@@ -111,7 +111,7 @@ const CONFIG = {
             ALLOWED_ZONES: [
                 // 必要に応じて座標を設定してください
                 // { lat: 35.7099, lng: 139.8107, radiusMeters: 500 } // サンプル
-                { lat: 35.677798, lng: 139.863654, radiusMeters: 500 },
+                { lat: 35.729379, lng: 139.944390, radiusMeters: 200 },
             ],
             // 判定に失敗/拒否/範囲外時のリダイレクト先
             REDIRECT_PATH: 'location-denied.html',
