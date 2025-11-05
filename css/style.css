@@ -3442,24 +3442,25 @@ footer {
     font-size: 2rem;
     margin-bottom: 1.5rem;
     color: var(--primary-color);
-    text-align: left;
+    text-align: center;
 }
 
 .about-text p {
     margin-bottom: 2rem;
     color: var(--text-light);
     line-height: 1.7;
-    text-align: left;
+    text-align: center;
 }
 
 .about-text {
-    text-align: left;
+    text-align: center;
 }
 
 .mission-points {
     display: flex;
     flex-direction: column;
     gap: 1.5rem;
+    align-items: center;
 }
 
 /* mission-points内のabout-imageのスタイリング */
@@ -3483,7 +3484,8 @@ footer {
 .mission-point {
     display: flex;
     gap: 1rem;
-    align-items: flex-start;
+    align-items: center;
+    text-align: center;
 }
 
 .mission-point i {
