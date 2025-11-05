@@ -551,14 +551,39 @@ document.addEventListener('DOMContentLoaded', function() {
         const showIndicator = () => indicator.classList.add('show');
         const hideIndicator = () => indicator.classList.remove('show');
 
-        // すべてのアンカー遷移で表示
+        // すべてのアンカー遷移とボタンからのページ遷移で表示
         document.addEventListener('click', (e) => {
+            // アンカーリンクの検出
             const anchor = e.target.closest && e.target.closest('a[href]');
-            if (!anchor) return;
-            const href = anchor.getAttribute('href') || '';
-            if (href.startsWith('#') || href.startsWith('javascript:')) return;
-            showIndicator();
-            setTimeout(hideIndicator, 5000);
+            if (anchor) {
+                const href = anchor.getAttribute('href') || '';
+                // アンカーリンク（#）やJavaScriptリンクは除外
+                if (href.startsWith('#') || href.startsWith('javascript:')) return;
+                // 外部リンクや同じドメインのリンクは対象
+                showIndicator();
+                setTimeout(hideIndicator, 5000);
+                return;
+            }
+            
+            // ボタン要素（.btnクラス）からの遷移を検出
+            const button = e.target.closest && e.target.closest('.btn, button');
+            if (button) {
+                // ボタンがアンカーリンク内にある場合は既に処理済み
+                const parentAnchor = button.closest('a[href]');
+                if (parentAnchor) return;
+                
+                // ボタンのonclick属性やdata-href属性をチェック
+                const onclick = button.getAttribute('onclick') || '';
+                const dataHref = button.getAttribute('data-href') || '';
+                const href = button.getAttribute('href') || '';
+                
+                // ページ遷移を行う可能性がある場合はインジケータを表示
+                if (onclick.includes('location') || onclick.includes('window.location') || 
+                    onclick.includes('href') || dataHref || href) {
+                    showIndicator();
+                    setTimeout(hideIndicator, 5000);
+                }
+            }
         }, true);
 
         // すべてのフォーム送信で表示
@@ -571,6 +596,29 @@ document.addEventListener('DOMContentLoaded', function() {
         window.addEventListener('beforeunload', () => {
             showIndicator();
         });
+        
+        // window.locationを使ったJavaScriptでの遷移にも対応（可能な限り）
+        try {
+            const originalLocationAssign = window.location.assign;
+            const originalLocationReplace = window.location.replace;
+            
+            if (typeof originalLocationAssign === 'function') {
+                window.location.assign = function(...args) {
+                    showIndicator();
+                    return originalLocationAssign.apply(this, args);
+                };
+            }
+            
+            if (typeof originalLocationReplace === 'function') {
+                window.location.replace = function(...args) {
+                    showIndicator();
+                    return originalLocationReplace.apply(this, args);
+                };
+            }
+        } catch (e) {
+            // セキュリティ制限により設定できない場合は無視
+            console.debug('Could not intercept location methods:', e);
+        }
 
         // すべてのAPIClientインスタンスで表示（プロトタイプをパッチ）
         if (typeof APIClient !== 'undefined' && !APIClient.__indicatorPatched) {
