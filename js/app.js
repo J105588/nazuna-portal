@@ -706,13 +706,33 @@ document.addEventListener('DOMContentLoaded', function() {
     };
     
     // オープニング画面を表示しない場合は直接ページエントリーアニメーションを実行
-    if (!shouldShowOpening) {
-        document.body.classList.add('page-enter');
+    // ページエントリーアニメーション開始ユーティリティ
+    function startPageEnterAnimation() {
+        // 二重適用防止
+        if (!document.body.classList.contains('page-enter')) {
+            document.body.classList.add('page-enter');
+        }
         requestAnimationFrame(() => {
             document.body.classList.add('page-enter-active');
-            // コンテンツの初期化を開始
-            initializeContent();
+            // アニメーション終了後にクラスをクリーンアップ
+            const onAnimEnd = () => {
+                document.body.classList.remove('page-enter');
+                document.body.classList.remove('page-enter-active');
+                document.body.removeEventListener('animationend', onAnimEnd);
+            };
+            document.body.addEventListener('animationend', onAnimEnd, { once: true });
+            // フォールバック（安全網）
+            setTimeout(() => {
+                document.body.classList.remove('page-enter');
+                document.body.classList.remove('page-enter-active');
+            }, 2000);
         });
+    }
+
+    if (!shouldShowOpening) {
+        startPageEnterAnimation();
+        // コンテンツの初期化を開始
+        initializeContent();
     } else {
         // オープニング画面を表示する場合は、コンテンツの初期化のみ実行
         initializeContent();
@@ -1041,18 +1061,27 @@ function hideOpeningScreen() {
         openingScreen.classList.add('fade-out');
         
         // ページエントリーアニメーションを開始
-        document.body.classList.add('page-enter');
-        requestAnimationFrame(() => {
-            document.body.classList.add('page-enter-active');
-            
-            // メインコンテンツの表示を少し遅らせる
-            setTimeout(() => {
-                const main = document.querySelector('main');
-                if (main) {
-                    main.classList.add('page-ready');
-                }
-            }, 200);
-        });
+        if (typeof startPageEnterAnimation === 'function') {
+            startPageEnterAnimation();
+        } else {
+            // 後方互換のためのフォールバック
+            document.body.classList.add('page-enter');
+            requestAnimationFrame(() => {
+                document.body.classList.add('page-enter-active');
+                setTimeout(() => {
+                    document.body.classList.remove('page-enter');
+                    document.body.classList.remove('page-enter-active');
+                }, 2000);
+            });
+        }
+        
+        // メインコンテンツの表示を少し遅らせる
+        setTimeout(() => {
+            const main = document.querySelector('main');
+            if (main) {
+                main.classList.add('page-ready');
+            }
+        }, 200);
         
         setTimeout(() => {
             if (openingScreen.parentNode) {

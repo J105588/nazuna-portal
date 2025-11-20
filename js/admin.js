@@ -405,11 +405,20 @@ function setupEventListeners() {
     const hamburgerMenu = document.getElementById('hamburger-menu');
     const adminSidebar = document.getElementById('admin-sidebar');
     const sidebarCloseBtn = document.getElementById('admin-sidebar-close');
+    const adminSidebarOverlay = document.getElementById('admin-sidebar-overlay');
     
     if (hamburgerMenu && adminSidebar) {
         hamburgerMenu.addEventListener('click', () => {
             adminSidebar.classList.toggle('active');
             hamburgerMenu.classList.toggle('active');
+            // オーバーレイはタブレット以下でのみ表示
+            if (adminSidebarOverlay) {
+                if (window.innerWidth <= 1024 && adminSidebar.classList.contains('active')) {
+                    adminSidebarOverlay.classList.add('active');
+                } else {
+                    adminSidebarOverlay.classList.remove('active');
+                }
+            }
         });
     }
     
@@ -417,8 +426,30 @@ function setupEventListeners() {
         sidebarCloseBtn.addEventListener('click', () => {
             adminSidebar.classList.remove('active');
             hamburgerMenu?.classList.remove('active');
+            adminSidebarOverlay?.classList.remove('active');
         });
     }
+    
+    // オーバーレイクリックでサイドバーを閉じる
+    if (adminSidebarOverlay && adminSidebar) {
+        adminSidebarOverlay.addEventListener('click', () => {
+            adminSidebar.classList.remove('active');
+            hamburgerMenu?.classList.remove('active');
+            adminSidebarOverlay.classList.remove('active');
+        });
+    }
+    
+    // サイドバー以外の領域クリックで閉じる（モバイル時のみ有効）
+    document.addEventListener('click', (e) => {
+        if (!adminSidebar.classList.contains('active')) return;
+        const clickedInsideSidebar = e.target.closest && e.target.closest('#admin-sidebar');
+        const clickedHamburger = e.target.closest && e.target.closest('#hamburger-menu');
+        if (!clickedInsideSidebar && !clickedHamburger) {
+            adminSidebar.classList.remove('active');
+            hamburgerMenu?.classList.remove('active');
+            if (window.innerWidth <= 1024) adminSidebarOverlay?.classList.remove('active');
+        }
+    }, true);
     
     // モーダル
     const modalCloseBtn = document.getElementById('modal-close');

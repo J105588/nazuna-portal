@@ -284,10 +284,28 @@
     border-right: 1px solid var(--admin-border);
     display: flex;
     flex-direction: column;
+    width: 280px; /* 明示的に固定幅を指定（デスクトップ時の全画面化を防止） */
     height: 100vh;
     position: sticky;
     top: 0;
     overflow-y: auto;
+}
+
+/* サイドバーオーバーレイ（モバイル表示時に外側クリックで閉じるため） */
+.admin-sidebar-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.4);
+    backdrop-filter: blur(2px);
+    z-index: 900; /* サイドバー(1000)の下、ヘッダーより上 */
+    opacity: 0;
+    pointer-events: none;
+    transition: var(--admin-transition);
+}
+
+.admin-sidebar-overlay.active {
+    opacity: 1;
+    pointer-events: auto;
 }
 
 .sidebar-header {
@@ -1337,6 +1355,12 @@ textarea.form-control {
     
     .admin-sidebar.active {
         left: 0;
+    }
+
+    /* サイドバーが開いている間はオーバーレイを表示 */
+    .admin-sidebar.active ~ .admin-sidebar-overlay {
+        opacity: 1;
+        pointer-events: auto;
     }
     
     .hamburger-menu {
