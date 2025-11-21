@@ -319,7 +319,7 @@ function showAdminPanel(user) {
     console.log('admin-main element found:', !!adminMain);
     
     if (adminMain) {
-        adminMain.style.display = 'block';
+        adminMain.style.display = '';
         console.log('Admin main panel displayed');
     } else {
         console.error('admin-main element not found!');
