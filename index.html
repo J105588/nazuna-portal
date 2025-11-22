@@ -1,14 +1,16 @@
 <!DOCTYPE html>
 <html lang="ja">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>なずなポータルサイト - ホーム</title>
     <link rel="stylesheet" href="css/style.css">
     <link rel="manifest" href="manifest.json">
-    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&display=swap"
+        rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
-    
+
     <!-- PWA対応メタタグ -->
     <meta name="theme-color" content="#4a7c59">
     <meta name="apple-mobile-web-app-capable" content="yes">
@@ -18,34 +20,47 @@
     <meta name="msapplication-config" content="browserconfig.xml">
     <meta name="application-name" content="なずなポータル">
     <meta name="mobile-web-app-capable" content="yes">
-    
+
     <!-- iOS 16.4+ PWA プッシュ通知対応 -->
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-touch-fullscreen" content="yes">
     <meta name="apple-mobile-web-app-orientations" content="portrait">
     <meta name="web-app-origin-association" content="https://nazuna-portal.web.app">
-    
+
     <!-- iOS対応 -->
-    <link rel="icon" type="image/png" href="https://lh3.googleusercontent.com/pw/AP1GczPtDAtqRlRZY8yBF0ajASVZzyEDa1uq1vlm3Dw7a7TIXMQUzwOjquumsabe_DDWZiM6tg2Ruxgtb-kvWibkkbxvcklHnPPqCat1N8H4mKJp3QPpmvyEyJxObatEQq4xD2zu0AQ8yBYZf7GePeGIoEEF=w1033-h1033-s-no-gm?authuser=0">
-    <link rel="apple-touch-icon" href="https://lh3.googleusercontent.com/pw/AP1GczPtDAtqRlRZY8yBF0ajASVZzyEDa1uq1vlm3Dw7a7TIXMQUzwOjquumsabe_DDWZiM6tg2Ruxgtb-kvWibkkbxvcklHnPPqCat1N8H4mKJp3QPpmvyEyJxObatEQq4xD2zu0AQ8yBYZf7GePeGIoEEF=w1033-h1033-s-no-gm?authuser=0">
-    <link rel="apple-touch-icon" sizes="152x152" href="https://lh3.googleusercontent.com/pw/AP1GczPtDAtqRlRZY8yBF0ajASVZzyEDa1uq1vlm3Dw7a7TIXMQUzwOjquumsabe_DDWZiM6tg2Ruxgtb-kvWibkkbxvcklHnPPqCat1N8H4mKJp3QPpmvyEyJxObatEQq4xD2zu0AQ8yBYZf7GePeGIoEEF=w1033-h1033-s-no-gm?authuser=0">
-    <link rel="apple-touch-icon" sizes="180x180" href="https://lh3.googleusercontent.com/pw/AP1GczPtDAtqRlRZY8yBF0ajASVZzyEDa1uq1vlm3Dw7a7TIXMQUzwOjquumsabe_DDWZiM6tg2Ruxgtb-kvWibkkbxvcklHnPPqCat1N8H4mKJp3QPpmvyEyJxObatEQq4xD2zu0AQ8yBYZf7GePeGIoEEF=w1033-h1033-s-no-gm?authuser=0">
-    <link rel="apple-touch-icon" sizes="167x167" href="https://lh3.googleusercontent.com/pw/AP1GczPtDAtqRlRZY8yBF0ajASVZzyEDa1uq1vlm3Dw7a7TIXMQUzwOjquumsabe_DDWZiM6tg2Ruxgtb-kvWibkkbxvcklHnPPqCat1N8H4mKJp3QPpmvyEyJxObatEQq4xD2zu0AQ8yBYZf7GePeGIoEEF=w1033-h1033-s-no-gm?authuser=0">
-    
+    <link rel="icon" type="image/png"
+        href="https://lh3.googleusercontent.com/pw/AP1GczPtDAtqRlRZY8yBF0ajASVZzyEDa1uq1vlm3Dw7a7TIXMQUzwOjquumsabe_DDWZiM6tg2Ruxgtb-kvWibkkbxvcklHnPPqCat1N8H4mKJp3QPpmvyEyJxObatEQq4xD2zu0AQ8yBYZf7GePeGIoEEF=w1033-h1033-s-no-gm?authuser=0">
+    <link rel="apple-touch-icon"
+        href="https://lh3.googleusercontent.com/pw/AP1GczPtDAtqRlRZY8yBF0ajASVZzyEDa1uq1vlm3Dw7a7TIXMQUzwOjquumsabe_DDWZiM6tg2Ruxgtb-kvWibkkbxvcklHnPPqCat1N8H4mKJp3QPpmvyEyJxObatEQq4xD2zu0AQ8yBYZf7GePeGIoEEF=w1033-h1033-s-no-gm?authuser=0">
+    <link rel="apple-touch-icon" sizes="152x152"
+        href="https://lh3.googleusercontent.com/pw/AP1GczPtDAtqRlRZY8yBF0ajASVZzyEDa1uq1vlm3Dw7a7TIXMQUzwOjquumsabe_DDWZiM6tg2Ruxgtb-kvWibkkbxvcklHnPPqCat1N8H4mKJp3QPpmvyEyJxObatEQq4xD2zu0AQ8yBYZf7GePeGIoEEF=w1033-h1033-s-no-gm?authuser=0">
+    <link rel="apple-touch-icon" sizes="180x180"
+        href="https://lh3.googleusercontent.com/pw/AP1GczPtDAtqRlRZY8yBF0ajASVZzyEDa1uq1vlm3Dw7a7TIXMQUzwOjquumsabe_DDWZiM6tg2Ruxgtb-kvWibkkbxvcklHnPPqCat1N8H4mKJp3QPpmvyEyJxObatEQq4xD2zu0AQ8yBYZf7GePeGIoEEF=w1033-h1033-s-no-gm?authuser=0">
+    <link rel="apple-touch-icon" sizes="167x167"
+        href="https://lh3.googleusercontent.com/pw/AP1GczPtDAtqRlRZY8yBF0ajASVZzyEDa1uq1vlm3Dw7a7TIXMQUzwOjquumsabe_DDWZiM6tg2Ruxgtb-kvWibkkbxvcklHnPPqCat1N8H4mKJp3QPpmvyEyJxObatEQq4xD2zu0AQ8yBYZf7GePeGIoEEF=w1033-h1033-s-no-gm?authuser=0">
+
     <!-- Windows対応 -->
-    <meta name="msapplication-TileImage" content="https://lh3.googleusercontent.com/pw/AP1GczPtDAtqRlRZY8yBF0ajASVZzyEDa1uq1vlm3Dw7a7TIXMQUzwOjquumsabe_DDWZiM6tg2Ruxgtb-kvWibkkbxvcklHnPPqCat1N8H4mKJp3QPpmvyEyJxObatEQq4xD2zu0AQ8yBYZf7GePeGIoEEF=w1033-h1033-s-no-gm?authuser=0">  
-    <meta name="msapplication-square70x70logo" content="https://lh3.googleusercontent.com/pw/AP1GczPtDAtqRlRZY8yBF0ajASVZzyEDa1uq1vlm3Dw7a7TIXMQUzwOjquumsabe_DDWZiM6tg2Ruxgtb-kvWibkkbxvcklHnPPqCat1N8H4mKJp3QPpmvyEyJxObatEQq4xD2zu0AQ8yBYZf7GePeGIoEEF=w1033-h1033-s-no-gm?authuser=0">
-    <meta name="msapplication-square150x150logo" content="https://lh3.googleusercontent.com/pw/AP1GczPtDAtqRlRZY8yBF0ajASVZzyEDa1uq1vlm3Dw7a7TIXMQUzwOjquumsabe_DDWZiM6tg2Ruxgtb-kvWibkkbxvcklHnPPqCat1N8H4mKJp3QPpmvyEyJxObatEQq4xD2zu0AQ8yBYZf7GePeGIoEEF=w1033-h1033-s-no-gm?authuser=0">
-    <meta name="msapplication-wide310x150logo" content="https://lh3.googleusercontent.com/pw/AP1GczPtDAtqRlRZY8yBF0ajASVZzyEDa1uq1vlm3Dw7a7TIXMQUzwOjquumsabe_DDWZiM6tg2Ruxgtb-kvWibkkbxvcklHnPPqCat1N8H4mKJp3QPpmvyEyJxObatEQq4xD2zu0AQ8yBYZf7GePeGIoEEF=w1033-h1033-s-no-gm?authuser=0">
-    <meta name="msapplication-square310x310logo" content="https://lh3.googleusercontent.com/pw/AP1GczPtDAtqRlRZY8yBF0ajASVZzyEDa1uq1vlm3Dw7a7TIXMQUzwOjquumsabe_DDWZiM6tg2Ruxgtb-kvWibkkbxvcklHnPPqCat1N8H4mKJp3QPpmvyEyJxObatEQq4xD2zu0AQ8yBYZf7GePeGIoEEF=w1033-h1033-s-no-gm?authuser=0">
+    <meta name="msapplication-TileImage"
+        content="https://lh3.googleusercontent.com/pw/AP1GczPtDAtqRlRZY8yBF0ajASVZzyEDa1uq1vlm3Dw7a7TIXMQUzwOjquumsabe_DDWZiM6tg2Ruxgtb-kvWibkkbxvcklHnPPqCat1N8H4mKJp3QPpmvyEyJxObatEQq4xD2zu0AQ8yBYZf7GePeGIoEEF=w1033-h1033-s-no-gm?authuser=0">
+    <meta name="msapplication-square70x70logo"
+        content="https://lh3.googleusercontent.com/pw/AP1GczPtDAtqRlRZY8yBF0ajASVZzyEDa1uq1vlm3Dw7a7TIXMQUzwOjquumsabe_DDWZiM6tg2Ruxgtb-kvWibkkbxvcklHnPPqCat1N8H4mKJp3QPpmvyEyJxObatEQq4xD2zu0AQ8yBYZf7GePeGIoEEF=w1033-h1033-s-no-gm?authuser=0">
+    <meta name="msapplication-square150x150logo"
+        content="https://lh3.googleusercontent.com/pw/AP1GczPtDAtqRlRZY8yBF0ajASVZzyEDa1uq1vlm3Dw7a7TIXMQUzwOjquumsabe_DDWZiM6tg2Ruxgtb-kvWibkkbxvcklHnPPqCat1N8H4mKJp3QPpmvyEyJxObatEQq4xD2zu0AQ8yBYZf7GePeGIoEEF=w1033-h1033-s-no-gm?authuser=0">
+    <meta name="msapplication-wide310x150logo"
+        content="https://lh3.googleusercontent.com/pw/AP1GczPtDAtqRlRZY8yBF0ajASVZzyEDa1uq1vlm3Dw7a7TIXMQUzwOjquumsabe_DDWZiM6tg2Ruxgtb-kvWibkkbxvcklHnPPqCat1N8H4mKJp3QPpmvyEyJxObatEQq4xD2zu0AQ8yBYZf7GePeGIoEEF=w1033-h1033-s-no-gm?authuser=0">
+    <meta name="msapplication-square310x310logo"
+        content="https://lh3.googleusercontent.com/pw/AP1GczPtDAtqRlRZY8yBF0ajASVZzyEDa1uq1vlm3Dw7a7TIXMQUzwOjquumsabe_DDWZiM6tg2Ruxgtb-kvWibkkbxvcklHnPPqCat1N8H4mKJp3QPpmvyEyJxObatEQq4xD2zu0AQ8yBYZf7GePeGIoEEF=w1033-h1033-s-no-gm?authuser=0">
     <!-- Supabase CDN -->
     <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
-    
+
     <!-- Firebase SDK -->
-    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js" onload="console.log('Firebase App SDK loaded'); if (typeof firebase !== 'undefined') { setTimeout(function() { window.dispatchEvent(new Event('firebaseSDKLoaded')); }, 50); }"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-messaging-compat.js" onload="console.log('Firebase Messaging SDK loaded'); if (typeof firebase !== 'undefined' && typeof firebase.messaging !== 'undefined') { window.dispatchEvent(new Event('firebaseSDKLoaded')); }"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"
+        onload="console.log('Firebase App SDK loaded'); if (typeof firebase !== 'undefined') { setTimeout(function() { window.dispatchEvent(new Event('firebaseSDKLoaded')); }, 50); }"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-messaging-compat.js"
+        onload="console.log('Firebase Messaging SDK loaded'); if (typeof firebase !== 'undefined' && typeof firebase.messaging !== 'undefined') { window.dispatchEvent(new Event('firebaseSDKLoaded')); }"></script>
     <!-- Firebase初期化は js/firebase-config.js にて一元管理 -->
 </head>
+
 <body>
     <!-- サイドバー -->
     <div class="sidebar" id="sidebar">
@@ -97,7 +112,7 @@
             </ul>
         </nav>
     </div>
-    
+
     <!-- サイドバーオーバーレイ -->
     <div class="sidebar-overlay" id="sidebar-overlay"></div>
     <header>
@@ -125,20 +140,70 @@
                         生徒一人ひとりの声から、より良い学校生活を。<br>
                         お知らせ、活動、意見募集、すべてここから。
                     </p>
-                    <div class="hero-buttons">
-                        <a href="news.html" class="btn btn-primary">
-                            <i class="fas fa-bell"></i>
-                            最新のお知らせ
+
+                    <!-- クイックアクション（新設） -->
+                    <div class="quick-actions-grid">
+                        <a href="forum.html" class="quick-action-card tilt-card">
+                            <div class="action-icon"><i class="fas fa-paper-plane"></i></div>
+                            <span>目安箱へ投稿</span>
                         </a>
-                        <a href="council.html" class="btn btn-secondary">
-                            <i class="fas fa-users"></i>
-                            生徒会紹介
+                        <a href="survey.html" class="quick-action-card tilt-card">
+                            <div class="action-icon"><i class="fas fa-poll-h"></i></div>
+                            <span>アンケート回答</span>
+                        </a>
+                        <a href="clubs.html" class="quick-action-card tilt-card">
+                            <div class="action-icon"><i class="fas fa-running"></i></div>
+                            <span>部活動を探す</span>
+                        </a>
+                        <a href="news.html" class="quick-action-card tilt-card">
+                            <div class="action-icon"><i class="fas fa-calendar-check"></i></div>
+                            <span>行事予定</span>
                         </a>
                     </div>
                 </div>
                 <div class="hero-image">
                     <div class="hero-graphic">
-                        <img src="https://lh3.googleusercontent.com/pw/AP1GczPtDAtqRlRZY8yBF0ajASVZzyEDa1uq1vlm3Dw7a7TIXMQUzwOjquumsabe_DDWZiM6tg2Ruxgtb-kvWibkkbxvcklHnPPqCat1N8H4mKJp3QPpmvyEyJxObatEQq4xD2zu0AQ8yBYZf7GePeGIoEEF=w1033-h1033-s-no-gm?authuser=0" alt="mainアイコン" referrerpolicy="no-referrer" crossorigin="anonymous" onerror="this.onerror=null; this.src='images/icon.png';" />
+                        <img src="https://lh3.googleusercontent.com/pw/AP1GczPtDAtqRlRZY8yBF0ajASVZzyEDa1uq1vlm3Dw7a7TIXMQUzwOjquumsabe_DDWZiM6tg2Ruxgtb-kvWibkkbxvcklHnPPqCat1N8H4mKJp3QPpmvyEyJxObatEQq4xD2zu0AQ8yBYZf7GePeGIoEEF=w1033-h1033-s-no-gm?authuser=0"
+                            alt="mainアイコン" referrerpolicy="no-referrer" crossorigin="anonymous"
+                            onerror="this.onerror=null; this.src='images/icon.png';" />
+                    </div>
+                </div>
+            </div>
+            <!-- Wave Divider 1 -->
+            <div class="custom-shape-divider-bottom">
+                <svg data-name="Layer 1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 120"
+                    preserveAspectRatio="none">
+                    <path
+                        d="M321.39,56.44c58-10.79,114.16-30.13,172-41.86,82.39-16.72,168.19-17.73,250.45-.39C823.78,31,906.67,72,985.66,92.83c70.05,18.48,146.53,26.09,214.34,3V0H0V27.35A600.21,600.21,0,0,0,321.39,56.44Z"
+                        class="shape-fill"></path>
+                </svg>
+            </div>
+        </section>
+
+        <!-- 最新情報（お知らせ・フォーラム） -->
+        <section class="latest-updates">
+            <div class="container">
+                <h2 class="section-title">最新情報</h2>
+                <div class="updates-grid reveal-on-scroll">
+                    <div class="update-card news-update tilt-card">
+                        <div class="update-header">
+                            <i class="fas fa-bell"></i>
+                            <span>最新のお知らせ</span>
+                        </div>
+                        <div class="update-content" id="latest-news">
+                            <div class="loading">読み込み中...</div>
+                        </div>
+                        <a href="news.html" class="update-link">すべて見る</a>
+                    </div>
+                    <div class="update-card forum-update tilt-card">
+                        <div class="update-header">
+                            <i class="fas fa-comments"></i>
+                            <span>最新のフォーラム投稿</span>
+                        </div>
+                        <div class="update-content" id="latest-posts">
+                            <div class="loading">読み込み中...</div>
+                        </div>
+                        <a href="forum.html" class="update-link">すべて見る</a>
                     </div>
                 </div>
             </div>
@@ -146,14 +211,25 @@
 
         <!-- 生徒会について -->
         <section class="council-about">
+            <!-- Wave Divider 2 -->
+            <div class="custom-shape-divider-top">
+                <svg data-name="Layer 1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 120"
+                    preserveAspectRatio="none">
+                    <path
+                        d="M985.66,92.83C906.67,72,823.78,31,743.84,14.19c-82.26-17.34-168.06-16.33-250.45.39-57.84,11.73-114,31.07-172,41.86A600.21,600.21,0,0,1,0,27.35V120H1200V95.8C1132.19,118.92,1055.71,111.31,985.66,92.83Z"
+                        class="shape-fill"></path>
+                </svg>
+            </div>
             <div class="container">
                 <div class="about-content">
-                    <div class="about-text">
+                    <div class="about-text reveal-on-scroll">
                         <h2>生徒会について</h2>
                         <p>生徒会は、全校生徒の代表として、学校生活の課題解決や行事運営、意見集約を行っています。日々の小さな改善から、学校全体に関わる提案まで、みなさんの声をベースに活動しています。</p>
-                        <div class="mission-points">
+                        <div class="mission-points reveal-on-scroll delay-200">
                             <div class="about-image">
-                                <img src="https://cdn.discordapp.com/attachments/1262097463213424746/1381244718561624075/IMG_5086.jpg?ex=690be823&is=690a96a3&hm=cf088156ea62c7ccd4b4758092aa2b5a340e9a25ffaa5f15d6e84ec0d746c153&" alt="生徒会" class="council-image" onerror="this.onerror=null; this.src='images/IMG_5086.jpg';" />
+                                <img src="https://cdn.discordapp.com/attachments/1262097463213424746/1381244718561624075/IMG_5086.jpg?ex=690be823&is=690a96a3&hm=cf088156ea62c7ccd4b4758092aa2b5a340e9a25ffaa5f15d6e84ec0d746c153&"
+                                    alt="生徒会" class="council-image"
+                                    onerror="this.onerror=null; this.src='images/IMG_5086.jpg';" />
                             </div>
                             <div class="mission-point">
                                 <i class="fas fa-heart"></i>
@@ -192,68 +268,10 @@
             </div>
         </section>
 
-        <!-- 取り組み・重点テーマ -->
-        <section class="council-activities">
-            <div class="container">
-                <h2 class="section-title">現在の重点テーマ</h2>
-                <div class="activities-grid">
-                    <div class="activity-card">
-                        <div class="activity-icon"><i class="fas fa-calendar-alt"></i></div>
-                        <h3>学校行事のアップデート</h3>
-                        <p>より参加しやすく、もっと楽しく。企画段階からみなさんの意見を反映します。</p>
-                    </div>
-                    <div class="activity-card">
-                        <div class="activity-icon"><i class="fas fa-bullhorn"></i></div>
-                        <h3>意見の見える化</h3>
-                        <p>フォーラム・アンケートの結果を公開し、取り組み状況とともにお知らせします。</p>
-                    </div>
-                    <div class="activity-card">
-                        <div class="activity-icon"><i class="fas fa-handshake"></i></div>
-                        <h3>部活動横断連携</h3>
-                        <p>部活動同士のコラボや、情報発信の場づくりを支援します。</p>
-                    </div>
-                    <div class="activity-card">
-                        <div class="activity-icon"><i class="fas fa-shield-alt"></i></div>
-                        <h3>安心・安全の推進</h3>
-                        <p>校内環境やオンライン上の困りごとを継続的に改善します。</p>
-                    </div>
-                </div>
-            </div>
-        </section>
-
-        <!-- 最新情報（お知らせ・フォーラム） -->
-        <section class="latest-updates">
-            <div class="container">
-                <h2 class="section-title">最新情報</h2>
-                <div class="updates-grid">
-                    <div class="update-card news-update">
-                        <div class="update-header">
-                            <i class="fas fa-bell"></i>
-                            <span>最新のお知らせ</span>
-                        </div>
-                        <div class="update-content" id="latest-news">
-                            <div class="loading">読み込み中...</div>
-                        </div>
-                        <a href="news.html" class="update-link">すべて見る</a>
-                    </div>
-                    <div class="update-card forum-update">
-                        <div class="update-header">
-                            <i class="fas fa-comments"></i>
-                            <span>最新のフォーラム投稿</span>
-                        </div>
-                        <div class="update-content" id="latest-posts">
-                            <div class="loading">読み込み中...</div>
-                        </div>
-                        <a href="forum.html" class="update-link">すべて見る</a>
-                    </div>
-                </div>
-            </div>
-        </section>
-
         <!-- 参加しよう（CTA） -->
         <section class="join-council">
             <div class="container">
-                <div class="join-content">
+                <div class="join-content reveal-on-scroll">
                     <h2>生徒会に参加しませんか？</h2>
                     <p>運営の裏側を一緒に支えるメンバーを随時募集しています。小さな関わり方からでも大歓迎です。</p>
                     <div class="join-buttons">
@@ -301,4 +319,5 @@
     <script src="js/firebase-config.js"></script>
     <script src="js/notification-manager.js"></script>
 </body>
+
 </html>

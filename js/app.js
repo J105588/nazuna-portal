@@ -10,17 +10,17 @@ function initSupabase() {
         setTimeout(initSupabase, 100);
         return;
     }
-    
-    if (typeof supabase !== 'undefined' && 
-        CONFIG.SUPABASE.URL && 
+
+    if (typeof supabase !== 'undefined' &&
+        CONFIG.SUPABASE.URL &&
         CONFIG.SUPABASE.ANON_KEY &&
         CONFIG.SUPABASE.URL !== 'YOUR_SUPABASE_URL_HERE' &&
         CONFIG.SUPABASE.ANON_KEY !== 'YOUR_SUPABASE_ANON_KEY_HERE') {
-        
+
         try {
             // 古いURLを使用しているクライアントを検出してクリア
             const currentUrl = CONFIG.SUPABASE.URL;
-            
+
             // 既存のクライアントを完全にクリア
             if (window.supabaseClient) {
                 try {
@@ -40,23 +40,23 @@ function initSupabase() {
                 window.supabaseClient = null;
                 supabaseClient = null;
             }
-            
+
             if (window.supabaseQueries) {
                 window.supabaseQueries = null;
                 supabaseQueries = null;
             }
-            
+
             // ストレージから古いSupabaseキャッシュをクリア
             clearSupabaseStorageCache();
-            
+
             // 新しいクライアントを作成（CORS設定を含む）
             const supabaseOptions = CONFIG.SUPABASE.OPTIONS || {};
-            
+
             // URLが正しい形式か検証
             if (!currentUrl.startsWith('https://') || !currentUrl.includes('.supabase.co')) {
                 throw new Error('Invalid Supabase URL format: ' + currentUrl);
             }
-            
+
             // 古いURLを完全にチェック（厳格な検証）
             const oldInvalidUrls = ['jirppalacwwinwnsyauo', 'jffjacpedwldbgmggdcy'];
             const containsOldUrl = oldInvalidUrls.some(oldUrl => currentUrl.toLowerCase().includes(oldUrl.toLowerCase()));
@@ -66,10 +66,10 @@ function initSupabase() {
                 console.error('Please update CONFIG.SUPABASE.URL in js/config.js');
                 throw new Error('Invalid Supabase URL configuration');
             }
-            
+
             console.log('Creating Supabase client with URL:', currentUrl);
             supabaseClient = supabase.createClient(currentUrl, CONFIG.SUPABASE.ANON_KEY, supabaseOptions);
-            
+
             // 作成されたクライアントのURLを検証（可能な場合）
             if (supabaseClient) {
                 // Supabaseクライアントの内部URLを確認
@@ -80,7 +80,7 @@ function initSupabase() {
                         console.error('Supabase client URL mismatch after creation!');
                         console.error('Expected URL:', currentUrl);
                         console.error('Client URL:', clientUrl);
-                        
+
                         // 古いURLを含んでいる場合はエラー
                         const containsOldInClient = oldInvalidUrls.some(oldUrl => clientUrl.toLowerCase().includes(oldUrl.toLowerCase()));
                         if (containsOldInClient) {
@@ -94,24 +94,24 @@ function initSupabase() {
                     console.warn('Could not verify client URL (this is normal for some Supabase versions):', e);
                 }
             }
-            
+
             window.supabaseClient = supabaseClient; // グローバルに公開
-            
+
             if (typeof SupabaseQueries === 'undefined') {
                 throw new Error('SupabaseQueries class not available');
             }
             supabaseQueries = new SupabaseQueries(supabaseClient);
             window.supabaseQueries = supabaseQueries; // グローバルに公開
-            
+
             console.log('Supabase client and queries initialized successfully');
             console.log('Supabase URL:', currentUrl);
-            
+
             // 接続テスト
             testSupabaseConnection();
         } catch (error) {
             console.error('Failed to initialize Supabase client:', error);
             console.log('Error details:', error.message);
-            
+
             // エラーの詳細を表示
             if (error.message && error.message.includes('ERR_NAME_NOT_RESOLVED')) {
                 console.error('DNS resolution failed. Possible causes:');
@@ -125,7 +125,7 @@ function initSupabase() {
                     initSupabase();
                 }, 2000);
             }
-            
+
             console.log('Continuing with demo mode...');
             supabaseClient = null;
             supabaseQueries = null;
@@ -151,7 +151,7 @@ function initSupabase() {
 async function testSupabaseConnection() {
     const client = window.supabaseClient;
     if (!client) return;
-    
+
     try {
         // クライアントのURLを検証（可能な場合）
         if (client.supabaseUrl && CONFIG.SUPABASE.URL) {
@@ -164,8 +164,8 @@ async function testSupabaseConnection() {
                 return;
             }
         }
-        
-        
+
+
         // 古いURLを使用していないか最終チェック
         const OLD_INVALID_URLS = ['jirppalacwwinwnsyauo', 'jffjacpedwldbgmggdcy'];
         const currentUrl = CONFIG.SUPABASE.URL;
@@ -174,23 +174,23 @@ async function testSupabaseConnection() {
             console.error('Current URL:', currentUrl);
             throw new Error('Invalid Supabase URL configuration');
         }
-        
+
         // 簡単な接続テスト（council_membersテーブルの存在確認）
         const { data, error } = await client
             .from('council_members')
             .select('id')
             .limit(1);
-            
+
         if (error) {
             console.error('Supabase connection test failed:', error);
-            
+
             // エラーメッセージから詳細を確認
             const errorMsg = error.message || '';
             const errorDetails = error.details || '';
             const errorHint = error.hint || '';
-            
+
             // ERR_NAME_NOT_RESOLVED エラーを検出
-            if (errorMsg.includes('ERR_NAME_NOT_RESOLVED') || 
+            if (errorMsg.includes('ERR_NAME_NOT_RESOLVED') ||
                 errorMsg.includes('Failed to fetch') ||
                 errorDetails.includes('ERR_NAME_NOT_RESOLVED')) {
                 console.error('DNS resolution failed - Supabase URL may be invalid or project deleted');
@@ -200,7 +200,7 @@ async function testSupabaseConnection() {
                 showConnectionError('Supabaseプロジェクトに接続できません。URLが正しいか確認してください。');
                 return;
             }
-            
+
             if (errorMsg.includes('410') || errorMsg.includes('Gone')) {
                 console.error('Supabase project appears to be deleted or unavailable');
                 console.log('Attempting to clear cache and reinitialize...');
@@ -217,7 +217,7 @@ async function testSupabaseConnection() {
         }
     } catch (error) {
         console.error('Supabase connection test error:', error);
-        
+
         // ネットワークエラーの場合
         if (error.message && (
             error.message.includes('ERR_NAME_NOT_RESOLVED') ||
@@ -260,7 +260,7 @@ function clearSupabaseStorageCache() {
             localStorage.removeItem(key);
             console.log('Cleared localStorage key:', key);
         });
-        
+
         // セッションストレージからもクリア
         const sessionKeysToRemove = [];
         for (let i = 0; i < sessionStorage.length; i++) {
@@ -273,7 +273,7 @@ function clearSupabaseStorageCache() {
             sessionStorage.removeItem(key);
             console.log('Cleared sessionStorage key:', key);
         });
-        
+
         if (keysToRemove.length > 0 || sessionKeysToRemove.length > 0) {
             console.log('Supabase storage cache cleared:', {
                 localStorage: keysToRemove.length,
@@ -290,10 +290,10 @@ function clearSupabaseCacheAndReinit() {
     try {
         // ストレージキャッシュをクリア
         clearSupabaseStorageCache();
-        
+
         // Supabaseクライアントを再初期化
         initSupabase();
-        
+
     } catch (error) {
         console.error('Error clearing Supabase cache:', error);
     }
@@ -334,19 +334,19 @@ class APIClient {
         this.cache = new Map();
         this.requestQueue = [];
         this.isOnline = navigator.onLine;
-        
+
         // オンライン/オフライン状態の監視
         window.addEventListener('online', () => {
             this.isOnline = true;
             this.processQueue();
         });
-        
+
         window.addEventListener('offline', () => {
             this.isOnline = false;
         });
     }
 
-// JSONP リクエストを送信する関数
+    // JSONP リクエストを送信する関数
     sendRequest(action, params = {}, options = {}) {
         return new Promise((resolve, reject) => {
             // オフライン時の処理
@@ -355,7 +355,7 @@ class APIClient {
                 reject(new Error(CONFIG.MESSAGES.INFO.OFFLINE));
                 return;
             }
-            
+
             // キャッシュチェック
             const cacheKey = `${action}_${JSON.stringify(params)}`;
             if (options.useCache && this.cache.has(cacheKey)) {
@@ -365,9 +365,9 @@ class APIClient {
                     return;
                 }
             }
-            
-    const callbackName = 'callback_' + Date.now() + '_' + Math.random().toString(36).substr(2);
-            
+
+            const callbackName = 'callback_' + Date.now() + '_' + Math.random().toString(36).substr(2);
+
             // タイムアウト設定
             let timeoutCleared = false;
             const timeout = setTimeout(() => {
@@ -378,8 +378,8 @@ class APIClient {
                     reject(new Error(CONFIG.MESSAGES.ERROR.NETWORK));
                 }
             }, options.timeout || 10000);
-    
-    // グローバルコールバック関数を設定
+
+            // グローバルコールバック関数を設定
             window.gasCallbacks[callbackName] = (data) => {
                 try {
                     // タイムアウトが既に発生している場合は無視
@@ -387,20 +387,20 @@ class APIClient {
                         console.warn('Response received after timeout, ignoring');
                         return;
                     }
-                    
+
                     // コールバックが既に削除されている場合（タイムアウト後の呼び出しなど）は無視
                     if (!window.gasCallbacks || !window.gasCallbacks[callbackName]) {
                         console.warn('Callback already cleaned up, ignoring response');
                         return;
                     }
-                    
+
                     clearTimeout(timeout);
                     timeoutCleared = true;
-                    
+
                     // verifyAdminSessionなど、validプロパティを使うAPIにも対応
                     const isSuccess = data && (data.success === true || data.valid === true);
                     const isFailure = data && (data.success === false || data.valid === false);
-                    
+
                     if (isSuccess && !isFailure) {
                         // キャッシュに保存
                         if (options.useCache) {
@@ -431,19 +431,19 @@ class APIClient {
                 } finally {
                     this.cleanup(callbackName);
                 }
-    };
-    
-    // パラメータをURLエンコード
-    const queryParams = new URLSearchParams({
-        action: action,
-        callback: 'gasCallbacks.' + callbackName,
+            };
+
+            // パラメータをURLエンコード
+            const queryParams = new URLSearchParams({
+                action: action,
+                callback: 'gasCallbacks.' + callbackName,
                 timestamp: Date.now(),
-        ...params
-    });
-    
-    // scriptタグを動的に生成
-    const script = document.createElement('script');
-    script.id = 'jsonp_' + callbackName;
+                ...params
+            });
+
+            // scriptタグを動的に生成
+            const script = document.createElement('script');
+            script.id = 'jsonp_' + callbackName;
             script.src = `${this.baseURL}?${queryParams}`;
             script.onerror = () => {
                 if (!timeoutCleared) {
@@ -452,15 +452,15 @@ class APIClient {
                 this.cleanup(callbackName);
                 reject(new Error(CONFIG.MESSAGES.ERROR.NETWORK));
             };
-            
-    document.head.appendChild(script);
+
+            document.head.appendChild(script);
         });
     }
-    
+
     // クリーンアップ処理
     cleanup(callbackName) {
         // 後から遅延で呼ばれてもエラーにしないためのノップ
-        window.gasCallbacks[callbackName] = function noop() {};
+        window.gasCallbacks[callbackName] = function noop() { };
         const script = document.getElementById('jsonp_' + callbackName);
         if (script) {
             script.remove();
@@ -472,7 +472,7 @@ class APIClient {
             }
         }, 30000);
     }
-    
+
     // キューに溜まったリクエストを処理
     processQueue() {
         while (this.requestQueue.length > 0) {
@@ -482,7 +482,7 @@ class APIClient {
                 .catch(request.reject);
         }
     }
-    
+
     // キャッシュクリア
     clearCache() {
         this.cache.clear();
@@ -503,9 +503,9 @@ function sendJsonpRequest(action, params = {}, callback) {
 }
 
 // ページ初期化
-document.addEventListener('DOMContentLoaded', function() {
+document.addEventListener('DOMContentLoaded', function () {
     console.log('DOM loaded, initializing...');
-    
+
     // セッションごとにオープニング画面を表示
     const shouldShowOpening = checkAndMarkSessionVisit();
     if (shouldShowOpening) {
@@ -513,13 +513,13 @@ document.addEventListener('DOMContentLoaded', function() {
         document.body.classList.add('opening-active');
         showOpeningScreen();
     }
-    
+
     // Supabaseを初期化
     initSupabase();
-    
+
     // API Client初期化
     initializeAPIClient();
-    
+
     // 処理中インジケータを準備
     try {
         // アイコンをローカルキャッシュから取得（次回以降即時表示）
@@ -535,7 +535,7 @@ document.addEventListener('DOMContentLoaded', function() {
         indicator.referrerPolicy = 'no-referrer';
         indicator.crossOrigin = 'anonymous';
         indicator.src = cached || ICON_URL;
-        indicator.onerror = function() {
+        indicator.onerror = function () {
             // フォールバック
             indicator.src = 'images/icon.png';
         };
@@ -546,7 +546,7 @@ document.addEventListener('DOMContentLoaded', function() {
             if (!cached) {
                 localStorage.setItem(cachedKey, ICON_URL);
             }
-        } catch (_) {}
+        } catch (_) { }
 
         const showIndicator = () => indicator.classList.add('show');
         const hideIndicator = () => indicator.classList.remove('show');
@@ -564,21 +564,21 @@ document.addEventListener('DOMContentLoaded', function() {
                 setTimeout(hideIndicator, 5000);
                 return;
             }
-            
+
             // ボタン要素（.btnクラス）からの遷移を検出
             const button = e.target.closest && e.target.closest('.btn, button');
             if (button) {
                 // ボタンがアンカーリンク内にある場合は既に処理済み
                 const parentAnchor = button.closest('a[href]');
                 if (parentAnchor) return;
-                
+
                 // ボタンのonclick属性やdata-href属性をチェック
                 const onclick = button.getAttribute('onclick') || '';
                 const dataHref = button.getAttribute('data-href') || '';
                 const href = button.getAttribute('href') || '';
-                
+
                 // ページ遷移を行う可能性がある場合はインジケータを表示
-                if (onclick.includes('location') || onclick.includes('window.location') || 
+                if (onclick.includes('location') || onclick.includes('window.location') ||
                     onclick.includes('href') || dataHref || href) {
                     showIndicator();
                     setTimeout(hideIndicator, 5000);
@@ -596,21 +596,21 @@ document.addEventListener('DOMContentLoaded', function() {
         window.addEventListener('beforeunload', () => {
             showIndicator();
         });
-        
+
         // window.locationを使ったJavaScriptでの遷移にも対応（可能な限り）
         try {
             const originalLocationAssign = window.location.assign;
             const originalLocationReplace = window.location.replace;
-            
+
             if (typeof originalLocationAssign === 'function') {
-                window.location.assign = function(...args) {
+                window.location.assign = function (...args) {
                     showIndicator();
                     return originalLocationAssign.apply(this, args);
                 };
             }
-            
+
             if (typeof originalLocationReplace === 'function') {
-                window.location.replace = function(...args) {
+                window.location.replace = function (...args) {
                     showIndicator();
                     return originalLocationReplace.apply(this, args);
                 };
@@ -624,8 +624,8 @@ document.addEventListener('DOMContentLoaded', function() {
         if (typeof APIClient !== 'undefined' && !APIClient.__indicatorPatched) {
             const originalSend = APIClient.prototype.sendRequest;
             if (typeof originalSend === 'function') {
-                APIClient.prototype.sendRequest = function(...args) {
-                    try { showIndicator(); } catch (e) {}
+                APIClient.prototype.sendRequest = function (...args) {
+                    try { showIndicator(); } catch (e) { }
                     const p = originalSend.apply(this, args);
                     try {
                         return Promise.resolve(p).finally(() => hideIndicator());
@@ -638,13 +638,13 @@ document.addEventListener('DOMContentLoaded', function() {
                 APIClient.__indicatorPatched = true;
             }
         }
-    } catch (_) {}
+    } catch (_) { }
 
     // 基本機能を初期化
     initNavigation();
     initSidebar();
     initPWA();
-    
+
     // ページ別の初期化
     const currentPage = getCurrentPage();
     console.log('Current page:', currentPage);
@@ -655,14 +655,14 @@ document.addEventListener('DOMContentLoaded', function() {
         window.location.href = '404.html?from=' + encodeURIComponent(currentPage);
         return;
     }
-    
+
     // 最小5秒間はオープニング画面を表示
     const startTime = Date.now();
     const minDisplayTime = 5000; // 5秒
-    
+
     const initializeContent = async () => {
         try {
-            switch(currentPage) {
+            switch (currentPage) {
                 case 'index':
                     await initHomePage();
                     break;
@@ -690,21 +690,21 @@ document.addEventListener('DOMContentLoaded', function() {
         } catch (error) {
             console.error('Error during content initialization:', error);
         }
-        
+
         // オープニング画面を表示した場合のみ隠す
         if (shouldShowOpening) {
             const elapsedTime = Date.now() - startTime;
             const remainingTime = Math.max(minDisplayTime - elapsedTime, 0);
-            
+
             console.log(`Elapsed time: ${elapsedTime}ms, remaining time: ${remainingTime}ms`);
-            
+
             setTimeout(() => {
                 console.log('Hiding opening screen...');
                 hideOpeningScreen();
             }, remainingTime);
         }
     };
-    
+
     // オープニング画面を表示しない場合は直接ページエントリーアニメーションを実行
     // ページエントリーアニメーション開始ユーティリティ
     function startPageEnterAnimation() {
@@ -737,7 +737,7 @@ document.addEventListener('DOMContentLoaded', function() {
         // オープニング画面を表示する場合は、コンテンツの初期化のみ実行
         initializeContent();
     }
-    
+
     // フォールバック：オープニング画面を表示した場合のみ10秒後に強制的に閉じる
     if (shouldShowOpening) {
         setTimeout(() => {
@@ -754,19 +754,19 @@ document.addEventListener('DOMContentLoaded', function() {
 function checkAndMarkSessionVisit() {
     const SESSION_KEY = 'nazuna-portal-session';
     const OPENING_SHOWN_KEY = 'nazuna-portal-opening-shown';
-    
+
     // セッション開始時刻を取得または設定
     let sessionStart = sessionStorage.getItem(SESSION_KEY);
     if (!sessionStart) {
         sessionStart = Date.now().toString();
         sessionStorage.setItem(SESSION_KEY, sessionStart);
         console.log('New session started');
-        
+
         // 新しいセッション: この1回だけ表示し、以後のページでは表示しない
         sessionStorage.setItem(OPENING_SHOWN_KEY, 'true');
         return true;
     }
-    
+
     // 同一セッション内でオープニングが既に表示されたかチェック
     const openingShown = sessionStorage.getItem(OPENING_SHOWN_KEY);
     if (!openingShown) {
@@ -774,7 +774,7 @@ function checkAndMarkSessionVisit() {
         console.log('First page load in this session');
         return true;
     }
-    
+
     console.log('Opening already shown in this session');
     return false;
 }
@@ -783,14 +783,14 @@ function checkAndMarkSessionVisit() {
 function checkAndMarkFirstVisit() {
     const FIRST_VISIT_KEY = 'nazuna-portal-first-visit';
     const isFirstVisit = !localStorage.getItem(FIRST_VISIT_KEY);
-    
+
     if (isFirstVisit) {
         localStorage.setItem(FIRST_VISIT_KEY, Date.now().toString());
         console.log('Marking first visit');
     } else {
         console.log('Returning visitor');
     }
-    
+
     return isFirstVisit;
 }
 
@@ -818,16 +818,16 @@ function getCurrentPage() {
 function initNavigation() {
     // ページ内リンクのスムーススクロール
     document.querySelectorAll('a[href^="#"]').forEach(anchor => {
-        anchor.addEventListener('click', function(e) {
+        anchor.addEventListener('click', function (e) {
             const href = this.getAttribute('href');
-            
+
             // 空のhrefや単純な#の場合はスキップ
             if (!href || href === '#' || href.length <= 1) {
                 return;
             }
-            
+
             e.preventDefault();
-            
+
             try {
                 const target = document.querySelector(href);
                 if (target) {
@@ -839,7 +839,7 @@ function initNavigation() {
             }
         });
     });
-    
+
     console.log('Navigation initialized - using sidebar navigation');
 }
 
@@ -848,18 +848,18 @@ function initSidebar() {
     const hamburger = document.querySelector('.hamburger');
     const sidebar = document.querySelector('.sidebar');
     const overlay = document.querySelector('.sidebar-overlay');
-    
+
     // ハンバーガーメニューをクリックしてサイドバーを開閉
     hamburger?.addEventListener('click', (e) => {
         e.stopPropagation();
         toggleSidebar();
     });
-    
+
     // オーバーレイをクリックしてサイドバーを閉じる
     overlay?.addEventListener('click', () => {
         closeSidebar();
     });
-    
+
     // サイドバー内のリンクをクリックしたらサイドバーを閉じて画面遷移
     document.querySelectorAll('.sidebar-nav a').forEach(link => {
         link.addEventListener('click', (e) => {
@@ -880,7 +880,7 @@ function initSidebar() {
         e.stopPropagation();
         closeSidebar();
     });
-    
+
     // ESCキーでサイドバーを閉じる
     document.addEventListener('keydown', (e) => {
         if (e.key === 'Escape' && sidebar?.classList.contains('active')) {
@@ -911,27 +911,27 @@ function toggleSidebar() {
     const hamburger = document.querySelector('.hamburger');
     const sidebar = document.querySelector('.sidebar');
     const overlay = document.querySelector('.sidebar-overlay');
-    
+
     const isActive = sidebar?.classList.contains('active');
-    
+
     hamburger?.classList.toggle('active');
     sidebar?.classList.toggle('active');
     overlay?.classList.toggle('active');
-    
+
     // ハンバーガーボタンの位置制御用クラス
     if (!isActive) {
         document.body.classList.add('sidebar-open');
     } else {
         document.body.classList.remove('sidebar-open');
     }
-    
+
     // アクセシビリティ属性を更新
     if (hamburger) {
         const newExpanded = !isActive;
         hamburger.setAttribute('aria-expanded', newExpanded.toString());
         hamburger.setAttribute('aria-label', newExpanded ? 'メニューを閉じる' : 'メニューを開く');
     }
-    
+
     // ボディのスクロールを制御
     if (!isActive) {
         document.body.style.overflow = 'hidden';
@@ -945,7 +945,7 @@ function closeSidebar() {
     const hamburger = document.querySelector('.hamburger');
     const sidebar = document.querySelector('.sidebar');
     const overlay = document.querySelector('.sidebar-overlay');
-    
+
     hamburger?.classList.remove('active');
     sidebar?.classList.remove('active');
     overlay?.classList.remove('active');
@@ -966,69 +966,52 @@ function preloadImage(url) {
 // オープニング画面を表示
 async function showOpeningScreen() {
     console.log('Showing opening screen...');
-    
+
     // 既存のオープニング画面があれば削除
     const existing = document.getElementById('opening-screen');
     if (existing) {
         existing.remove();
     }
-    
+
     // 画像をプリロード
     const iconUrl = 'https://lh3.googleusercontent.com/pw/AP1GczPtDAtqRlRZY8yBF0ajASVZzyEDa1uq1vlm3Dw7a7TIXMQUzwOjquumsabe_DDWZiM6tg2Ruxgtb-kvWibkkbxvcklHnPPqCat1N8H4mKJp3QPpmvyEyJxObatEQq4xD2zu0AQ8yBYZf7GePeGIoEEF=w1033-h1033-s-no-gm?authuser=0';
     let imageLoaded = false;
-    
+
     try {
         await preloadImage(iconUrl);
         imageLoaded = true;
-        console.log('Opening image preloaded successfully');
-    } catch (error) {
-        console.warn('Failed to preload opening image:', error);
+    } catch (e) {
+        console.warn('Failed to preload opening image, using fallback');
     }
-    
-    const openingHTML = `
-        <div class="opening-screen" id="opening-screen">
-            <div class="opening-particles">
-                <div class="opening-particle"></div>
-                <div class="opening-particle"></div>
-                <div class="opening-particle"></div>
-                <div class="opening-particle"></div>
-                <div class="opening-particle"></div>
-                <div class="opening-particle"></div>
-                <div class="opening-particle"></div>
-                <div class="opening-particle"></div>
-                <div class="opening-particle"></div>
-                <div class="opening-particle"></div>
-                <div class="opening-particle"></div>
-                <div class="opening-particle"></div>
-                <div class="opening-particle"></div>
-                <div class="opening-particle"></div>
-                <div class="opening-particle"></div>
-                <div class="opening-particle"></div>
-                <div class="opening-particle"></div>
-                <div class="opening-particle"></div>
-                <div class="opening-particle"></div>
-                <div class="opening-particle"></div>
-            </div>
-            <div class="opening-logo">
-                <img src="${iconUrl}" alt="なずなポータル" class="opening-logo-img" style="opacity: ${imageLoaded ? '1' : '0'}; transition: opacity 0.5s ease-in-out;">
-            </div>
-            <h1 class="opening-title" data-text="なずなポータル">なずなポータル</h1>
-            <p class="opening-subtitle">みんなでつくる学校生活</p>
-            <div class="opening-loader"></div>
+
+    // 新しいオープニング画面を作成
+    const openingScreen = document.createElement('div');
+    openingScreen.id = 'opening-screen';
+    openingScreen.className = 'opening-screen';
+
+    // 新しいHTML構造 (Artistic Fluid Design)
+    openingScreen.innerHTML = `
+        <div class="opening-art-bg"></div>
+        <div class="opening-content">
+            <img src="${iconUrl}" alt="なずなポータル" class="opening-logo-img" id="opening-logo-img" style="opacity: 0; transition: opacity 0.5s ease;">
+            <div class="opening-title" data-text="なずなポータル">なずなポータル</div>
+            <div class="opening-subtitle">みんなでつくる学校生活</div>
             <div class="opening-progress">
                 <div class="opening-progress-bar"></div>
             </div>
-            <div class="opening-loading-text">読み込み中...</div>
+            <div class="opening-loading-text">LOADING...</div>
         </div>
     `;
-    
-    document.body.insertAdjacentHTML('afterbegin', openingHTML);
+
+    document.body.appendChild(openingScreen);
     console.log('Opening screen added to DOM');
-    
-    // 画像がまだ読み込まれていない場合は、読み込み完了後に表示
-    if (!imageLoaded) {
-        const img = document.querySelector('.opening-logo-img');
-        if (img) {
+
+    // 画像読み込み完了時の処理
+    const img = document.getElementById('opening-logo-img');
+    if (img) {
+        if (imageLoaded) {
+            img.style.opacity = '1';
+        } else {
             img.onload = () => {
                 img.style.opacity = '1';
                 console.log('Opening image loaded and displayed');
@@ -1039,10 +1022,9 @@ async function showOpeningScreen() {
             };
         }
     }
-    
+
     // デバッグ用：オープニング画面をクリックで閉じる
-    const openingScreen = document.getElementById('opening-screen');
-    if (openingScreen && CONFIG.APP.DEBUG) {
+    if (CONFIG.APP.DEBUG) {
         openingScreen.style.cursor = 'pointer';
         openingScreen.addEventListener('click', () => {
             console.log('Opening screen clicked (debug mode)');
@@ -1055,11 +1037,11 @@ async function showOpeningScreen() {
 function hideOpeningScreen() {
     console.log('Attempting to hide opening screen...');
     const openingScreen = document.getElementById('opening-screen');
-    
+
     if (openingScreen) {
         console.log('Opening screen found, adding fade-out class');
         openingScreen.classList.add('fade-out');
-        
+
         // ページエントリーアニメーションを開始
         if (typeof startPageEnterAnimation === 'function') {
             startPageEnterAnimation();
@@ -1074,7 +1056,7 @@ function hideOpeningScreen() {
                 }, 2000);
             });
         }
-        
+
         // メインコンテンツの表示を少し遅らせる
         setTimeout(() => {
             const main = document.querySelector('main');
@@ -1082,7 +1064,7 @@ function hideOpeningScreen() {
                 main.classList.add('page-ready');
             }
         }, 200);
-        
+
         setTimeout(() => {
             if (openingScreen.parentNode) {
                 openingScreen.remove();
@@ -1107,7 +1089,7 @@ function getCachedCouncilMembers() {
     if (!dataCache.councilMembers || !dataCache.lastFetch) {
         return null;
     }
-    
+
     const now = Date.now();
     if (now - dataCache.lastFetch > dataCache.cacheDuration) {
         // キャッシュ期限切れ
@@ -1115,7 +1097,7 @@ function getCachedCouncilMembers() {
         dataCache.lastFetch = null;
         return null;
     }
-    
+
     return dataCache.councilMembers;
 }
 
@@ -1133,7 +1115,7 @@ window.setCachedCouncilMembers = setCachedCouncilMembers;
 async function loadCouncilMembers() {
     const container = document.querySelector('.council-members');
     if (!container) return;
-    
+
     // ローディング表示
     container.innerHTML = `
         <div class="loading-container">
@@ -1141,14 +1123,14 @@ async function loadCouncilMembers() {
             <p>生徒会メンバー情報を読み込み中...</p>
         </div>
     `;
-    
+
     const renderMember = (member) => `
         <div class="member-card clickable" data-member-id="${member.id}" tabindex="0" role="button" aria-label="${member.name}の詳細を見る">
             <div class="member-image-wrapper">
-                ${member.image_url ? 
-                    `<img src="${member.image_url}" alt="${member.name}" class="member-image" onerror="this.onerror=null; this.style.display='none'; this.nextElementSibling.style.display='flex';">` :
-                    ''
-                }
+                ${member.image_url ?
+            `<img src="${member.image_url}" alt="${member.name}" class="member-image" onerror="this.onerror=null; this.style.display='none'; this.nextElementSibling.style.display='flex';">` :
+            ''
+        }
                 <div class="member-image-placeholder" style="display: ${member.image_url ? 'none' : 'flex'}; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); height: 150px; border-radius: 50%; width: 150px; margin: 0 auto 1rem; align-items: center; justify-content: center;">
                     <i class="fas fa-user" style="font-size: 3rem; color: rgba(255, 255, 255, 0.8);"></i>
                 </div>
@@ -1162,7 +1144,7 @@ async function loadCouncilMembers() {
             </div>
         </div>
     `;
-    
+
     try {
         // まずキャッシュをチェック
         const cachedData = getCachedCouncilMembers();
@@ -1173,20 +1155,20 @@ async function loadCouncilMembers() {
             showInfoMessage('キャッシュされたデータを表示しています。');
             return;
         }
-        
+
         const queries = window.supabaseQueries;
         if (queries) {
             console.log('Loading council members from Supabase...');
             const { data, error } = await queries.getCouncilMembers({ activeOnly: true });
-            
+
             if (error) {
                 console.error('Supabase error loading council members:', error);
                 console.log('Error details:', JSON.stringify(error));
-                
+
                 // エラーの詳細をチェック
                 const errorMsg = error.message || error.details || error.hint || '不明なエラー';
                 const isRLSError = errorMsg.includes('policy') || errorMsg.includes('RLS') || errorMsg.includes('permission');
-                
+
                 if (isRLSError) {
                     container.innerHTML = `
                         <div class="no-data-message">
@@ -1265,7 +1247,7 @@ Query: SELECT * FROM council_members WHERE is_active = true ORDER BY display_ord
             `;
             showErrorMessage('データベースに接続できません。');
         }
-        
+
     } catch (error) {
         console.error('Error loading council members:', error);
         container.innerHTML = `
@@ -1288,31 +1270,31 @@ Query: SELECT * FROM council_members WHERE is_active = true ORDER BY display_ord
 // 生徒会メンバーカードをクリック可能にする
 function makeCouncilMembersClickable() {
     const memberCards = document.querySelectorAll('.member-card.clickable');
-    
+
     memberCards.forEach(card => {
         // クリックイベント
-        card.addEventListener('click', function() {
+        card.addEventListener('click', function () {
             const memberId = this.dataset.memberId;
             if (memberId) {
                 window.location.href = `member-detail.html?id=${memberId}`;
             }
         });
-        
+
         // キーボード操作対応
-        card.addEventListener('keydown', function(e) {
+        card.addEventListener('keydown', function (e) {
             if (e.key === 'Enter' || e.key === ' ') {
                 e.preventDefault();
                 this.click();
             }
         });
-        
+
         // ホバー効果
-        card.addEventListener('mouseenter', function() {
+        card.addEventListener('mouseenter', function () {
             this.style.transform = 'translateY(-8px) scale(1.02)';
             this.style.boxShadow = '0 8px 25px rgba(0,0,0,0.15)';
         });
-        
-        card.addEventListener('mouseleave', function() {
+
+        card.addEventListener('mouseleave', function () {
             this.style.transform = 'translateY(0) scale(1)';
             this.style.boxShadow = '';
         });
@@ -1322,22 +1304,22 @@ function makeCouncilMembersClickable() {
 // Supabaseからデータを読み込む汎用関数（統一版）
 async function loadFromSupabase(table, container, renderFunction, fallbackData = null, options = {}) {
     const loadingEl = document.getElementById(`${table}-loading`);
-    
+
     if (loadingEl) loadingEl.style.display = 'block';
-    
+
     try {
         const queries = window.supabaseQueries;
         if (queries) {
             const { data, error } = await queries.getTableData(table, options);
-            
+
             if (loadingEl) loadingEl.style.display = 'none';
-            
+
             if (error) {
                 console.error('Supabase error:', error);
                 showNoDataMessage(container, queries.getErrorMessage(error, `${table}の読み込み`));
                 return;
             }
-            
+
             if (data && data.length > 0) {
                 container.innerHTML = data.map(renderFunction).join('');
             } else {
@@ -1346,7 +1328,7 @@ async function loadFromSupabase(table, container, renderFunction, fallbackData =
         } else {
             // Supabaseが利用できない場合はフォールバックデータまたは「まだ情報はありません」を表示
             if (loadingEl) loadingEl.style.display = 'none';
-            
+
             if (fallbackData && fallbackData.length > 0) {
                 container.innerHTML = fallbackData.map(renderFunction).join('');
             } else {
@@ -1400,14 +1382,14 @@ function showMessage(message, type) {
             <span>${message}</span>
         </div>
     `;
-    
+
     document.body.appendChild(messageEl);
-    
+
     // アニメーション表示
     setTimeout(() => {
         messageEl.classList.add('show');
     }, 100);
-    
+
     // 5秒後に自動で消す
     setTimeout(() => {
         messageEl.classList.remove('show');
@@ -1423,21 +1405,21 @@ function showMessage(message, type) {
 async function loadClubs() {
     const container = document.getElementById('clubs-container');
     if (!container) return;
-    
+
     // フォールバックデータ（DB接続失敗時のみ使用）
     const fallbackClubs = [];
-    
+
     const renderClub = (club) => `
         <div class="club-card" data-category="${club.category || ''}">
-            ${club.image_url ? `<img src="${club.image_url}" alt="${club.name}" class="club-image">` : 
-              `<div class="club-image" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);"></div>`}
+            ${club.image_url ? `<img src="${club.image_url}" alt="${club.name}" class="club-image">` :
+            `<div class="club-image" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);"></div>`}
             <h3>${club.name}</h3>
             <p>${club.description}</p>
             ${club.members ? `<p class="club-members">部員数: ${club.members}名</p>` : ''}
             ${club.schedule ? `<p class="club-schedule">活動日: ${club.schedule}</p>` : ''}
         </div>
     `;
-    
+
     await loadFromSupabase('clubs', container, renderClub, fallbackClubs);
 }
 
@@ -1445,7 +1427,7 @@ async function loadClubs() {
 async function loadNews() {
     const newsContainer = document.querySelector('.news-container');
     if (!newsContainer) return;
-    
+
     // 新しいNewsLoaderを使用
     if (typeof NewsLoader !== 'undefined') {
         const newsLoader = new NewsLoader();
@@ -1504,7 +1486,7 @@ async function initForum() {
         pageSize: 10,
         totalPages: 1
     };
-    
+
     const bindLogout = (el) => el && el.addEventListener('click', () => {
         localStorage.removeItem('nazuna-auth');
         updateAuthUI();
@@ -1529,7 +1511,7 @@ async function initForum() {
             updateCounter();
         }
 
-        submitBtn.addEventListener('click', function() {
+        submitBtn.addEventListener('click', function () {
             // 先に認証チェック：未ログインなら即モーダルへ
             const auth = getAuth();
             if (!auth) {
@@ -1543,16 +1525,16 @@ async function initForum() {
                 return;
             }
             const category = categorySelect ? categorySelect.value : 'general';
-            
+
             // 投稿を送信
             submitBtn.disabled = true;
             submitBtn.textContent = '送信中...';
-            
+
             // Supabaseに投稿を送信
             submitToSupabase(content, auth.student_number, category).then(success => {
                 submitBtn.disabled = false;
                 submitBtn.textContent = '投稿する';
-                
+
                 if (success) {
                     contentInput.value = '';
                     alert(CONFIG.MESSAGES.SUCCESS.POST_SUBMITTED);
@@ -1568,7 +1550,7 @@ async function initForum() {
             });
         });
     }
-    
+
     // ステータスフィルター
     if (statusFilter) {
         statusFilter.addEventListener('change', () => {
@@ -1624,7 +1606,7 @@ async function initForum() {
             }
         });
     }
-    
+
     // 投稿一覧を読み込み
     loadPosts().then(updatePager);
 
@@ -1636,25 +1618,25 @@ async function initForum() {
                 if (!auth) { openAuthModal(); return; }
                 const message = chatText.value.trim();
                 if (!message) return;
-                
+
                 const queries = window.supabaseQueries;
                 if (!queries) {
                     alert('データベース接続エラーが発生しました。ページを再読み込みしてください。');
                     return;
                 }
-                
+
                 // 簡易: 直近の投稿に紐づけて送る（将来はユーザーごとのスレッド化）
                 const latest = await getLatestUserPostId(auth.student_number);
-                if (!latest) { 
-                    alert('まず投稿してください。'); 
-                    return; 
+                if (!latest) {
+                    alert('まず投稿してください。');
+                    return;
                 }
-                
-                await queries.sendChat({ 
-                    post_id: latest, 
-                    sender: auth.student_number, 
-                    message: message, 
-                    is_admin: false 
+
+                await queries.sendChat({
+                    post_id: latest,
+                    sender: auth.student_number,
+                    message: message,
+                    is_admin: false
                 });
                 chatText.value = '';
                 await renderChat(latest);
@@ -1671,10 +1653,10 @@ async function loadPosts() {
     const container = document.getElementById('posts-container');
     if (!container) return;
     const state = window.forumState || { search: '', status: 'all', orderBy: 'created_at', orderDirection: 'desc', page: 1, pageSize: 10 };
-    
+
     // フォールバックデータ（DB接続失敗時のみ使用）
     const fallbackPosts = [];
-    
+
     const renderPost = (post) => `
         <div class="post-item">
             <div class="post-header">
@@ -1691,7 +1673,7 @@ async function loadPosts() {
             ` : ''}
         </div>
     `;
-    
+
     const options = {
         orderBy: state.orderBy,
         orderDirection: state.orderDirection,
@@ -1799,13 +1781,13 @@ async function renderChat(post_id) {
     const chatPanel = document.getElementById('chat-panel');
     const chatMessages = document.getElementById('chat-messages');
     if (!chatPanel || !chatMessages) return;
-    
+
     const queries = window.supabaseQueries;
     if (!queries) {
         console.warn('supabaseQueries not initialized in renderChat');
         return;
     }
-    
+
     try {
         const { data, error } = await queries.listChats(post_id, { limit: 200 });
         if (error) {
@@ -1840,23 +1822,23 @@ async function submitToSupabase(content, student_number, category = 'general') {
             showErrorMessage('投稿の送信に失敗しました。データベースに接続できません。');
             return false;
         }
-        
+
         if (!content || !student_number) {
             console.error('Missing required parameters for post submission');
             return false;
         }
-        
-        const result = await queries.createPost({ 
-            content: content, 
-            student_number: student_number, 
-            category: category || 'general' 
+
+        const result = await queries.createPost({
+            content: content,
+            student_number: student_number,
+            category: category || 'general'
         });
-        
+
         if (result && result.error) {
             console.error('Supabase insert error:', result.error);
             return false;
         }
-        
+
         return true;
     } catch (error) {
         console.error('Error submitting post:', error);
@@ -1931,7 +1913,7 @@ function openAuthModal() {
     stepRegister.style.display = 'none';
     stepConfirmName.style.display = 'none';
     stepLogin.style.display = 'none';
-    
+
     // フォームをリセット
     if (numberInput) numberInput.value = '';
     if (nameInput) nameInput.value = '';
@@ -1975,7 +1957,7 @@ function openAuthModal() {
         // 既存のイベントリスナーを削除（重複防止）
         const newBtn = btn.cloneNode(true);
         btn.parentNode.replaceChild(newBtn, btn);
-        
+
         newBtn.addEventListener('click', (e) => {
             e.preventDefault();
             e.stopPropagation();
@@ -1997,16 +1979,16 @@ function openAuthModal() {
         const queries = window.supabaseQueries;
         if (!queries) { showAuthError('Supabase未設定'); return; }
         err.style.display = 'none';
-        
+
         const { data, error } = await queries.getStudentByNumber(sn);
         if (error) { showAuthError('確認に失敗しました'); return; }
-        
+
         if (!data) {
             // 登録されていない場合：エラーメッセージを表示
             showAuthError('登録されていません。生徒番号を確認してください。');
             return;
         }
-        
+
         // 登録されている場合：名前確認ステップを表示
         stepNumber.style.display = 'none';
         stepConfirmName.style.display = '';
@@ -2016,7 +1998,7 @@ function openAuthModal() {
             nameDisplayDiv.textContent = data.name || '（名前が登録されていません）';
         }
         err.style.display = 'none';
-        
+
         // 名前確認後の処理
         if (confirmNameBtn) {
             confirmNameBtn.onclick = () => {
@@ -2062,15 +2044,15 @@ function openAuthModal() {
                 }
             };
         }
-        
+
         // ログイン処理
         const doLogin = async () => {
             const pw = passLoginInput.value;
             if (!pw) { showAuthError('パスワードを入力してください'); return; }
             const hash = await window.sha256(pw);
-            if (hash !== data.password_hash) { 
-                showAuthError('認証に失敗しました'); 
-                return; 
+            if (hash !== data.password_hash) {
+                showAuthError('認証に失敗しました');
+                return;
             }
             localStorage.setItem('nazuna-auth', JSON.stringify({ student_number: data.student_number, name: data.name }));
             closeModal();
@@ -2081,7 +2063,7 @@ function openAuthModal() {
             passLoginInput.onkeydown = (e) => { if (e.key === 'Enter') doLogin(); };
         }
     };
-    
+
     // 初回登録処理（管理者による事前登録など、別ルートでの登録に使用可能）
     if (registerBtn && stepRegister) {
         registerBtn.onclick = async () => {
@@ -2089,40 +2071,40 @@ function openAuthModal() {
             const name = nameInput.value.trim();
             const pw = passSetInput.value;
             const pwConfirm = passConfirmInput.value;
-            
+
             if (!sn) { showAuthError('生徒番号を入力してください'); return; }
             if (!name) { showAuthError('氏名を入力してください'); return; }
             if (!pw || pw.length < 6) { showAuthError('6文字以上のパスワードを入力してください'); return; }
             if (pw !== pwConfirm) { showAuthError('パスワードが一致しません'); return; }
-            
+
             const registerQueries = window.supabaseQueries;
             if (!registerQueries) { showAuthError('Supabase未設定'); return; }
-            
+
             const password_hash = await window.sha256(pw);
-            const { data: created, error: insErr } = await registerQueries.registerStudent({ 
-                student_number: sn, 
-                name, 
-                password_hash 
+            const { data: created, error: insErr } = await registerQueries.registerStudent({
+                student_number: sn,
+                name,
+                password_hash
             });
-            
-            if (insErr) { 
-                showAuthError('登録に失敗しました: ' + (insErr.message || 'エラーが発生しました')); 
-                return; 
+
+            if (insErr) {
+                showAuthError('登録に失敗しました: ' + (insErr.message || 'エラーが発生しました'));
+                return;
             }
-            
+
             localStorage.setItem('nazuna-auth', JSON.stringify({ student_number: sn, name }));
             closeModal();
             updateAuthUI();
         };
-        
+
         // Enterキーでの登録
         if (passConfirmInput) {
-            passConfirmInput.onkeydown = (e) => { 
-                if (e.key === 'Enter' && registerBtn) registerBtn.click(); 
+            passConfirmInput.onkeydown = (e) => {
+                if (e.key === 'Enter' && registerBtn) registerBtn.click();
             };
         }
     }
-    
+
     checkBtn.onclick = doCheck;
     numberInput.onkeydown = (e) => { if (e.key === 'Enter') doCheck(); };
 }
@@ -2137,17 +2119,17 @@ function showAuthError(message) {
 // PWA初期化
 function initPWA() {
     console.log('Initializing PWA...');
-    
+
     // PWAアップデーターとインストーラーは別ファイルで初期化されるため、
     // ここでは基本的なService Worker登録のみ行う
     if ('serviceWorker' in navigator) {
         navigator.serviceWorker.register('./sw.js')
             .then(registration => {
                 console.log('ServiceWorker registered successfully');
-                
+
                 // iOS向け通知許可の要求
                 requestIOSNotificationPermission();
-                
+
                 return registration;
             })
             .catch(err => {
@@ -2163,19 +2145,19 @@ async function requestIOSNotificationPermission() {
     // iOSデバイスの検出
     const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
     const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
-    
+
     if (isIOS || isSafari) {
         console.log('iOS device detected, requesting notification permission...');
-        
+
         // 通知がサポートされているかチェック
         if ('Notification' in window) {
             try {
                 const permission = await Notification.requestPermission();
-                
+
                 if (permission === 'granted') {
                     console.log('iOS notification permission granted');
                     showNotification('通知が有効になりました', '重要なお知らせをお届けします', 'success');
-                    
+
                     // PWAインストール促進（iOS Safari用）
                     showIOSInstallPrompt();
                 } else if (permission === 'denied') {
@@ -2194,7 +2176,7 @@ async function requestIOSNotificationPermission() {
 function showIOSInstallPrompt() {
     const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
     const isInStandaloneMode = window.navigator.standalone === true;
-    
+
     if (isIOS && !isInStandaloneMode) {
         // PWAがまだインストールされていない場合のみ表示
         setTimeout(() => {
@@ -2219,9 +2201,9 @@ function showIOSInstallPrompt() {
                     </button>
                 </div>
             `;
-            
+
             document.body.appendChild(installPrompt);
-            
+
             // 10秒後に自動で消す
             setTimeout(() => {
                 if (installPrompt.parentElement) {
@@ -2267,12 +2249,12 @@ async function initHomePage() {
 async function loadLatestNews() {
     const container = document.getElementById('latest-news');
     if (!container) return Promise.resolve();
-    
+
     container.innerHTML = '<div class="loading">読み込み中...</div>';
-    
+
     try {
         let latestNews = [];
-        
+
         // Supabaseから最新のお知らせを取得
         if (window.supabaseQueries) {
             try {
@@ -2281,12 +2263,12 @@ async function loadLatestNews() {
                     offset: 0,
                     publishedOnly: true
                 });
-                
+
                 if (error) {
                     console.error('Error loading latest news:', error);
                     throw error;
                 }
-                
+
                 if (data && Array.isArray(data) && data.length > 0) {
                     latestNews = data.map(item => ({
                         id: (item && item.id) ? item.id : null,
@@ -2301,7 +2283,7 @@ async function loadLatestNews() {
                 // エラーが発生しても続行（空のリストで表示）
             }
         }
-        
+
         // データが無い場合またはSupabaseが利用できない場合
         if (latestNews.length === 0) {
             container.innerHTML = `
@@ -2315,16 +2297,16 @@ async function loadLatestNews() {
             `;
             return;
         }
-        
+
         // お知らせを表示
         container.innerHTML = latestNews.map(item => {
             const categoryLabel = getNewsTypeLabel(item.category);
             // 日付を簡潔に表示（時間は表示しない）
             const dateObj = new Date(item.date);
-            const formattedDate = isNaN(dateObj.getTime()) 
-                ? item.date 
+            const formattedDate = isNaN(dateObj.getTime())
+                ? item.date
                 : `${dateObj.getFullYear()}/${(dateObj.getMonth() + 1).toString().padStart(2, '0')}/${dateObj.getDate().toString().padStart(2, '0')}`;
-            
+
             return `
                 <div class="news-preview" data-news-id="${item.id}">
                     <span class="news-type ${item.category}">${escapeHtml(categoryLabel)}</span>
@@ -2334,7 +2316,7 @@ async function loadLatestNews() {
                 </div>
             `;
         }).join('');
-        
+
     } catch (error) {
         console.error('Error loading latest news:', error);
         container.innerHTML = `
@@ -2353,12 +2335,12 @@ async function loadLatestNews() {
 async function loadLatestPosts() {
     const container = document.getElementById('latest-posts');
     if (!container) return Promise.resolve();
-    
+
     container.innerHTML = '<div class="loading">読み込み中...</div>';
-    
+
     try {
         let latestPosts = [];
-        
+
         // Supabaseから最新の投稿を取得（承認済みのみ）
         if (window.supabaseQueries) {
             try {
@@ -2373,7 +2355,7 @@ async function loadLatestPosts() {
                         approval_status: 'approved' // 承認済みのみ表示
                     }
                 });
-                
+
                 // approval_statusカラムが存在しない場合（古いデータベース）のフォールバック
                 if (error || !data || !Array.isArray(data) || data.length === 0) {
                     // フィルターなしで再試行（RLSポリシーに任せる）
@@ -2384,7 +2366,7 @@ async function loadLatestPosts() {
                             orderBy: 'created_at',
                             orderDirection: 'desc'
                         });
-                        
+
                         if (fallbackResult && !fallbackResult.error && fallbackResult.data && Array.isArray(fallbackResult.data)) {
                             latestPosts = fallbackResult.data;
                         }
@@ -2399,7 +2381,7 @@ async function loadLatestPosts() {
                 // エラーが発生しても続行（空のリストで表示）
             }
         }
-        
+
         // データが無い場合またはSupabaseが利用できない場合
         if (latestPosts.length === 0) {
             container.innerHTML = `
@@ -2413,26 +2395,26 @@ async function loadLatestPosts() {
             `;
             return;
         }
-        
+
         // 投稿を表示
         container.innerHTML = latestPosts.map(post => {
             if (!post.content) return ''; // contentが無い場合はスキップ
-            
-            const contentPreview = post.content.length > 100 
-                ? post.content.substring(0, 100) + '...' 
+
+            const contentPreview = post.content.length > 100
+                ? post.content.substring(0, 100) + '...'
                 : post.content;
-            
+
             // 日付を簡潔に表示（時間は表示しない）
             const dateObj = new Date(post.created_at);
-            const formattedDate = isNaN(dateObj.getTime()) 
-                ? post.created_at 
+            const formattedDate = isNaN(dateObj.getTime())
+                ? post.created_at
                 : `${dateObj.getFullYear()}/${(dateObj.getMonth() + 1).toString().padStart(2, '0')}/${dateObj.getDate().toString().padStart(2, '0')}`;
-            
+
             // 承認済みの場合はステータスバッジを表示しない
-            const statusBadge = (post.approval_status === 'approved' && (!post.status || post.status === 'resolved' || post.status === 'closed')) 
-                ? '' 
+            const statusBadge = (post.approval_status === 'approved' && (!post.status || post.status === 'resolved' || post.status === 'closed'))
+                ? ''
                 : `<span class="post-status status-${post.status || 'pending'}">${getStatusLabel(post.status || 'pending')}</span>`;
-            
+
             return `
                 <div class="post-preview" data-post-id="${post.id}">
                     <div class="post-header-mini">
@@ -2449,7 +2431,7 @@ async function loadLatestPosts() {
                 </div>
             `;
         }).filter(html => html !== '').join(''); // 空のエントリを除外
-        
+
     } catch (error) {
         console.error('Error loading latest posts:', error);
         container.innerHTML = `
@@ -2468,25 +2450,25 @@ async function loadLatestPosts() {
 function initPWAInstall() {
     const installBtn = document.getElementById('install-pwa');
     if (!installBtn) return;
-    
+
     let deferredPrompt;
-    
+
     window.addEventListener('beforeinstallprompt', (e) => {
         e.preventDefault();
         deferredPrompt = e;
         installBtn.style.display = 'inline-flex';
     });
-    
+
     installBtn.addEventListener('click', async () => {
         if (!deferredPrompt) return;
-        
+
         deferredPrompt.prompt();
         const { outcome } = await deferredPrompt.userChoice;
-        
+
         if (outcome === 'accepted') {
             console.log('PWA installed');
         }
-        
+
         deferredPrompt = null;
         installBtn.style.display = 'none';
     });
@@ -2497,15 +2479,15 @@ function initClubsFilter() {
     // 支持: ニュースと同じデザイン(.filter-tab)を優先、後方互換で.filter-btnも拾う
     const filterBtns = document.querySelectorAll('.clubs-filter .filter-tab, .clubs-filter .filter-btn');
     const clubCards = document.querySelectorAll('.club-card');
-    
+
     filterBtns.forEach(btn => {
         btn.addEventListener('click', () => {
             // アクティブ状態の切り替え
             filterBtns.forEach(b => b.classList.remove('active'));
             btn.classList.add('active');
-            
+
             const category = btn.dataset.category;
-            
+
             clubCards.forEach(card => {
                 if (category === 'all' || card.dataset.category === category) {
                     card.style.display = 'block';
@@ -2549,9 +2531,9 @@ function initNotifications() {
     const enableBtn = document.getElementById('enable-notifications');
     const disableBtn = document.getElementById('disable-notifications');
     const statusEl = document.getElementById('notification-status');
-    
+
     if (!enableBtn || !disableBtn || !statusEl) return;
-    
+
     // 通知許可状態をチェック
     function checkNotificationStatus() {
         if (!('Notification' in window)) {
@@ -2559,7 +2541,7 @@ function initNotifications() {
             enableBtn.style.display = 'none';
             return;
         }
-        
+
         switch (Notification.permission) {
             case 'granted':
                 statusEl.innerHTML = '<p><i class="fas fa-check-circle"></i> 通知が有効になっています</p>';
@@ -2576,11 +2558,11 @@ function initNotifications() {
                 disableBtn.style.display = 'none';
         }
     }
-    
+
     enableBtn.addEventListener('click', async () => {
         const permission = await Notification.requestPermission();
         checkNotificationStatus();
-        
+
         if (permission === 'granted') {
             new Notification(CONFIG.APP.NAME, {
                 body: CONFIG.MESSAGES.SUCCESS.NOTIFICATION_ENABLED,
@@ -2588,12 +2570,12 @@ function initNotifications() {
             });
         }
     });
-    
+
     disableBtn.addEventListener('click', () => {
         // 通知を無効にする（実際にはブラウザ設定で行う）
         alert('通知を無効にするには、ブラウザの設定から行ってください。');
     });
-    
+
     checkNotificationStatus();
 }
 
@@ -2601,7 +2583,7 @@ function initNotifications() {
 async function loadSurveys() {
     const container = document.getElementById('active-surveys');
     if (!container) return;
-    
+
     container.innerHTML = `
         <div class="no-data-message">
             <div class="no-data-icon">
@@ -2617,16 +2599,16 @@ async function loadSurveys() {
 function initSurveyForm() {
     const form = document.querySelector('.survey-content');
     const submitBtn = (form && form.querySelector) ? form.querySelector('.btn-primary') : null;
-    
+
     if (!submitBtn) return;
-    
+
     submitBtn.addEventListener('click', (e) => {
         e.preventDefault();
-        
+
         // 回答を収集
         const formData = new FormData();
         const inputs = form.querySelectorAll('input:checked, textarea');
-        
+
         inputs.forEach(input => {
             if (input.type === 'radio' || input.type === 'checkbox') {
                 formData.append(input.name, input.value);
@@ -2634,16 +2616,16 @@ function initSurveyForm() {
                 formData.append('comments', input.value.trim());
             }
         });
-        
+
         // 送信処理（実際はGASに送信）
         submitBtn.disabled = true;
         submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 送信中...';
-        
+
         setTimeout(() => {
             alert(CONFIG.MESSAGES.SUCCESS.SURVEY_SUBMITTED);
             submitBtn.disabled = false;
             submitBtn.innerHTML = '<i class="fas fa-paper-plane"></i> 回答を送信';
-            
+
             // フォームをリセット
             inputs.forEach(input => {
                 if (input.type === 'radio' || input.type === 'checkbox') {
@@ -2702,175 +2684,230 @@ window.addEventListener('DOMContentLoaded', hideLoadingOverlay);
                     setTimeout(checkAndRun, 100);
                     return;
                 }
-                try { console.log('Geo guard: Config not found'); } catch {}
+                try { console.log('Geo guard: Config not found'); } catch { }
                 return;
             }
-        // 現在ページ名を推定（例: /forum.html -> forum）
-        const path = (window.location.pathname || '').toLowerCase();
-        const file = path.split('/').pop() || '';
-        const page = file.replace(/\.html?$/, '') || 'index';
-        const enabled = guard.ENABLED_PAGES?.[page] === true;
-        try {
-            console.log('Geo guard: Page check', { page, enabled, enabledPages: guard.ENABLED_PAGES });
-        } catch {}
-        if (!enabled) return;
-        
-        try {
-            console.log('Geo guard: Starting...', { page, zones: guard.ALLOWED_ZONES });
-        } catch {}
-
-        const zones = Array.isArray(guard.ALLOWED_ZONES) ? guard.ALLOWED_ZONES : [];
-        const redirectTo = guard.REDIRECT_PATH || 'location-denied.html';
-        
-        // リダイレクト関数を先に定義（許可ゾーン未設定チェックで使用）
-        const redirectToError = (errorType, lat, lng) => {
-            const url = new URL(redirectTo, window.location.origin);
-            if (errorType) {
-                url.searchParams.set('error', errorType);
-            }
-            if (lat != null && lng != null && !isNaN(lat) && !isNaN(lng)) {
-                url.searchParams.set('lat', lat.toString());
-                url.searchParams.set('lng', lng.toString());
-            }
-            window.location.replace(url.toString());
-        };
-
-        if (zones.length === 0) {
-            // 許可ゾーン未設定なら即リダイレクト（安全側）
-            redirectToError('unavailable', null, null);
-            return;
-        }
-
-        const isWithinAnyZone = (lat, lng) => {
-            const toRad = (d) => d * Math.PI / 180;
-            const R = 6371000; // 地球半径[m]
-            for (const z of zones) {
-                if (typeof z?.lat !== 'number' || typeof z?.lng !== 'number' || typeof z?.radiusMeters !== 'number') {
-                    try { console.warn('Geo guard: Invalid zone config:', z); } catch {}
-                    continue;
-                }
-                const dLat = toRad(z.lat - lat);
-                const dLng = toRad(z.lng - lng);
-                const a = Math.sin(dLat/2)**2 + Math.cos(toRad(lat)) * Math.cos(toRad(z.lat)) * Math.sin(dLng/2)**2;
-                const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-                const distance = R * c;
-                try {
-                    console.log('Geo guard: Zone check', {
-                        zone: { lat: z.lat, lng: z.lng, radius: z.radiusMeters },
-                        current: { lat, lng },
-                        distance: distance.toFixed(2) + 'm',
-                        within: distance <= z.radiusMeters,
-                        message: distance <= z.radiusMeters 
-                            ? `✓ 範囲内（距離: ${distance.toFixed(2)}m ≤ 半径: ${z.radiusMeters}m）`
-                            : `✗ 範囲外（距離: ${distance.toFixed(2)}m > 半径: ${z.radiusMeters}m）`
-                    });
-                } catch {}
-                if (distance <= z.radiusMeters) return true;
-            }
-            return false;
-        };
-
-        const onDenied = (errorType, lat, lng) => {
-            try { console.warn('Geolocation denied or unavailable; redirecting.'); } catch {}
-            redirectToError(errorType, lat, lng);
-        };
-
-        if (!('geolocation' in navigator)) {
-            onDenied('unavailable', null, null);
-            return;
-        }
-
-        const maybeRequestConsent = async () => {
-            const consentText = guard.CONSENT_MESSAGE || '';
-            // iOS Safari等ではPermissions APIが未対応または制限があるため、フォールバック処理
-            if (!('permissions' in navigator)) {
-                // Permissions APIなし→同意ダイアログを表示（許可後にブラウザの許可ダイアログが表示される）
-                if (consentText) {
-                    return window.confirm(consentText);
-                }
-                return true;
-            }
+            // 現在ページ名を推定（例: /forum.html -> forum）
+            const path = (window.location.pathname || '').toLowerCase();
+            const file = path.split('/').pop() || '';
+            const page = file.replace(/\.html?$/, '') || 'index';
+            const enabled = guard.ENABLED_PAGES?.[page] === true;
             try {
-                const status = await navigator.permissions.query({ name: 'geolocation' });
-                if (status.state === 'denied') return false; // 既にブロック
-                if (status.state === 'prompt') {
+                console.log('Geo guard: Page check', { page, enabled, enabledPages: guard.ENABLED_PAGES });
+            } catch { }
+            if (!enabled) return;
+
+            try {
+                console.log('Geo guard: Starting...', { page, zones: guard.ALLOWED_ZONES });
+            } catch { }
+
+            const zones = Array.isArray(guard.ALLOWED_ZONES) ? guard.ALLOWED_ZONES : [];
+            const redirectTo = guard.REDIRECT_PATH || 'location-denied.html';
+
+            // リダイレクト関数を先に定義（許可ゾーン未設定チェックで使用）
+            const redirectToError = (errorType, lat, lng) => {
+                const url = new URL(redirectTo, window.location.origin);
+                if (errorType) {
+                    url.searchParams.set('error', errorType);
+                }
+                if (lat != null && lng != null && !isNaN(lat) && !isNaN(lng)) {
+                    url.searchParams.set('lat', lat.toString());
+                    url.searchParams.set('lng', lng.toString());
+                }
+                window.location.replace(url.toString());
+            };
+
+            if (zones.length === 0) {
+                // 許可ゾーン未設定なら即リダイレクト（安全側）
+                redirectToError('unavailable', null, null);
+                return;
+            }
+
+            const isWithinAnyZone = (lat, lng) => {
+                const toRad = (d) => d * Math.PI / 180;
+                const R = 6371000; // 地球半径[m]
+                for (const z of zones) {
+                    if (typeof z?.lat !== 'number' || typeof z?.lng !== 'number' || typeof z?.radiusMeters !== 'number') {
+                        try { console.warn('Geo guard: Invalid zone config:', z); } catch { }
+                        continue;
+                    }
+                    const dLat = toRad(z.lat - lat);
+                    const dLng = toRad(z.lng - lng);
+                    const a = Math.sin(dLat / 2) ** 2 + Math.cos(toRad(lat)) * Math.cos(toRad(z.lat)) * Math.sin(dLng / 2) ** 2;
+                    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+                    const distance = R * c;
+                    try {
+                        console.log('Geo guard: Zone check', {
+                            zone: { lat: z.lat, lng: z.lng, radius: z.radiusMeters },
+                            current: { lat, lng },
+                            distance: distance.toFixed(2) + 'm',
+                            within: distance <= z.radiusMeters,
+                            message: distance <= z.radiusMeters
+                                ? `✓ 範囲内（距離: ${distance.toFixed(2)}m ≤ 半径: ${z.radiusMeters}m）`
+                                : `✗ 範囲外（距離: ${distance.toFixed(2)}m > 半径: ${z.radiusMeters}m）`
+                        });
+                    } catch { }
+                    if (distance <= z.radiusMeters) return true;
+                }
+                return false;
+            };
+
+            const onDenied = (errorType, lat, lng) => {
+                try { console.warn('Geolocation denied or unavailable; redirecting.'); } catch { }
+                redirectToError(errorType, lat, lng);
+            };
+
+            if (!('geolocation' in navigator)) {
+                onDenied('unavailable', null, null);
+                return;
+            }
+
+            const maybeRequestConsent = async () => {
+                const consentText = guard.CONSENT_MESSAGE || '';
+                // iOS Safari等ではPermissions APIが未対応または制限があるため、フォールバック処理
+                if (!('permissions' in navigator)) {
+                    // Permissions APIなし→同意ダイアログを表示（許可後にブラウザの許可ダイアログが表示される）
                     if (consentText) {
                         return window.confirm(consentText);
                     }
+                    return true;
                 }
-                // granted の場合はそのまま実行
-                return true;
-            } catch (e) {
-                // Permissions APIのエラー（iOS等で発生）→同意ダイアログを表示
-                if (consentText) {
-                    return window.confirm(consentText);
-                }
-                return true;
-            }
-        };
-
-        // 同意確認（iOS等でも動作するよう改善）
-        maybeRequestConsent().then((ok) => {
-            if (!ok) { onDenied('denied', null, null); return; }
-            const options = {
-                enableHighAccuracy: !!guard.ENABLE_HIGH_ACCURACY,
-                timeout: Math.max(1000, Number(guard.TIMEOUT_MS) || 6000),
-                maximumAge: 0
-            };
-            navigator.geolocation.getCurrentPosition((pos) => {
                 try {
-                    const lat = pos.coords.latitude;
-                    const lng = pos.coords.longitude;
-                    try {
-                        console.log('Geo guard: Position obtained', { lat, lng });
-                    } catch {}
-                    const within = isWithinAnyZone(lat, lng);
-                    try {
-                        console.log('Geo guard: Zone check result', { within });
-                    } catch {}
-                    if (!within) {
-                        // 範囲外：座標情報を渡してリダイレクト
-                        try {
-                            console.warn('Geo guard: Out of zone, redirecting...', { lat, lng });
-                        } catch {}
-                        redirectToError('out_of_zone', lat, lng);
-                    } else {
-                        try {
-                            console.log('Geo guard: Access granted (within zone)');
-                        } catch {}
+                    const status = await navigator.permissions.query({ name: 'geolocation' });
+                    if (status.state === 'denied') return false; // 既にブロック
+                    if (status.state === 'prompt') {
+                        if (consentText) {
+                            return window.confirm(consentText);
+                        }
                     }
+                    // granted の場合はそのまま実行
+                    return true;
                 } catch (e) {
+                    // Permissions APIのエラー（iOS等で発生）→同意ダイアログを表示
+                    if (consentText) {
+                        return window.confirm(consentText);
+                    }
+                    return true;
+                }
+            };
+
+            // 同意確認（iOS等でも動作するよう改善）
+            maybeRequestConsent().then((ok) => {
+                if (!ok) { onDenied('denied', null, null); return; }
+                const options = {
+                    enableHighAccuracy: !!guard.ENABLE_HIGH_ACCURACY,
+                    timeout: Math.max(1000, Number(guard.TIMEOUT_MS) || 6000),
+                    maximumAge: 0
+                };
+                navigator.geolocation.getCurrentPosition((pos) => {
                     try {
-                        console.error('Geo guard: Error processing position', e);
-                    } catch {}
-                    onDenied('unavailable', null, null);
-                }
-            }, (err) => {
-                // エラーの詳細を処理（iOS等でも適切に動作）
-                // err.code: 1=PERMISSION_DENIED, 2=POSITION_UNAVAILABLE, 3=TIMEOUT
-                let errorType = 'unavailable';
-                if (err.code === 1) {
-                    // ユーザーが許可を拒否
-                    errorType = 'denied';
-                    try { console.warn('Geolocation permission denied by user'); } catch {}
-                } else if (err.code === 2) {
-                    // 位置情報が取得できない（GPSオフ等）
-                    errorType = 'unavailable';
-                    try { console.warn('Geolocation position unavailable'); } catch {}
-                } else if (err.code === 3) {
-                    // タイムアウト
-                    errorType = 'timeout';
-                    try { console.warn('Geolocation request timeout'); } catch {}
-                }
-                // エラー時は座標が取得できていないため、エラー種別のみを渡す
-                onDenied(errorType, null, null);
-            }, options);
-        });
+                        const lat = pos.coords.latitude;
+                        const lng = pos.coords.longitude;
+                        try {
+                            console.log('Geo guard: Position obtained', { lat, lng });
+                        } catch { }
+                        const within = isWithinAnyZone(lat, lng);
+                        try {
+                            console.log('Geo guard: Zone check result', { within });
+                        } catch { }
+                        if (!within) {
+                            // 範囲外：座標情報を渡してリダイレクト
+                            try {
+                                console.warn('Geo guard: Out of zone, redirecting...', { lat, lng });
+                            } catch { }
+                            redirectToError('out_of_zone', lat, lng);
+                        } else {
+                            try {
+                                console.log('Geo guard: Access granted (within zone)');
+                            } catch { }
+                        }
+                    } catch (e) {
+                        try {
+                            console.error('Geo guard: Error processing position', e);
+                        } catch { }
+                        onDenied('unavailable', null, null);
+                    }
+                }, (err) => {
+                    // エラーの詳細を処理（iOS等でも適切に動作）
+                    // err.code: 1=PERMISSION_DENIED, 2=POSITION_UNAVAILABLE, 3=TIMEOUT
+                    let errorType = 'unavailable';
+                    if (err.code === 1) {
+                        // ユーザーが許可を拒否
+                        errorType = 'denied';
+                        try { console.warn('Geolocation permission denied by user'); } catch { }
+                    } else if (err.code === 2) {
+                        // 位置情報が取得できない（GPSオフ等）
+                        errorType = 'unavailable';
+                        try { console.warn('Geolocation position unavailable'); } catch { }
+                    } else if (err.code === 3) {
+                        // タイムアウト
+                        errorType = 'timeout';
+                        try { console.warn('Geolocation request timeout'); } catch { }
+                    }
+                    // エラー時は座標が取得できていないため、エラー種別のみを渡す
+                    onDenied(errorType, null, null);
+                }, options);
+            });
         } catch (e) {
-            try { console.error('Geo guard error:', e); } catch {}
+            try { console.error('Geo guard error:', e); } catch { }
         }
     };
-    
+
     // 初期実行
     checkAndRun();
 })();
+
+// ==========================================
+// Visual & Animation Upgrades
+// ==========================================
+
+function initScrollAnimations() {
+    const observerOptions = {
+        root: null,
+        rootMargin: '0px',
+        threshold: 0.1
+    };
+
+    const observer = new IntersectionObserver((entries, observer) => {
+        entries.forEach(entry => {
+            if (entry.isIntersecting) {
+                entry.target.classList.add('is-visible');
+                observer.unobserve(entry.target); // Only animate once
+            }
+        });
+    }, observerOptions);
+
+    const elements = document.querySelectorAll('.reveal-on-scroll');
+    elements.forEach(el => observer.observe(el));
+}
+
+function initTiltEffect() {
+    const cards = document.querySelectorAll('.tilt-card');
+
+    cards.forEach(card => {
+        card.addEventListener('mousemove', (e) => {
+            const rect = card.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+
+            const centerX = rect.width / 2;
+            const centerY = rect.height / 2;
+
+            // Subtle tilt (max 5 degrees)
+            const rotateX = ((y - centerY) / centerY) * -5;
+            const rotateY = ((x - centerX) / centerX) * 5;
+
+            card.style.transform = `perspective(1000px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) scale(1.02)`;
+        });
+
+        card.addEventListener('mouseleave', () => {
+            card.style.transform = 'perspective(1000px) rotateX(0) rotateY(0) scale(1)';
+        });
+    });
+}
+
+// Initialize animations when DOM is ready
+document.addEventListener('DOMContentLoaded', () => {
+    initScrollAnimations();
+    initTiltEffect();
+});
