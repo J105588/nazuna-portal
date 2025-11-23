@@ -7,7 +7,7 @@
 // キャッシュ設定
 // =====================================
 
-const CACHE_VERSION = 33;
+const CACHE_VERSION = 4;
 const CACHE_NAME = `nazuna-portal-v${CACHE_VERSION}`;
 const CACHE_PREFIX = 'nazuna-portal-v';
 
@@ -15,7 +15,6 @@ const CACHE_PREFIX = 'nazuna-portal-v';
 const STATIC_CACHE_FILES = [
   '/',
   'index.html',
-  'admin.html',
   'clubs.html',
   'council.html',
   'forum.html',
@@ -32,18 +31,12 @@ const STATIC_CACHE_FILES = [
   'js/notification-manager.js',
   'js/pwa-update.js',
   'images/icon.png',
-  'images/icon-192x192.png',
-  'images/icon-512x512.png',
-  'images/badge-72x72.png'
 ];
 
 // オプションのリソース（存在しない場合はスキップ）
 const OPTIONAL_CACHE_FILES = [
   'schedule.html',
   'js/api-client.js',
-  'images/icon-192x192.png',
-  'images/icon-512x512.png',
-  'images/badge-72x72.png'
 ];
 
 // 動的にキャッシュするパターン
@@ -73,7 +66,7 @@ const BYPASS_SW_PATTERNS = [
 
 self.addEventListener('install', (event) => {
   console.log('[SW] Installing Service Worker version', CACHE_VERSION);
-  
+
   event.waitUntil(
     (async () => {
       try {
@@ -84,7 +77,7 @@ self.addEventListener('install', (event) => {
           const normalized = url.startsWith('/') ? url.slice(1) : url;
           return new URL(normalized, self.registration.scope).toString();
         };
-        
+
         // 必須リソースをキャッシュ
         const requiredFiles = STATIC_CACHE_FILES.map(async (url) => {
           try {
@@ -103,7 +96,7 @@ self.addEventListener('install', (event) => {
             return false;
           }
         });
-        
+
         // オプションリソースをキャッシュ
         const optionalFiles = OPTIONAL_CACHE_FILES.map(async (url) => {
           try {
@@ -122,18 +115,18 @@ self.addEventListener('install', (event) => {
             return false;
           }
         });
-        
+
         const cachePromises = [...requiredFiles, ...optionalFiles];
-        
+
         const results = await Promise.allSettled(cachePromises);
         const successCount = results.filter(r => r.status === 'fulfilled' && r.value === true).length;
-        
+
         const totalFiles = STATIC_CACHE_FILES.length + OPTIONAL_CACHE_FILES.length;
         console.log(`[SW] Caching complete: ${successCount}/${totalFiles} files cached successfully`);
-        
+
         // 即座にアクティブ化
         await self.skipWaiting();
-        
+
       } catch (error) {
         console.error('[SW] Installation failed:', error);
         // エラーが発生してもService Workerは有効にする
@@ -149,43 +142,43 @@ self.addEventListener('install', (event) => {
 
 self.addEventListener('activate', (event) => {
   console.log('[SW] Activating Service Worker version', CACHE_VERSION);
-  
+
   event.waitUntil(
     (async () => {
       try {
         // 全てのキャッシュ名を取得
         const cacheNames = await caches.keys();
-        
+
         console.log('[SW] Found caches:', cacheNames);
-        
+
         // 古いキャッシュを削除
         const deletePromises = cacheNames.map((cacheName) => {
           // nazuna-portalで始まるキャッシュのみ対象
           if (cacheName.startsWith(CACHE_PREFIX)) {
             const version = parseInt(cacheName.replace(CACHE_PREFIX, ''));
-            
+
             // 現在のバージョンより古い場合削除
             if (!isNaN(version) && version < CACHE_VERSION) {
               console.log('[SW] Deleting old cache:', cacheName);
               return caches.delete(cacheName);
             }
           }
-          
+
           return Promise.resolve();
         });
-        
+
         await Promise.all(deletePromises);
-        
+
         console.log('[SW] Old caches deleted successfully');
-        
+
         // 即座に全てのクライアントをコントロール
         await self.clients.claim();
-        
+
         console.log('[SW] Service Worker activated and claimed clients');
-        
+
         // クライアントへの強制リロードは行わない
         // 更新通知は BroadcastChannel と UI 側の制御に任せる
-        
+
       } catch (error) {
         console.error('[SW] Activation failed:', error);
       }
@@ -200,7 +193,7 @@ self.addEventListener('activate', (event) => {
 self.addEventListener('fetch', (event) => {
   const { request } = event;
   const url = new URL(request.url);
-  
+
   // GitHub Pages: manifest.json と favicon.ico はそのままネットワークへ
   if (url.pathname.endsWith('/manifest.json') || url.pathname.endsWith('/favicon.ico')) {
     event.respondWith(fetch(request));
@@ -213,28 +206,28 @@ self.addEventListener('fetch', (event) => {
     // Service Workerに介入させない（ブラウザが直接処理）
     return;
   }
-  
+
   // キャッシュしないパターンをチェック
   const shouldNotCache = NO_CACHE_PATTERNS.some(pattern => pattern.test(request.url));
-  
+
   if (shouldNotCache) {
     // ネットワークのみ
     event.respondWith(fetch(request));
     return;
   }
-  
+
   // GETリクエストのみキャッシュ対象
   if (request.method !== 'GET') {
     event.respondWith(fetch(request));
     return;
   }
-  
+
   // ナビゲーションリクエスト（HTMLページ）
   if (request.mode === 'navigate') {
     event.respondWith(handleNavigationRequest(request));
     return;
   }
-  
+
   // 静的リソース
   event.respondWith(handleResourceRequest(request));
 });
@@ -247,25 +240,25 @@ async function handleNavigationRequest(request) {
   try {
     // ネットワークから取得を試みる
     const networkResponse = await fetch(request);
-    
+
     // 成功した場合はキャッシュに保存
     if (networkResponse && networkResponse.ok) {
       const cache = await caches.open(CACHE_NAME);
       cache.put(request, networkResponse.clone());
     }
-    
+
     return networkResponse;
-    
+
   } catch (error) {
     console.log('[SW] Network failed, trying cache:', request.url);
-    
+
     // ネットワークが失敗した場合はキャッシュから取得
     const cachedResponse = await caches.match(request);
-    
+
     if (cachedResponse) {
       return cachedResponse;
     }
-    
+
     // キャッシュにもない場合はスコープ相対の index.html
     const fallbackUrl = new URL('index.html', self.registration.scope).toString();
     return caches.match(fallbackUrl);
@@ -279,32 +272,32 @@ async function handleNavigationRequest(request) {
 async function handleResourceRequest(request) {
   // まずキャッシュを確認
   const cachedResponse = await caches.match(request);
-  
+
   if (cachedResponse) {
     // バックグラウンドで更新（Stale-While-Revalidate）
     updateCacheInBackground(request);
     return cachedResponse;
   }
-  
+
   // キャッシュになければネットワークから取得
   try {
     const networkResponse = await fetch(request);
-    
+
     // 動的にキャッシュするか判定
-    const shouldCache = DYNAMIC_CACHE_PATTERNS.some(pattern => 
+    const shouldCache = DYNAMIC_CACHE_PATTERNS.some(pattern =>
       pattern.test(request.url)
     );
-    
+
     if (shouldCache && networkResponse && networkResponse.ok) {
       const cache = await caches.open(CACHE_NAME);
       cache.put(request, networkResponse.clone());
     }
-    
+
     return networkResponse;
-    
+
   } catch (error) {
     console.error('[SW] Fetch failed:', request.url, error);
-    
+
     // ネットワークエラーの場合は空のレスポンスを返す
     return new Response('Network error', {
       status: 408,
@@ -323,26 +316,26 @@ async function updateCacheInBackground(request) {
   const url = request.url;
   const now = Date.now();
   const lastUpdate = updateCacheThrottle.get(url) || 0;
-  
+
   // 同じURLは60秒以内に複数回更新しない
   if (now - lastUpdate < 60000) {
     return;
   }
-  
+
   try {
     const networkResponse = await fetch(request);
-    
+
     if (networkResponse && networkResponse.ok) {
       const cache = await caches.open(CACHE_NAME);
       await cache.put(request, networkResponse);
       updateCacheThrottle.set(url, now);
-      
+
       // ログは開発時のみ（本番環境では削減）
       if (CACHE_VERSION <= 100) {
         console.log('[SW] Cache updated in background:', request.url);
       }
     }
-    
+
   } catch (error) {
     // バックグラウンド更新の失敗は無視（ログも出力しない）
   }
@@ -354,7 +347,7 @@ async function updateCacheInBackground(request) {
 
 self.addEventListener('push', (event) => {
   console.log('[SW] Push notification received');
-  
+
   let notificationData = {
     title: 'お知らせ',
     body: '',
@@ -362,13 +355,13 @@ self.addEventListener('push', (event) => {
     badge: '/images/badge-72x72.png',
     url: '/'
   };
-  
+
   // プッシュデータを解析
   if (event.data) {
     try {
       const payload = event.data.json();
       console.log('[SW] Push payload:', payload);
-      
+
       // Firebase HTTP v1 API形式（統一されたデータ構造）
       // GAS側から送信されるデータ構造に対応
       if (payload.data) {
@@ -379,19 +372,19 @@ self.addEventListener('push', (event) => {
         notificationData.badge = payload.data.badge || notificationData.badge;
         notificationData.tag = payload.data.tag || payload.data.historyId || 'general';
       }
-      
+
       // notification フィールドがある場合も対応（フォールバック）
       if (payload.notification) {
         notificationData.title = payload.notification.title || notificationData.title;
         notificationData.body = payload.notification.body || notificationData.body;
       }
-      
+
     } catch (error) {
       console.error('[SW] Failed to parse push data:', error);
       // デフォルト値を使用
     }
   }
-  
+
   // 通知オプション
   const options = {
     body: notificationData.body,
@@ -415,7 +408,7 @@ self.addEventListener('push', (event) => {
     requireInteraction: false,
     tag: notificationData.tag || 'nazuna-notification'
   };
-  
+
   // 通知を表示
   event.waitUntil(
     self.registration.showNotification(notificationData.title, options)
@@ -428,14 +421,14 @@ self.addEventListener('push', (event) => {
 
 self.addEventListener('notificationclick', (event) => {
   console.log('[SW] Notification clicked:', event.action);
-  
+
   event.notification.close();
-  
+
   // 「閉じる」アクションの場合は何もしない
   if (event.action === 'close') {
     return;
   }
-  
+
   // URLを取得し正規化
   let urlToOpen = event.notification.data?.url || '/';
   try {
@@ -459,7 +452,7 @@ self.addEventListener('notificationclick', (event) => {
   } catch (_e) {
     urlToOpen = self.location.origin + '/';
   }
-  
+
   // クライアントを開く
   event.waitUntil(
     (async () => {
@@ -469,17 +462,17 @@ self.addEventListener('notificationclick', (event) => {
           type: 'window',
           includeUncontrolled: true
         });
-        
+
         // 同じURLのウィンドウが既に開いている場合はフォーカス
         for (const client of allClients) {
           const clientUrl = new URL(client.url);
           const targetUrl = new URL(urlToOpen);
-          
+
           if (clientUrl.pathname === targetUrl.pathname) {
             return client.focus();
           }
         }
-        
+
         // 新しいウィンドウ/タブを開く（失敗時はフォールバック）
         let opened = null;
         try {
@@ -505,7 +498,7 @@ self.addEventListener('notificationclick', (event) => {
           // 何もできない
         }
         return null;
-        
+
       } catch (error) {
         console.error('[SW] Failed to open window:', error);
       }
@@ -519,11 +512,11 @@ self.addEventListener('notificationclick', (event) => {
 
 self.addEventListener('message', (event) => {
   console.log('[SW] Message received:', event.data);
-  
+
   if (event.data && event.data.type === 'SKIP_WAITING') {
     self.skipWaiting();
   }
-  
+
   if (event.data && event.data.type === 'CLEAR_CACHE') {
     event.waitUntil(
       caches.keys().then(cacheNames => {
@@ -538,7 +531,7 @@ self.addEventListener('message', (event) => {
       })
     );
   }
-  
+
   if (event.data && event.data.type === 'GET_VERSION') {
     event.ports[0].postMessage({
       version: CACHE_VERSION,
@@ -553,7 +546,7 @@ self.addEventListener('message', (event) => {
 
 self.addEventListener('sync', (event) => {
   console.log('[SW] Background sync:', event.tag);
-  
+
   if (event.tag === 'sync-notifications') {
     event.waitUntil(syncNotifications());
   }
@@ -563,9 +556,9 @@ async function syncNotifications() {
   try {
     // バックグラウンドで通知データを同期
     console.log('[SW] Syncing notifications...');
-    
+
     // ここに同期ロジックを実装
-    
+
   } catch (error) {
     console.error('[SW] Sync failed:', error);
   }
@@ -592,7 +585,7 @@ try {
   const channel = new BroadcastChannel('pwa-updates');
   // 通知: 現在のキャッシュ名
   const postCacheName = () => {
-    try { channel.postMessage({ type: 'CACHE_NAME', cacheName: CACHE_NAME }); } catch (e) {}
+    try { channel.postMessage({ type: 'CACHE_NAME', cacheName: CACHE_NAME }); } catch (e) { }
   };
   // 起動時に送信
   postCacheName();
@@ -605,4 +598,4 @@ try {
       postCacheName();
     }
   });
-} catch (e) {}
+} catch (e) { }

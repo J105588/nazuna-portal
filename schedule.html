@@ -1,0 +1,658 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>なずなポータルサイト - 行事予定</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="manifest" href="manifest.json">
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&display=swap"
+        rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+
+    <!-- PWA & Settings (Common) -->
+    <meta name="theme-color" content="#4a7c59">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+
+    <style>
+        /* --- カレンダー専用スタイル --- */
+
+        .page-header {
+            background-color: #4a7c59;
+            color: white;
+            padding: 5rem 1rem;
+            text-align: center;
+            margin-bottom: 1.5rem;
+        }
+
+        .page-header h2 {
+            font-size: 1.8rem;
+        }
+
+        .calendar-wrapper {
+            max-width: 800px;
+            margin: 0 auto 8rem;
+            padding: 0 1rem;
+            position: relative;
+        }
+
+        /* コントロールバー */
+        .calendar-controls {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+            background: white;
+            padding: 0.75rem 1rem;
+            border-radius: 10px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+        }
+
+        .current-month-label {
+            font-size: 1.3rem;
+            font-weight: 700;
+            color: #333;
+        }
+
+        .ctrl-btn {
+            background: #f5f5f5;
+            border: none;
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            cursor: pointer;
+            transition: 0.2s;
+            color: #555;
+            font-size: 0.9rem;
+        }
+
+        .ctrl-btn:hover {
+            background: #4a7c59;
+            color: white;
+        }
+
+        /* グリッド本体 */
+        .calendar-grid {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            /* 行数は自動。ヘッダー(30px) + コンテンツ(自動) */
+            grid-template-rows: 30px auto;
+            gap: 4px;
+            background: white;
+            padding: 1rem;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+        }
+
+        /* 曜日ヘッダー */
+        .weekday {
+            text-align: center;
+            font-weight: bold;
+            color: #888;
+            font-size: 0.8rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .weekday.sun {
+            color: #e53935;
+        }
+
+        .weekday.sat {
+            color: #1e88e5;
+        }
+
+        /* 日付セル */
+        .day-cell {
+            min-height: 80px;
+            aspect-ratio: 1 / 0.9;
+            border-radius: 6px;
+            padding: 4px;
+            font-size: 0.9rem;
+            position: relative;
+            cursor: pointer;
+            transition: transform 0.1s, background-color 0.2s;
+            background-color: #fff;
+            border: 1px solid #f4f4f4;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .day-cell:hover {
+            background-color: #fafafa;
+            transform: scale(1.02);
+            z-index: 2;
+            border-color: #ddd;
+        }
+
+        /* 今日の表示 */
+        .day-cell.today {
+            border: 2px solid #4a7c59;
+            background-color: #f1f8e9;
+        }
+
+        .day-cell.today .day-number {
+            color: #2e7d32;
+            font-weight: bold;
+        }
+
+        /* 別月（前月・翌月）の表示 - 薄くする */
+        .day-cell.other-month {
+            background-color: #fcfcfc;
+            color: #ccc;
+        }
+
+        .day-cell.other-month .day-number {
+            color: #ccc;
+        }
+
+        .day-cell.other-month:hover {
+            background-color: #f5f5f5;
+        }
+
+        .day-cell.other-month .event-dot {
+            opacity: 0.4;
+        }
+
+        /* イベントドット表示エリア */
+        .event-markers {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 2px;
+            margin-top: auto;
+            margin-bottom: 2px;
+            width: 100%;
+        }
+
+        .event-dot {
+            width: 5px;
+            height: 5px;
+            border-radius: 50%;
+        }
+
+        /* === イベントの種類と色定義 === */
+        :root {
+            --color-school: #d32f2f;
+            --color-council: #2e7d32;
+            --color-club: #1976d2;
+            --color-exam: #7b1fa2;
+            --color-holiday: #ef5350;
+            --color-deadline: #f57c00;
+            --color-volunteer: #009688;
+            --color-other: #78909c;
+        }
+
+        .type-school {
+            background-color: var(--color-school);
+        }
+
+        .type-council {
+            background-color: var(--color-council);
+        }
+
+        .type-club {
+            background-color: var(--color-club);
+        }
+
+        .type-exam {
+            background-color: var(--color-exam);
+        }
+
+        .type-holiday {
+            background-color: var(--color-holiday);
+        }
+
+        .type-deadline {
+            background-color: var(--color-deadline);
+        }
+
+        .type-volunteer {
+            background-color: var(--color-volunteer);
+        }
+
+        .type-other {
+            background-color: var(--color-other);
+        }
+
+        /* 凡例エリア */
+        .legend-area {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 0.8rem;
+            margin-top: 1rem;
+            margin-bottom: 10rem;
+            font-size: 0.75rem;
+            color: #555;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .legend-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+        }
+
+        /* === 詳細オーバーレイ === */
+        .overlay-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.4);
+            z-index: 1000;
+            display: none;
+            opacity: 0;
+            transition: opacity 0.2s;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .overlay-container.active {
+            display: flex;
+            opacity: 1;
+        }
+
+        .event-modal {
+            background: white;
+            width: 85%;
+            max-width: 380px;
+            border-radius: 12px;
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
+            transform: scale(0.8);
+            transition: transform 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            overflow: hidden;
+        }
+
+        .overlay-container.active .event-modal {
+            transform: scale(1);
+        }
+
+        .modal-header {
+            padding: 1rem;
+            background: #f9f9f9;
+            border-bottom: 1px solid #eee;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .modal-date {
+            font-size: 1.2rem;
+            font-weight: bold;
+            color: #333;
+        }
+
+        .modal-close {
+            background: none;
+            border: none;
+            font-size: 1.1rem;
+            cursor: pointer;
+            color: #999;
+        }
+
+        .modal-body {
+            padding: 1rem;
+            max-height: 50vh;
+            overflow-y: auto;
+        }
+
+        .modal-event-item {
+            margin-bottom: 0.8rem;
+            padding-bottom: 0.8rem;
+            border-bottom: 1px solid #f5f5f5;
+        }
+
+        .modal-event-item:last-child {
+            border-bottom: none;
+            margin-bottom: 0;
+        }
+
+        .modal-event-badge {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 10px;
+            color: white;
+            font-size: 0.7rem;
+            margin-bottom: 0.3rem;
+        }
+
+        .modal-event-title {
+            font-size: 1rem;
+            font-weight: bold;
+            display: block;
+            margin-bottom: 0.2rem;
+        }
+
+        .modal-event-time {
+            font-size: 0.8rem;
+            color: #666;
+            margin-bottom: 0.3rem;
+            display: block;
+        }
+
+        .modal-event-desc {
+            font-size: 0.85rem;
+            color: #444;
+            line-height: 1.5;
+        }
+
+        @media (max-width: 600px) {
+            .calendar-grid {
+                padding: 0.5rem;
+                gap: 2px;
+            }
+
+            .day-cell {
+                min-height: 60px;
+                font-size: 0.8rem;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <!-- サイドバー (共通) -->
+    <div class="sidebar" id="sidebar">
+        <div class="sidebar-header">
+            <h2>なずなポータル</h2>
+            <button class="sidebar-close-btn" id="sidebar-close-btn"><i class="fas fa-times"></i></button>
+        </div>
+        <nav class="sidebar-nav">
+            <ul>
+                <li><a href="index.html"><i class="fas fa-home"></i><span>ホーム</span></a></li>
+                <li><a href="schedule.html" class="active"><i class="fas fa-calendar-alt"></i><span>行事予定</span></a></li>
+                <li><a href="council.html"><i class="fas fa-users"></i><span>生徒会紹介</span></a></li>
+                <li><a href="clubs.html"><i class="fas fa-running"></i><span>部活動</span></a></li>
+                <li><a href="forum.html"><i class="fas fa-comments"></i><span>なずなフォーラム</span></a></li>
+            </ul>
+        </nav>
+    </div>
+    <div class="sidebar-overlay" id="sidebar-overlay"></div>
+
+    <header>
+        <nav class="navbar">
+            <div class="nav-container">
+                <button class="hamburger" id="hamburger"><span aria-hidden="true"></span><span
+                        aria-hidden="true"></span><span aria-hidden="true"></span></button>
+                <h1 class="logo">行事予定</h1>
+                <div class="nav-spacer"></div>
+            </div>
+        </nav>
+    </header>
+
+    <main>
+        <section class="page-header">
+            <div class="container">
+                <h2><i class="fas fa-calendar-check"></i> Schedule</h2>
+                <p>学校行事、試験日程、生徒会活動など</p>
+            </div>
+        </section>
+
+        <div class="calendar-wrapper reveal-on-scroll">
+            <!-- コントロール -->
+            <div class="calendar-controls">
+                <button class="ctrl-btn" id="prevMonth"><i class="fas fa-chevron-left"></i></button>
+                <div class="current-month-label" id="currentMonthLabel">2025年 11月</div>
+                <button class="ctrl-btn" id="nextMonth"><i class="fas fa-chevron-right"></i></button>
+            </div>
+
+            <!-- カレンダーグリッド -->
+            <div class="calendar-grid" id="calendarGrid">
+                <!-- JSで生成 -->
+            </div>
+
+            <!-- 凡例 -->
+            <div class="legend-area">
+                <div class="legend-item"><span class="legend-dot type-school"></span> 学校行事</div>
+                <div class="legend-item"><span class="legend-dot type-exam"></span> 試験</div>
+                <div class="legend-item"><span class="legend-dot type-holiday"></span> 祝日</div>
+                <div class="legend-item"><span class="legend-dot type-deadline"></span> 提出</div>
+                <div class="legend-item"><span class="legend-dot type-council"></span> 生徒会</div>
+                <div class="legend-item"><span class="legend-dot type-club"></span> 部活</div>
+                <div class="legend-item"><span class="legend-dot type-volunteer"></span> ボランティア</div>
+            </div>
+        </div>
+    </main>
+
+    <!-- 詳細オーバーレイ -->
+    <div class="overlay-container" id="eventOverlay">
+        <div class="event-modal" id="eventModal">
+            <div class="modal-header">
+                <div class="modal-date" id="modalDate"></div>
+                <button class="modal-close" id="closeModalBtn"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="modal-body" id="modalBody"></div>
+        </div>
+    </div>
+    <footer>
+        <div class="footer-content">
+            <div class="footer-section">
+                <h3>なずなポータル</h3>
+                <p>みんなでつくる学校生活</p>
+            </div>
+            <div class="footer-section">
+                <h4>リンク</h4>
+                <ul>
+                    <li><a href="council.html">生徒会紹介</a></li>
+                    <li><a href="clubs.html">部活動</a></li>
+                    <li><a href="forum.html">なずなフォーラム</a></li>
+                    <li><a href="devlog.html">開発日誌</a></li>
+                </ul>
+            </div>
+            <div class="footer-section">
+                <h4>お問い合わせ</h4>
+                <p>生徒会室まで</p>
+                <p>平日 12:30-13:00</p>
+            </div>
+        </div>
+        <div class="footer-bottom">
+            <p>&copy; 2025 市川学園生徒会. All rights reserved.</p>
+        </div>
+    </footer>
+
+    <script src="js/config.js"></script>
+    <script src="js/app.js"></script>
+
+    <script>
+        /* --- カレンダーロジック --- */
+
+        const csvUrl = 'data/events.csv';
+        let allEvents = [];
+        let currentDate = new Date();
+
+        const weekDays = ['日', '月', '火', '水', '木', '金', '土'];
+        const typeLabels = {
+            school: '学校行事', council: '生徒会', club: '部活動', exam: '試験',
+            holiday: '祝日', deadline: '提出期限', volunteer: 'ボランティア', other: 'その他'
+        };
+
+        const gridEl = document.getElementById('calendarGrid');
+        const labelEl = document.getElementById('currentMonthLabel');
+        const overlayEl = document.getElementById('eventOverlay');
+        const modalEl = document.getElementById('eventModal');
+        const modalDateEl = document.getElementById('modalDate');
+        const modalBodyEl = document.getElementById('modalBody');
+
+        document.addEventListener('DOMContentLoaded', async () => {
+            await loadEventsFromCSV();
+            renderCalendar(currentDate);
+
+            document.getElementById('prevMonth').addEventListener('click', () => {
+                currentDate.setMonth(currentDate.getMonth() - 1);
+                renderCalendar(currentDate);
+            });
+            document.getElementById('nextMonth').addEventListener('click', () => {
+                currentDate.setMonth(currentDate.getMonth() + 1);
+                renderCalendar(currentDate);
+            });
+
+            document.getElementById('closeModalBtn').addEventListener('click', closeModal);
+            overlayEl.addEventListener('click', (e) => {
+                if (e.target === overlayEl) closeModal();
+            });
+        });
+
+        async function loadEventsFromCSV() {
+            try {
+                const response = await fetch(csvUrl);
+                if (!response.ok) return;
+                const text = await response.text();
+                const rows = text.trim().split('\n');
+                const headers = rows[0].split(',').map(h => h.trim());
+                allEvents = rows.slice(1).map(row => {
+                    const values = row.split(',');
+                    const event = {};
+                    headers.forEach((h, i) => event[h] = values[i] ? values[i].trim() : '');
+                    return event;
+                });
+            } catch (e) {
+                console.error('CSV load error', e);
+            }
+        }
+
+        function renderCalendar(date) {
+            gridEl.innerHTML = '';
+
+            const year = date.getFullYear();
+            const month = date.getMonth();
+
+            labelEl.textContent = `${year}年 ${month + 1}月`;
+
+            // 曜日ヘッダー
+            weekDays.forEach((day, i) => {
+                const el = document.createElement('div');
+                el.className = `weekday ${i === 0 ? 'sun' : ''} ${i === 6 ? 'sat' : ''}`;
+                el.textContent = day;
+                gridEl.appendChild(el);
+            });
+
+            const firstDay = new Date(year, month, 1);
+            const lastDay = new Date(year, month + 1, 0);
+
+            // === 前月の日付埋め (今月が始まる曜日まで) ===
+            const prevMonthLastDate = new Date(year, month, 0).getDate();
+            const startDayIndex = firstDay.getDay(); // 0(日)〜6(土)
+
+            for (let i = startDayIndex - 1; i >= 0; i--) {
+                const dayNum = prevMonthLastDate - i;
+                const prevDate = new Date(year, month - 1, dayNum);
+                gridEl.appendChild(createDayCell(prevDate, true));
+            }
+
+            // === 当月の日付 ===
+            for (let d = 1; d <= lastDay.getDate(); d++) {
+                const currDate = new Date(year, month, d);
+                gridEl.appendChild(createDayCell(currDate, false));
+            }
+
+            // === 翌月の日付埋め (その週の土曜日まで埋める) ===
+            // 0(日)〜6(土) で終わった場合、6との差分だけ埋める
+            const endDayIndex = lastDay.getDay();
+            const remainingCells = 6 - endDayIndex;
+
+            for (let d = 1; d <= remainingCells; d++) {
+                const nextDate = new Date(year, month + 1, d);
+                gridEl.appendChild(createDayCell(nextDate, true));
+            }
+        }
+
+        // 日付セル作成ヘルパー関数
+        function createDayCell(dateObj, isOtherMonth) {
+            const cell = document.createElement('div');
+            cell.className = 'day-cell';
+            if (isOtherMonth) cell.classList.add('other-month');
+
+            const y = dateObj.getFullYear();
+            const m = dateObj.getMonth() + 1;
+            const d = dateObj.getDate();
+            const dateStr = `${y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+
+            // 今日の判定
+            const today = new Date();
+            if (!isOtherMonth && y === today.getFullYear() && (m - 1) === today.getMonth() && d === today.getDate()) {
+                cell.classList.add('today');
+            }
+
+            // 日付数字
+            const numSpan = document.createElement('span');
+            numSpan.className = 'day-number';
+            numSpan.textContent = d;
+            cell.appendChild(numSpan);
+
+            // イベント検索
+            const daysEvents = allEvents.filter(e => e.date === dateStr);
+
+            if (daysEvents.length > 0) {
+                const dotsContainer = document.createElement('div');
+                dotsContainer.className = 'event-markers';
+                daysEvents.forEach(evt => {
+                    const dot = document.createElement('span');
+                    dot.className = `event-dot type-${evt.type || 'other'}`;
+                    dotsContainer.appendChild(dot);
+                });
+                cell.appendChild(dotsContainer);
+            }
+
+            // クリックイベント
+            cell.addEventListener('click', (e) => {
+                openModal(dateObj, daysEvents, e.currentTarget);
+            });
+
+            return cell;
+        }
+
+        function openModal(dateObj, events, targetElement) {
+            const dayOfWeek = weekDays[dateObj.getDay()];
+            modalDateEl.textContent = `${dateObj.getMonth() + 1}月${dateObj.getDate()}日 (${dayOfWeek})`;
+
+            modalBodyEl.innerHTML = '';
+            if (!events || events.length === 0) {
+                modalBodyEl.innerHTML = '<div style="text-align:center;color:#999;padding:1rem;">予定はありません</div>';
+            } else {
+                events.forEach(evt => {
+                    const item = document.createElement('div');
+                    item.className = 'modal-event-item';
+                    const typeClass = `type-${evt.type || 'other'}`;
+
+                    item.innerHTML = `
+                        <span class="modal-event-badge ${typeClass}">${typeLabels[evt.type] || 'その他'}</span>
+                        <span class="modal-event-title">${evt.title}</span>
+                        <span class="modal-event-time"><i class="far fa-clock"></i> ${evt.time}</span>
+                        <p class="modal-event-desc">${evt.description}</p>
+                    `;
+                    modalBodyEl.appendChild(item);
+                });
+            }
+
+            // アニメーション基点
+            const rect = targetElement.getBoundingClientRect();
+            const centerX = window.innerWidth / 2;
+            const centerY = window.innerHeight / 2;
+            const targetX = rect.left + rect.width / 2;
+            const targetY = rect.top + rect.height / 2;
+            const originX = targetX < centerX ? '20%' : '80%';
+            const originY = targetY < centerY ? '20%' : '80%';
+            modalEl.style.transformOrigin = `${originX} ${originY}`;
+
+            overlayEl.classList.add('active');
+        }
+
+        function closeModal() {
+            overlayEl.classList.remove('active');
+        }
+    </script>
+</body>
+
+</html>
