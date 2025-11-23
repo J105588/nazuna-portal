@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>なずなポータルサイト - 開発日誌</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="manifest" href="manifest.json">
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&display=swap"
+        rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+
+    <!-- PWA対応メタタグ (共通) -->
+    <meta name="theme-color" content="#4a7c59">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="なずなポータル">
+    <meta name="msapplication-TileColor" content="#4a7c59">
+    <meta name="msapplication-config" content="browserconfig.xml">
+    <meta name="application-name" content="なずなポータル">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-touch-fullscreen" content="yes">
+    <meta name="apple-mobile-web-app-orientations" content="portrait">
+    <meta name="web-app-origin-association" content="https://nazuna-portal.web.app">
+
+    <!-- アイコン設定 (共通) -->
+    <link rel="icon" type="image/png"
+        href="https://lh3.googleusercontent.com/pw/AP1GczPtDAtqRlRZY8yBF0ajASVZzyEDa1uq1vlm3Dw7a7TIXMQUzwOjquumsabe_DDWZiM6tg2Ruxgtb-kvWibkkbxvcklHnPPqCat1N8H4mKJp3QPpmvyEyJxObatEQq4xD2zu0AQ8yBYZf7GePeGIoEEF=w1033-h1033-s-no-gm?authuser=0">
+    <link rel="apple-touch-icon"
+        href="https://lh3.googleusercontent.com/pw/AP1GczPtDAtqRlRZY8yBF0ajASVZzyEDa1uq1vlm3Dw7a7TIXMQUzwOjquumsabe_DDWZiM6tg2Ruxgtb-kvWibkkbxvcklHnPPqCat1N8H4mKJp3QPpmvyEyJxObatEQq4xD2zu0AQ8yBYZf7GePeGIoEEF=w1033-h1033-s-no-gm?authuser=0">
+
+    <!-- Windows対応 (共通) -->
+    <meta name="msapplication-TileImage"
+        content="https://lh3.googleusercontent.com/pw/AP1GczPtDAtqRlRZY8yBF0ajASVZzyEDa1uq1vlm3Dw7a7TIXMQUzwOjquumsabe_DDWZiM6tg2Ruxgtb-kvWibkkbxvcklHnPPqCat1N8H4mKJp3QPpmvyEyJxObatEQq4xD2zu0AQ8yBYZf7GePeGIoEEF=w1033-h1033-s-no-gm?authuser=0">
+
+    <!-- 開発日誌専用スタイル -->
+    <style>
+        /* ページヘッダー */
+        .page-header {
+            background-color: #4a7c59;
+            /* テーマカラー */
+            color: white;
+            padding: 3rem 1rem;
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+
+        .page-header h2 {
+            font-size: 2rem;
+            margin-bottom: 0.5rem;
+        }
+
+        /* 開発ログコンテナ */
+        .devlog-container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 0 1.5rem 4rem;
+        }
+
+        /* ログエントリー（カード） */
+        .devlog-entry {
+            background: #ffffff;
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-bottom: 2rem;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+            border-left: 5px solid #4a7c59;
+            transition: transform 0.2s;
+        }
+
+        .devlog-entry:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.1);
+        }
+
+        /* ヘッダー情報（日付・バージョン） */
+        .entry-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+        }
+
+        .version-tag {
+            background-color: #e8f5e9;
+            color: #2e7d32;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-weight: 700;
+            font-size: 0.9rem;
+        }
+
+        .entry-date {
+            color: #666;
+            font-size: 0.9rem;
+        }
+
+        /* 本文スタイル */
+        .devlog-entry h3 {
+            margin-bottom: 1rem;
+            font-size: 1.25rem;
+            color: #333;
+            border-bottom: 1px solid #eee;
+            padding-bottom: 0.5rem;
+        }
+
+        .devlog-entry ul {
+            list-style-type: none;
+            padding-left: 0;
+        }
+
+        .devlog-entry li {
+            position: relative;
+            padding-left: 1.5rem;
+            margin-bottom: 0.5rem;
+            line-height: 1.6;
+        }
+
+        .devlog-entry li::before {
+            content: "\f00c";
+            /* FontAwesome Check */
+            font-family: "Font Awesome 6 Free";
+            font-weight: 900;
+            position: absolute;
+            left: 0;
+            color: #4a7c59;
+        }
+
+        /* タグ（Feature, Fix等） */
+        .badge {
+            display: inline-block;
+            font-size: 0.75rem;
+            padding: 2px 8px;
+            border-radius: 4px;
+            margin-right: 5px;
+            color: white;
+            vertical-align: middle;
+        }
+
+        .badge-feature {
+            background-color: #1976d2;
+        }
+
+        .badge-fix {
+            background-color: #d32f2f;
+        }
+
+        .badge-maintenance {
+            background-color: #f57c00;
+        }
+    </style>
+
+    <!-- Supabase & Firebase SDK -->
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"
+        onload="console.log('Firebase App SDK loaded'); if (typeof firebase !== 'undefined') { setTimeout(function() { window.dispatchEvent(new Event('firebaseSDKLoaded')); }, 50); }"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-messaging-compat.js"
+        onload="console.log('Firebase Messaging SDK loaded'); if (typeof firebase !== 'undefined' && typeof firebase.messaging !== 'undefined') { window.dispatchEvent(new Event('firebaseSDKLoaded')); }"></script>
+</head>
+
+<body>
+    <!-- サイドバー (ナビゲーション) -->
+    <div class="sidebar" id="sidebar">
+        <div class="sidebar-header">
+            <h2>なずなポータル</h2>
+            <p>みんなでつくる学校生活</p>
+            <button class="sidebar-close-btn" id="sidebar-close-btn" aria-label="メニューを閉じる">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <nav class="sidebar-nav">
+            <ul>
+                <li>
+                    <a href="index.html">
+                        <i class="fas fa-home"></i>
+                        <span>ホーム</span>
+                    </a>
+                </li>
+                <li>
+                    <a href="council.html">
+                        <i class="fas fa-users"></i>
+                        <span>生徒会紹介</span>
+                    </a>
+                </li>
+                <li>
+                    <a href="clubs.html">
+                        <i class="fas fa-running"></i>
+                        <span>部活動</span>
+                    </a>
+                </li>
+                <li>
+                    <a href="forum.html">
+                        <i class="fas fa-comments"></i>
+                        <span>なずなフォーラム</span>
+                    </a>
+                </li>
+                <li>
+                    <a href="news.html">
+                        <i class="fas fa-bell"></i>
+                        <span>お知らせ</span>
+                    </a>
+                </li>
+                <li>
+                    <a href="survey.html">
+                        <i class="fas fa-poll"></i>
+                        <span>アンケート</span>
+                    </a>
+                </li>
+                <!-- 開発日誌へのリンクをアクティブ表示 -->
+                <li>
+                    <a href="devlog.html" class="active"
+                        style="background-color: rgba(255, 255, 255, 0.1); border-left: 4px solid #fff;">
+                        <i class="fas fa-code"></i>
+                        <span>開発日誌</span>
+                    </a>
+                </li>
+            </ul>
+        </nav>
+    </div>
+
+    <!-- サイドバーオーバーレイ -->
+    <div class="sidebar-overlay" id="sidebar-overlay"></div>
+    <header>
+        <nav class="navbar">
+            <div class="nav-container">
+                <button class="hamburger" id="hamburger" aria-label="メニューを開く" aria-expanded="false">
+                    <span aria-hidden="true"></span>
+                    <span aria-hidden="true"></span>
+                    <span aria-hidden="true"></span>
+                </button>
+                <h1 class="logo">開発日誌</h1>
+                <div class="nav-spacer"></div>
+            </div>
+        </nav>
+    </header>
+
+    <main>
+        <!-- ページトップヒーローエリア -->
+        <section class="page-header">
+            <div class="container">
+                <h2><i class="fas fa-laptop-code"></i> Development Log</h2>
+                <p>なずなポータルの更新履歴と開発状況</p>
+            </div>
+        </section>
+
+        <!-- ログ一覧 -->
+        <div class="devlog-container">
+
+            <!-- 最新の更新 -->
+            <article class="devlog-entry reveal-on-scroll">
+                <div class="entry-header">
+                    <span class="version-tag">v1.2.0</span>
+                    <span class="entry-date">2025.11.23</span>
+                </div>
+                <h3>PWA対応とプッシュ通知機能の実装</h3>
+                <p>iOSおよびAndroid端末でのアプリのような操作感を実現しました。</p>
+                <ul>
+                    <li><span class="badge badge-feature">Feature</span> iOS/Androidのホーム画面への追加に対応（manifest.json）</li>
+                    <li><span class="badge badge-feature">Feature</span> Firebaseを使用したプッシュ通知機能の基盤追加</li>
+                    <li><span class="badge badge-fix">Fix</span> iOS Safariでのステータスバー表示の調整</li>
+                    <li><span class="badge badge-maintenance">Maint</span> ファビコンおよびアプリアイコンの高解像度化</li>
+                </ul>
+            </article>
+
+            <!-- 過去のログ -->
+            <article class="devlog-entry reveal-on-scroll">
+                <div class="entry-header">
+                    <span class="version-tag">v1.1.5</span>
+                    <span class="entry-date">2025.11.15</span>
+                </div>
+                <h3>フォーラム機能の不具合修正</h3>
+                <ul>
+                    <li><span class="badge badge-fix">Fix</span> コメント投稿時に画面がリロードされる問題を修正</li>
+                    <li><span class="badge badge-fix">Fix</span> 一部のユーザーアイコンが表示されないバグを修正</li>
+                    <li><span class="badge badge-maintenance">Maint</span> Supabaseへの接続処理の最適化</li>
+                </ul>
+            </article>
+
+            <article class="devlog-entry reveal-on-scroll">
+                <div class="entry-header">
+                    <span class="version-tag">v1.1.0</span>
+                    <span class="entry-date">2025.11.01</span>
+                </div>
+                <h3>「なずなフォーラム」ベータ版公開</h3>
+                <p>生徒同士で意見交換ができる掲示板機能をリリースしました。</p>
+                <ul>
+                    <li><span class="badge badge-feature">Feature</span> 新規スレッド作成機能の実装</li>
+                    <li><span class="badge badge-feature">Feature</span> コメント機能および「いいね」ボタンの実装</li>
+                    <li><span class="badge badge-feature">Feature</span> 不適切な投稿の自動フィルター機能（β版）</li>
+                </ul>
+            </article>
+
+            <article class="devlog-entry reveal-on-scroll">
+                <div class="entry-header">
+                    <span class="version-tag">v1.0.0</span>
+                    <span class="entry-date">2025.10.20</span>
+                </div>
+                <h3>なずなポータル サイトオープン</h3>
+                <p>市川学園生徒会の公式サイトとして正式リリースしました。</p>
+                <ul>
+                    <li><span class="badge badge-feature">Feature</span> トップページ、生徒会紹介、部活動一覧ページの公開</li>
+                    <li><span class="badge badge-feature">Feature</span> 全校アンケート機能の実装</li>
+                </ul>
+            </article>
+
+        </div>
+    </main>
+
+    <footer>
+        <div class="footer-content">
+            <div class="footer-section">
+                <h3>なずなポータル</h3>
+                <p>みんなでつくる学校生活</p>
+            </div>
+            <div class="footer-section">
+                <h4>リンク</h4>
+                <ul>
+                    <li><a href="council.html">生徒会紹介</a></li>
+                    <li><a href="clubs.html">部活動</a></li>
+                    <li><a href="forum.html">なずなフォーラム</a></li>
+                    <li><a href="devlog.html">開発日誌</a></li>
+                </ul>
+            </div>
+            <div class="footer-section">
+                <h4>お問い合わせ</h4>
+                <p>生徒会室まで</p>
+                <p>平日 12:30-13:00</p>
+            </div>
+        </div>
+        <div class="footer-bottom">
+            <p>&copy; 2025 市川学園生徒会. All rights reserved.</p>
+        </div>
+    </footer>
+
+    <!-- 既存スクリプト -->
+    <script src="js/config.js"></script>
+    <script src="js/supabase-queries.js"></script>
+    <script src="js/app.js"></script>
+    <!-- Features -->
+    <script src="js/pwa-install.js"></script>
+    <script src="js/pwa-update.js"></script>
+    <script src="js/maintenance-checker.js"></script>
+    <!-- Notifications -->
+    <script src="js/firebase-config.js"></script>
+    <script src="js/notification-manager.js"></script>
+</body>
+
+</html>

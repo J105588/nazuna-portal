@@ -7631,7 +7631,7 @@ textarea.form-control {
 
 .custom-shape-divider-bottom {
     bottom: -1px;
-    /* Fix sub-pixel rendering gaps */
+    /* Reset position */
 }
 
 .custom-shape-divider-top {
@@ -7639,7 +7639,10 @@ textarea.form-control {
 }
 
 .custom-shape-divider-bottom svg {
-    transform: rotate(180deg);
+    transform: scaleY(-1);
+    /* Flip to make Left Low, Right High */
+    height: 90px;
+    /* Larger amplitude */
 }
 
 .custom-shape-divider-bottom svg,
@@ -7647,7 +7650,12 @@ textarea.form-control {
     position: relative;
     display: block;
     width: calc(100% + 1.3px);
+}
+
+.custom-shape-divider-top svg {
     height: 60px;
+    transform: rotate(180deg);
+    /* Flip to match section above */
 }
 
 .custom-shape-divider-bottom .shape-fill {
@@ -7678,9 +7686,9 @@ section {
     fill: #ffffff;
 }
 
-/* Divider 2 (Updates -> About): Updates is White, About is Light Green. Divider should be Light Green to blend into About. */
+/* Divider 2 (Updates -> About): Updates is White, About is Gradient. Divider should be White to blend into Updates. */
 .council-about .custom-shape-divider-top .shape-fill {
-    fill: #f0fdf4;
+    fill: #ffffff;
 }
 
 /* --- 3D Tilt Effect --- */
@@ -7751,4 +7759,437 @@ section {
 
 .update-link:hover::after {
     width: 100%;
+}
+
+/* =====================================
+   Council Page Redesign (Artistic & Fluid)
+   ===================================== */
+
+/* Page Header Polish */
+.page-header {
+    background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+    padding: 6rem 0 4rem;
+    color: white;
+    position: relative;
+    overflow: hidden;
+}
+
+.page-header::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: url("data:image/svg+xml,%3Csvg width='100' height='100' viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M11 18c3.866 0 7-3.134 7-7s-3.134-7-7-7-7 3.134-7 7 3.134 7 7 7zm48 25c3.866 0 7-3.134 7-7s-3.134-7-7-7-7 3.134-7 7 3.134 7 7 7zm-43-7c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zm63 31c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zM34 90c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zm56-76c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zM12 86c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm28-65c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm23-11c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm-6 60c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm29 22c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zM32 63c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm57-13c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm-9-21c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM60 91c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM35 41c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM12 60c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2z' fill='%23ffffff' fill-opacity='0.1' fill-rule='evenodd'/%3E%3C/svg%3E");
+    opacity: 0.3;
+}
+
+.page-header h1 {
+    font-family: "Yu Mincho", "Hiragino Mincho ProN", serif;
+    font-size: 2.8rem;
+    font-weight: 700;
+    margin-bottom: 0.5rem;
+    text-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+}
+
+/* About Section - Fluid Background */
+.council-about {
+    background:
+        radial-gradient(circle at 10% 20%, rgba(168, 213, 186, 0.15) 0%, transparent 40%),
+        radial-gradient(circle at 90% 80%, rgba(212, 165, 116, 0.15) 0%, transparent 40%),
+        #ffffff;
+    padding: 5rem 0;
+    position: relative;
+}
+
+.about-text h2 {
+    font-family: "Yu Mincho", "Hiragino Mincho ProN", serif;
+    font-size: 2.2rem;
+    color: var(--text-color);
+    margin-bottom: 1.5rem;
+    position: relative;
+    display: inline-block;
+}
+
+.about-text h2::after {
+    content: '';
+    position: absolute;
+    bottom: -10px;
+    left: 0;
+    width: 60px;
+    height: 3px;
+    background: linear-gradient(90deg, var(--primary-color), var(--secondary-color));
+}
+
+/* Mission Points - Floating Cards */
+.mission-points {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 2rem;
+    margin-top: 4rem;
+}
+
+.mission-point {
+    background: rgba(255, 255, 255, 0.8);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.6);
+    border-radius: 20px;
+    padding: 2rem;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.03);
+    transition: all 0.4s ease;
+    display: flex;
+    align-items: flex-start;
+    gap: 1.5rem;
+}
+
+.mission-point:hover {
+    transform: translateY(-10px);
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.08);
+    border-color: var(--secondary-color);
+}
+
+.mission-point i {
+    font-size: 2rem;
+    color: var(--primary-color);
+    background: rgba(168, 213, 186, 0.2);
+    padding: 1rem;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+
+.mission-point h4 {
+    font-size: 1.2rem;
+    margin-bottom: 0.5rem;
+    color: var(--text-color);
+    font-family: "Yu Mincho", serif;
+}
+
+/* Roles Grid - Glassmorphism & Tilt */
+.council-roles {
+    background: #f8fafc;
+    padding: 5rem 0;
+    position: relative;
+}
+
+.roles-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 2rem;
+}
+
+.role-card {
+    background: rgba(255, 255, 255, 0.7);
+    backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.8);
+    border-radius: 16px;
+    padding: 2rem;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.04);
+    transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+}
+
+.role-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 4px;
+    background: linear-gradient(90deg, var(--primary-color), var(--secondary-color));
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.role-card:hover {
+    transform: translateY(-10px) scale(1.02);
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+    background: #fff;
+}
+
+.role-card:hover::before {
+    opacity: 1;
+}
+
+.role-card h3 {
+    font-family: "Yu Mincho", serif;
+    font-size: 1.4rem;
+    margin-bottom: 1rem;
+    color: var(--text-color);
+}
+
+.role-card h3 i {
+    display: block;
+    font-size: 2.5rem;
+    margin-bottom: 1rem;
+    background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+    background-clip: text;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+/* Process - Vertical Artistic Timeline */
+.council-process {
+    padding: 6rem 0;
+    background: #fff;
+}
+
+.process-steps {
+    list-style: none;
+    padding: 0;
+    position: relative;
+    max-width: 800px;
+    margin: 0 auto;
+}
+
+.process-steps::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 20px;
+    width: 2px;
+    height: 100%;
+    background: linear-gradient(to bottom, var(--primary-color), var(--secondary-color));
+    opacity: 0.3;
+}
+
+.process-steps li {
+    position: relative;
+    padding-left: 60px;
+    margin-bottom: 3rem;
+}
+
+.process-steps li::before {
+    content: '';
+    position: absolute;
+    left: 11px;
+    top: 0;
+    width: 20px;
+    height: 20px;
+    background: #fff;
+    border: 3px solid var(--primary-color);
+    border-radius: 50%;
+    z-index: 1;
+    transition: all 0.3s ease;
+}
+
+.process-steps li:hover::before {
+    background: var(--primary-color);
+    transform: scale(1.2);
+    box-shadow: 0 0 0 5px rgba(74, 124, 89, 0.2);
+}
+
+.process-steps li strong {
+    display: block;
+    font-size: 1.3rem;
+    color: var(--primary-color);
+    margin-bottom: 0.5rem;
+    font-family: "Yu Mincho", serif;
+}
+
+/* FAQ - Elegant Details */
+.council-faq {
+    padding: 5rem 0;
+    background: #f9fbfd;
+}
+
+.faq-list {
+    max-width: 800px;
+    margin: 0 auto;
+}
+
+.faq-list details {
+    background: #fff;
+    border: none;
+    border-radius: 12px;
+    margin-bottom: 1.5rem;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
+    transition: all 0.3s ease;
+    overflow: hidden;
+}
+
+.faq-list details[open] {
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+}
+
+.faq-list summary {
+    padding: 1.5rem;
+    font-weight: 600;
+    cursor: pointer;
+    list-style: none;
+    position: relative;
+    padding-right: 3rem;
+    font-size: 1.1rem;
+    color: var(--text-color);
+}
+
+.faq-list summary::-webkit-details-marker {
+    display: none;
+}
+
+.faq-list summary::after {
+    content: '+';
+    position: absolute;
+    right: 1.5rem;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 1.5rem;
+    color: var(--primary-color);
+    transition: transform 0.3s ease;
+}
+
+.faq-list details[open] summary::after {
+    transform: translateY(-50%) rotate(45deg);
+}
+
+.faq-list details p {
+    padding: 0 1.5rem 1.5rem;
+    margin: 0;
+    color: var(--text-light);
+    line-height: 1.8;
+    border-top: 1px solid rgba(0, 0, 0, 0.05);
+    padding-top: 1rem;
+}
+
+/* Section Title Polish */
+.section-title {
+    font-family: "Yu Mincho", "Hiragino Mincho ProN", serif;
+    font-size: 2rem;
+    text-align: center;
+    margin-bottom: 3rem;
+    position: relative;
+    padding-bottom: 1rem;
+}
+
+.section-title::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 60px;
+    height: 3px;
+    background: linear-gradient(90deg, var(--primary-color), var(--secondary-color));
+    border-radius: 2px;
+}
+
+/* Scroll Animations */
+.section-reveal {
+    opacity: 0;
+    transform: translateY(30px);
+    transition: all 0.8s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+
+.section-reveal.active {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+.mission-point {
+    opacity: 0;
+    transform: translateY(20px);
+    transition: all 0.6s ease-out;
+}
+
+.mission-point.active {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+.role-card {
+    opacity: 0;
+    transform: translateY(20px);
+    transition: all 0.6s ease-out;
+}
+
+.role-card.active {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+/* Staggered Delays */
+.mission-point:nth-child(1) {
+    transition-delay: 0.1s;
+}
+
+.mission-point:nth-child(2) {
+    transition-delay: 0.2s;
+}
+
+.mission-point:nth-child(3) {
+    transition-delay: 0.3s;
+}
+
+.mission-point:nth-child(4) {
+    transition-delay: 0.4s;
+}
+
+.role-card:nth-child(1) {
+    transition-delay: 0.1s;
+}
+
+.role-card:nth-child(2) {
+    transition-delay: 0.2s;
+}
+
+.role-card:nth-child(3) {
+    transition-delay: 0.3s;
+}
+
+.role-card:nth-child(4) {
+    transition-delay: 0.4s;
+}
+
+.role-card:nth-child(5) {
+    transition-delay: 0.5s;
+}
+
+/* Devlog Styles */
+.devlog-list {
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 4rem 0;
+}
+
+.devlog-item {
+    background: #fff;
+    border-radius: 12px;
+    padding: 2rem;
+    margin-bottom: 2rem;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+    border: 1px solid var(--border-color);
+    transition: transform 0.3s ease;
+}
+
+.devlog-item:hover {
+    transform: translateY(-5px);
+}
+
+.devlog-date {
+    font-family: "Yu Mincho", serif;
+    color: var(--primary-color);
+    font-weight: bold;
+    margin-bottom: 0.5rem;
+    font-size: 1.1rem;
+}
+
+.devlog-content h3 {
+    margin-bottom: 1rem;
+    color: var(--text-color);
+}
+
+.devlog-content ul {
+    padding-left: 1.5rem;
+    color: var(--text-light);
+}
+
+.devlog-content li {
+    margin-bottom: 0.5rem;
+}
+
+/* Fix: Remove gradient from About Text underline */
+.about-text h2::after {
+    background: var(--primary-color);
 }

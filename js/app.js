@@ -995,7 +995,7 @@ async function showOpeningScreen() {
         <div class="opening-content">
             <img src="${iconUrl}" alt="なずなポータル" class="opening-logo-img" id="opening-logo-img" style="opacity: 0; transition: opacity 0.5s ease;">
             <div class="opening-title" data-text="なずなポータル">なずなポータル</div>
-            <div class="opening-subtitle">みんなでつくる学校生活</div>
+            <div class="opening-subtitle">市川学園生徒会</div>
             <div class="opening-progress">
                 <div class="opening-progress-bar"></div>
             </div>
@@ -2910,4 +2910,22 @@ function initTiltEffect() {
 document.addEventListener('DOMContentLoaded', () => {
     initScrollAnimations();
     initTiltEffect();
+});
+
+// Council Page Animations
+function setupCouncilAnimations() {
+    const observer = new IntersectionObserver((entries, observer) => {
+        entries.forEach(entry => {
+            if (entry.isIntersecting) {
+                entry.target.classList.add('active');
+                observer.unobserve(entry.target);
+            }
+        });
+    }, { threshold: 0.1 });
+
+    document.querySelectorAll('.section-reveal, .mission-point, .role-card').forEach(el => observer.observe(el));
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    setupCouncilAnimations();
 });
