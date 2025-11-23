@@ -1,12 +1,14 @@
 <!DOCTYPE html>
 <html lang="ja">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>なずなフォーラム - なずなポータル</title>
     <link rel="stylesheet" href="css/style.css">
     <link rel="manifest" href="manifest.json">
-    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&display=swap"
+        rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <!-- PWA対応メタタグ -->
     <meta name="theme-color" content="#4a7c59">
@@ -17,22 +19,32 @@
     <meta name="msapplication-config" content="browserconfig.xml">
     <meta name="application-name" content="なずなポータル">
     <meta name="mobile-web-app-capable" content="yes">
-    
+
     <!-- iOS対応 -->
-    <link rel="apple-touch-icon" href="https://lh3.googleusercontent.com/pw/AP1GczPtDAtqRlRZY8yBF0ajASVZzyEDa1uq1vlm3Dw7a7TIXMQUzwOjquumsabe_DDWZiM6tg2Ruxgtb-kvWibkkbxvcklHnPPqCat1N8H4mKJp3QPpmvyEyJxObatEQq4xD2zu0AQ8yBYZf7GePeGIoEEF=w1033-h1033-s-no-gm?authuser=0">
-    <link rel="apple-touch-icon" sizes="152x152" href="https://lh3.googleusercontent.com/pw/AP1GczPtDAtqRlRZY8yBF0ajASVZzyEDa1uq1vlm3Dw7a7TIXMQUzwOjquumsabe_DDWZiM6tg2Ruxgtb-kvWibkkbxvcklHnPPqCat1N8H4mKJp3QPpmvyEyJxObatEQq4xD2zu0AQ8yBYZf7GePeGIoEEF=w1033-h1033-s-no-gm?authuser=0">
-    <link rel="apple-touch-icon" sizes="180x180" href="https://lh3.googleusercontent.com/pw/AP1GczPtDAtqRlRZY8yBF0ajASVZzyEDa1uq1vlm3Dw7a7TIXMQUzwOjquumsabe_DDWZiM6tg2Ruxgtb-kvWibkkbxvcklHnPPqCat1N8H4mKJp3QPpmvyEyJxObatEQq4xD2zu0AQ8yBYZf7GePeGIoEEF=w1033-h1033-s-no-gm?authuser=0">
-    <link rel="apple-touch-icon" sizes="167x167" href="https://lh3.googleusercontent.com/pw/AP1GczPtDAtqRlRZY8yBF0ajASVZzyEDa1uq1vlm3Dw7a7TIXMQUzwOjquumsabe_DDWZiM6tg2Ruxgtb-kvWibkkbxvcklHnPPqCat1N8H4mKJp3QPpmvyEyJxObatEQq4xD2zu0AQ8yBYZf7GePeGIoEEF=w1033-h1033-s-no-gm?authuser=0">
-    
+    <link rel="apple-touch-icon"
+        href="https://lh3.googleusercontent.com/pw/AP1GczPtDAtqRlRZY8yBF0ajASVZzyEDa1uq1vlm3Dw7a7TIXMQUzwOjquumsabe_DDWZiM6tg2Ruxgtb-kvWibkkbxvcklHnPPqCat1N8H4mKJp3QPpmvyEyJxObatEQq4xD2zu0AQ8yBYZf7GePeGIoEEF=w1033-h1033-s-no-gm?authuser=0">
+    <link rel="apple-touch-icon" sizes="152x152"
+        href="https://lh3.googleusercontent.com/pw/AP1GczPtDAtqRlRZY8yBF0ajASVZzyEDa1uq1vlm3Dw7a7TIXMQUzwOjquumsabe_DDWZiM6tg2Ruxgtb-kvWibkkbxvcklHnPPqCat1N8H4mKJp3QPpmvyEyJxObatEQq4xD2zu0AQ8yBYZf7GePeGIoEEF=w1033-h1033-s-no-gm?authuser=0">
+    <link rel="apple-touch-icon" sizes="180x180"
+        href="https://lh3.googleusercontent.com/pw/AP1GczPtDAtqRlRZY8yBF0ajASVZzyEDa1uq1vlm3Dw7a7TIXMQUzwOjquumsabe_DDWZiM6tg2Ruxgtb-kvWibkkbxvcklHnPPqCat1N8H4mKJp3QPpmvyEyJxObatEQq4xD2zu0AQ8yBYZf7GePeGIoEEF=w1033-h1033-s-no-gm?authuser=0">
+    <link rel="apple-touch-icon" sizes="167x167"
+        href="https://lh3.googleusercontent.com/pw/AP1GczPtDAtqRlRZY8yBF0ajASVZzyEDa1uq1vlm3Dw7a7TIXMQUzwOjquumsabe_DDWZiM6tg2Ruxgtb-kvWibkkbxvcklHnPPqCat1N8H4mKJp3QPpmvyEyJxObatEQq4xD2zu0AQ8yBYZf7GePeGIoEEF=w1033-h1033-s-no-gm?authuser=0">
+
     <!-- Windows対応 -->
-    <meta name="msapplication-TileImage" content="https://lh3.googleusercontent.com/pw/AP1GczPtDAtqRlRZY8yBF0ajASVZzyEDa1uq1vlm3Dw7a7TIXMQUzwOjquumsabe_DDWZiM6tg2Ruxgtb-kvWibkkbxvcklHnPPqCat1N8H4mKJp3QPpmvyEyJxObatEQq4xD2zu0AQ8yBYZf7GePeGIoEEF=w1033-h1033-s-no-gm?authuser=0">
-    <meta name="msapplication-square70x70logo" content="https://lh3.googleusercontent.com/pw/AP1GczPtDAtqRlRZY8yBF0ajASVZzyEDa1uq1vlm3Dw7a7TIXMQUzwOjquumsabe_DDWZiM6tg2Ruxgtb-kvWibkkbxvcklHnPPqCat1N8H4mKJp3QPpmvyEyJxObatEQq4xD2zu0AQ8yBYZf7GePeGIoEEF=w1033-h1033-s-no-gm?authuser=0">
-    <meta name="msapplication-square150x150logo" content="https://lh3.googleusercontent.com/pw/AP1GczPtDAtqRlRZY8yBF0ajASVZzyEDa1uq1vlm3Dw7a7TIXMQUzwOjquumsabe_DDWZiM6tg2Ruxgtb-kvWibkkbxvcklHnPPqCat1N8H4mKJp3QPpmvyEyJxObatEQq4xD2zu0AQ8yBYZf7GePeGIoEEF=w1033-h1033-s-no-gm?authuser=0">
-    <meta name="msapplication-wide310x150logo" content="https://lh3.googleusercontent.com/pw/AP1GczPtDAtqRlRZY8yBF0ajASVZzyEDa1uq1vlm3Dw7a7TIXMQUzwOjquumsabe_DDWZiM6tg2Ruxgtb-kvWibkkbxvcklHnPPqCat1N8H4mKJp3QPpmvyEyJxObatEQq4xD2zu0AQ8yBYZf7GePeGIoEEF=w1033-h1033-s-no-gm?authuser=0">
-    <meta name="msapplication-square310x310logo" content="https://lh3.googleusercontent.com/pw/AP1GczPtDAtqRlRZY8yBF0ajASVZzyEDa1uq1vlm3Dw7a7TIXMQUzwOjquumsabe_DDWZiM6tg2Ruxgtb-kvWibkkbxvcklHnPPqCat1N8H4mKJp3QPpmvyEyJxObatEQq4xD2zu0AQ8yBYZf7GePeGIoEEF=w1033-h1033-s-no-gm?authuser=0">
+    <meta name="msapplication-TileImage"
+        content="https://lh3.googleusercontent.com/pw/AP1GczPtDAtqRlRZY8yBF0ajASVZzyEDa1uq1vlm3Dw7a7TIXMQUzwOjquumsabe_DDWZiM6tg2Ruxgtb-kvWibkkbxvcklHnPPqCat1N8H4mKJp3QPpmvyEyJxObatEQq4xD2zu0AQ8yBYZf7GePeGIoEEF=w1033-h1033-s-no-gm?authuser=0">
+    <meta name="msapplication-square70x70logo"
+        content="https://lh3.googleusercontent.com/pw/AP1GczPtDAtqRlRZY8yBF0ajASVZzyEDa1uq1vlm3Dw7a7TIXMQUzwOjquumsabe_DDWZiM6tg2Ruxgtb-kvWibkkbxvcklHnPPqCat1N8H4mKJp3QPpmvyEyJxObatEQq4xD2zu0AQ8yBYZf7GePeGIoEEF=w1033-h1033-s-no-gm?authuser=0">
+    <meta name="msapplication-square150x150logo"
+        content="https://lh3.googleusercontent.com/pw/AP1GczPtDAtqRlRZY8yBF0ajASVZzyEDa1uq1vlm3Dw7a7TIXMQUzwOjquumsabe_DDWZiM6tg2Ruxgtb-kvWibkkbxvcklHnPPqCat1N8H4mKJp3QPpmvyEyJxObatEQq4xD2zu0AQ8yBYZf7GePeGIoEEF=w1033-h1033-s-no-gm?authuser=0">
+    <meta name="msapplication-wide310x150logo"
+        content="https://lh3.googleusercontent.com/pw/AP1GczPtDAtqRlRZY8yBF0ajASVZzyEDa1uq1vlm3Dw7a7TIXMQUzwOjquumsabe_DDWZiM6tg2Ruxgtb-kvWibkkbxvcklHnPPqCat1N8H4mKJp3QPpmvyEyJxObatEQq4xD2zu0AQ8yBYZf7GePeGIoEEF=w1033-h1033-s-no-gm?authuser=0">
+    <meta name="msapplication-square310x310logo"
+        content="https://lh3.googleusercontent.com/pw/AP1GczPtDAtqRlRZY8yBF0ajASVZzyEDa1uq1vlm3Dw7a7TIXMQUzwOjquumsabe_DDWZiM6tg2Ruxgtb-kvWibkkbxvcklHnPPqCat1N8H4mKJp3QPpmvyEyJxObatEQq4xD2zu0AQ8yBYZf7GePeGIoEEF=w1033-h1033-s-no-gm?authuser=0">
     <!-- Supabase CDN -->
     <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
 </head>
+
 <body>
     <!-- サイドバー -->
     <div class="sidebar" id="sidebar">
@@ -76,6 +88,12 @@
                     </a>
                 </li>
                 <li>
+                    <a href="calendar.html">
+                        <i class="fas fa-calendar-check"></i>
+                        <span>行事カレンダー</span>
+                    </a>
+                </li>
+                <li>
                     <a href="survey.html">
                         <i class="fas fa-poll"></i>
                         <span>アンケート</span>
@@ -84,7 +102,7 @@
             </ul>
         </nav>
     </div>
-    
+
     <!-- サイドバーオーバーレイ -->
     <div class="sidebar-overlay" id="sidebar-overlay"></div>
     <header>
@@ -98,8 +116,10 @@
                 <h1 class="logo">なずなポータル</h1>
                 <div class="nav-spacer"></div>
                 <div class="nav-auth" style="display:flex; gap:8px; align-items:center;">
-                    <button id="nav-login-button" class="btn btn-outline" aria-label="ログイン" title="ログイン"><i class="fas fa-sign-in-alt"></i></button>
-                    <button id="nav-logout-button" class="btn btn-outline" style="display:none;"><i class="fas fa-sign-out-alt"></i> ログアウト</button>
+                    <button id="nav-login-button" class="btn btn-outline" aria-label="ログイン" title="ログイン"><i
+                            class="fas fa-sign-in-alt"></i></button>
+                    <button id="nav-logout-button" class="btn btn-outline" style="display:none;"><i
+                            class="fas fa-sign-out-alt"></i> ログアウト</button>
                 </div>
             </div>
         </nav>
@@ -127,7 +147,7 @@
                         <h3>匿名投稿</h3>
                         <p>名前はここに表示されません。安心して意見や要望を投稿できます</p>
                     </div>
-                    
+
                     <div class="about-card">
                         <div class="about-icon">
                             <i class="fas fa-reply"></i>
@@ -135,7 +155,7 @@
                         <h3>生徒会からの返信</h3>
                         <p>投稿された内容は生徒会で検討し、可能な限り返信いたします</p>
                     </div>
-                    
+
                     <div class="about-card">
                         <div class="about-icon">
                             <i class="fas fa-shield-alt"></i>
@@ -166,8 +186,11 @@
                         </div>
                         <div class="form-group">
                             <label for="forum-content">内容</label>
-                            <textarea id="forum-content" class="form-control" placeholder="あなたの声を聞かせてください（匿名投稿可）&#10;&#10;例：&#10;・図書室の開館時間を延長してほしい&#10;・体育祭の種目について提案があります&#10;・校内の設備で困っていることがあります" maxlength="1000"></textarea>
-                            <div class="char-counter" id="forum-char-counter" style="text-align:right; font-size:12px; color:#666; margin-top:4px;">0 / 1000</div>
+                            <textarea id="forum-content" class="form-control"
+                                placeholder="あなたの声を聞かせてください（匿名投稿可）&#10;&#10;例：&#10;・図書室の開館時間を延長してほしい&#10;・体育祭の種目について提案があります&#10;・校内の設備で困っていることがあります"
+                                maxlength="1000"></textarea>
+                            <div class="char-counter" id="forum-char-counter"
+                                style="text-align:right; font-size:12px; color:#666; margin-top:4px;">0 / 1000</div>
                         </div>
                         <div class="form-actions">
                             <button id="submit-post" class="btn btn-primary">
@@ -192,8 +215,10 @@
                 <div class="posts-header">
                     <h2><i class="fas fa-list"></i> 投稿一覧</h2>
                     <div class="auth-actions">
-                        <button id="login-button" class="btn btn-outline"><i class="fas fa-sign-in-alt"></i> ログイン</button>
-                        <button id="logout-button" class="btn btn-outline" style="display:none;"><i class="fas fa-sign-out-alt"></i> ログアウト</button>
+                        <button id="login-button" class="btn btn-outline"><i class="fas fa-sign-in-alt"></i>
+                            ログイン</button>
+                        <button id="logout-button" class="btn btn-outline" style="display:none;"><i
+                                class="fas fa-sign-out-alt"></i> ログアウト</button>
                     </div>
                     <div class="posts-filter" style="display:flex; gap:8px; flex-wrap:wrap; align-items:center;">
                         <select id="status-filter" class="form-control">
@@ -202,15 +227,18 @@
                             <option value="in_progress">対応中</option>
                             <option value="resolved">対応済み</option>
                         </select>
-                        <input type="text" id="search-posts" class="form-control" placeholder="キーワード検索" style="min-width:180px;">
+                        <input type="text" id="search-posts" class="form-control" placeholder="キーワード検索"
+                            style="min-width:180px;">
                         <select id="sort-posts" class="form-control">
                             <option value="created_at_desc">新しい順</option>
                             <option value="created_at_asc">古い順</option>
                         </select>
                         <div class="pagination" style="display:flex; gap:6px; align-items:center;">
-                            <button id="page-prev" class="btn btn-outline" aria-label="前のページ"><i class="fas fa-chevron-left"></i></button>
+                            <button id="page-prev" class="btn btn-outline" aria-label="前のページ"><i
+                                    class="fas fa-chevron-left"></i></button>
                             <span id="page-info" style="min-width:80px; text-align:center;">1 / 1</span>
-                            <button id="page-next" class="btn btn-outline" aria-label="次のページ"><i class="fas fa-chevron-right"></i></button>
+                            <button id="page-next" class="btn btn-outline" aria-label="次のページ"><i
+                                    class="fas fa-chevron-right"></i></button>
                         </div>
                     </div>
                 </div>
@@ -219,7 +247,9 @@
                 </div>
                 <div class="chat-panel" id="chat-panel" style="display:none; margin-top:16px;">
                     <h3><i class="fas fa-comments"></i> 生徒会とのチャット</h3>
-                    <div id="chat-messages" class="chat-messages" style="border:1px solid #ddd; border-radius:8px; padding:12px; min-height:120px; max-height:240px; overflow:auto;"></div>
+                    <div id="chat-messages" class="chat-messages"
+                        style="border:1px solid #ddd; border-radius:8px; padding:12px; min-height:120px; max-height:240px; overflow:auto;">
+                    </div>
                     <div class="chat-input" style="display:flex; gap:8px; margin-top:8px;">
                         <input type="text" id="chat-text" class="form-control" placeholder="メッセージを入力">
                         <button id="chat-send" class="btn btn-primary"><i class="fas fa-paper-plane"></i></button>
@@ -243,7 +273,7 @@
                             <li>生徒会活動に関する質問や提案</li>
                         </ul>
                     </div>
-                    
+
                     <div class="guideline-section">
                         <h3><i class="fas fa-times-circle"></i> 投稿できない内容</h3>
                         <ul>
@@ -254,7 +284,7 @@
                             <li>法律に違反する内容</li>
                         </ul>
                     </div>
-                    
+
                     <div class="guideline-section">
                         <h3><i class="fas fa-lightbulb"></i> より良い投稿のために</h3>
                         <ul>
@@ -303,7 +333,7 @@
     <!-- Notifications -->
     <script src="js/firebase-config.js"></script>
     <script src="js/notification-manager.js"></script>
-    
+
 </body>
 <div class="modal-overlay" id="auth-modal-overlay">
     <div class="modal" id="auth-modal">
@@ -318,7 +348,8 @@
                 <p style="margin-top:0; color:#555; font-size:14px;">生徒番号を入力してください。</p>
                 <div class="form-group">
                     <label for="student-number-input">生徒番号</label>
-                    <input type="text" id="student-number-input" class="form-control" placeholder="例: 2400123" autocomplete="off">
+                    <input type="text" id="student-number-input" class="form-control" placeholder="例: 2400123"
+                        autocomplete="off">
                 </div>
                 <button id="check-student-number" class="btn btn-primary">次へ</button>
             </div>
@@ -326,13 +357,16 @@
                 <p style="margin-top:0; color:#555; font-size:14px;">パスワードを設定してください。</p>
                 <div class="form-group">
                     <label for="student-name-input">氏名</label>
-                    <input type="text" id="student-name-input" class="form-control" placeholder="山田 太郎" autocomplete="off">
+                    <input type="text" id="student-name-input" class="form-control" placeholder="山田 太郎"
+                        autocomplete="off">
                 </div>
                 <div class="form-group">
                     <label for="password-set-input">パスワード設定</label>
                     <div class="password-input-wrapper">
-                        <input type="password" id="password-set-input" class="form-control" placeholder="6文字以上" autocomplete="new-password">
-                        <button type="button" id="toggle-password-set" class="password-toggle-btn" aria-label="パスワードを表示/非表示">
+                        <input type="password" id="password-set-input" class="form-control" placeholder="6文字以上"
+                            autocomplete="new-password">
+                        <button type="button" id="toggle-password-set" class="password-toggle-btn"
+                            aria-label="パスワードを表示/非表示">
                             <i class="fas fa-eye"></i>
                         </button>
                     </div>
@@ -340,8 +374,10 @@
                 <div class="form-group">
                     <label for="password-confirm-input">パスワード確認</label>
                     <div class="password-input-wrapper">
-                        <input type="password" id="password-confirm-input" class="form-control" placeholder="パスワードを再度入力" autocomplete="new-password">
-                        <button type="button" id="toggle-password-confirm" class="password-toggle-btn" aria-label="パスワードを表示/非表示">
+                        <input type="password" id="password-confirm-input" class="form-control" placeholder="パスワードを再度入力"
+                            autocomplete="new-password">
+                        <button type="button" id="toggle-password-confirm" class="password-toggle-btn"
+                            aria-label="パスワードを表示/非表示">
                             <i class="fas fa-eye"></i>
                         </button>
                     </div>
@@ -363,8 +399,10 @@
                 <div class="form-group">
                     <label for="password-login-input">パスワード</label>
                     <div class="password-input-wrapper">
-                        <input type="password" id="password-login-input" class="form-control" placeholder="パスワードを入力" autocomplete="current-password">
-                        <button type="button" id="toggle-password-login" class="password-toggle-btn" aria-label="パスワードを表示/非表示">
+                        <input type="password" id="password-login-input" class="form-control" placeholder="パスワードを入力"
+                            autocomplete="current-password">
+                        <button type="button" id="toggle-password-login" class="password-toggle-btn"
+                            aria-label="パスワードを表示/非表示">
                             <i class="fas fa-eye"></i>
                         </button>
                     </div>

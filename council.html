@@ -1,12 +1,14 @@
 <!DOCTYPE html>
 <html lang="ja">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>生徒会紹介 - なずなポータル</title>
     <link rel="stylesheet" href="css/style.css">
     <link rel="manifest" href="manifest.json">
-    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&display=swap"
+        rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <!-- PWA対応メタタグ -->
     <meta name="theme-color" content="#4a7c59">
@@ -17,23 +19,34 @@
     <meta name="msapplication-config" content="browserconfig.xml">
     <meta name="application-name" content="なずなポータル">
     <meta name="mobile-web-app-capable" content="yes">
-    
+
     <!-- iOS対応 -->
-    <link rel="icon" type="image/png" href="https://lh3.googleusercontent.com/pw/AP1GczPtDAtqRlRZY8yBF0ajASVZzyEDa1uq1vlm3Dw7a7TIXMQUzwOjquumsabe_DDWZiM6tg2Ruxgtb-kvWibkkbxvcklHnPPqCat1N8H4mKJp3QPpmvyEyJxObatEQq4xD2zu0AQ8yBYZf7GePeGIoEEF=w1033-h1033-s-no-gm?authuser=0">
-    <link rel="apple-touch-icon" href="https://lh3.googleusercontent.com/pw/AP1GczPtDAtqRlRZY8yBF0ajASVZzyEDa1uq1vlm3Dw7a7TIXMQUzwOjquumsabe_DDWZiM6tg2Ruxgtb-kvWibkkbxvcklHnPPqCat1N8H4mKJp3QPpmvyEyJxObatEQq4xD2zu0AQ8yBYZf7GePeGIoEEF=w1033-h1033-s-no-gm?authuser=0">
-    <link rel="apple-touch-icon" sizes="152x152" href="https://lh3.googleusercontent.com/pw/AP1GczPtDAtqRlRZY8yBF0ajASVZzyEDa1uq1vlm3Dw7a7TIXMQUzwOjquumsabe_DDWZiM6tg2Ruxgtb-kvWibkkbxvcklHnPPqCat1N8H4mKJp3QPpmvyEyJxObatEQq4xD2zu0AQ8yBYZf7GePeGIoEEF=w1033-h1033-s-no-gm?authuser=0">
-    <link rel="apple-touch-icon" sizes="180x180" href="https://lh3.googleusercontent.com/pw/AP1GczPtDAtqRlRZY8yBF0ajASVZzyEDa1uq1vlm3Dw7a7TIXMQUzwOjquumsabe_DDWZiM6tg2Ruxgtb-kvWibkkbxvcklHnPPqCat1N8H4mKJp3QPpmvyEyJxObatEQq4xD2zu0AQ8yBYZf7GePeGIoEEF=w1033-h1033-s-no-gm?authuser=0">
-    <link rel="apple-touch-icon" sizes="167x167" href="https://lh3.googleusercontent.com/pw/AP1GczPtDAtqRlRZY8yBF0ajASVZzyEDa1uq1vlm3Dw7a7TIXMQUzwOjquumsabe_DDWZiM6tg2Ruxgtb-kvWibkkbxvcklHnPPqCat1N8H4mKJp3QPpmvyEyJxObatEQq4xD2zu0AQ8yBYZf7GePeGIoEEF=w1033-h1033-s-no-gm?authuser=0">
-    
+    <link rel="icon" type="image/png"
+        href="https://lh3.googleusercontent.com/pw/AP1GczPtDAtqRlRZY8yBF0ajASVZzyEDa1uq1vlm3Dw7a7TIXMQUzwOjquumsabe_DDWZiM6tg2Ruxgtb-kvWibkkbxvcklHnPPqCat1N8H4mKJp3QPpmvyEyJxObatEQq4xD2zu0AQ8yBYZf7GePeGIoEEF=w1033-h1033-s-no-gm?authuser=0">
+    <link rel="apple-touch-icon"
+        href="https://lh3.googleusercontent.com/pw/AP1GczPtDAtqRlRZY8yBF0ajASVZzyEDa1uq1vlm3Dw7a7TIXMQUzwOjquumsabe_DDWZiM6tg2Ruxgtb-kvWibkkbxvcklHnPPqCat1N8H4mKJp3QPpmvyEyJxObatEQq4xD2zu0AQ8yBYZf7GePeGIoEEF=w1033-h1033-s-no-gm?authuser=0">
+    <link rel="apple-touch-icon" sizes="152x152"
+        href="https://lh3.googleusercontent.com/pw/AP1GczPtDAtqRlRZY8yBF0ajASVZzyEDa1uq1vlm3Dw7a7TIXMQUzwOjquumsabe_DDWZiM6tg2Ruxgtb-kvWibkkbxvcklHnPPqCat1N8H4mKJp3QPpmvyEyJxObatEQq4xD2zu0AQ8yBYZf7GePeGIoEEF=w1033-h1033-s-no-gm?authuser=0">
+    <link rel="apple-touch-icon" sizes="180x180"
+        href="https://lh3.googleusercontent.com/pw/AP1GczPtDAtqRlRZY8yBF0ajASVZzyEDa1uq1vlm3Dw7a7TIXMQUzwOjquumsabe_DDWZiM6tg2Ruxgtb-kvWibkkbxvcklHnPPqCat1N8H4mKJp3QPpmvyEyJxObatEQq4xD2zu0AQ8yBYZf7GePeGIoEEF=w1033-h1033-s-no-gm?authuser=0">
+    <link rel="apple-touch-icon" sizes="167x167"
+        href="https://lh3.googleusercontent.com/pw/AP1GczPtDAtqRlRZY8yBF0ajASVZzyEDa1uq1vlm3Dw7a7TIXMQUzwOjquumsabe_DDWZiM6tg2Ruxgtb-kvWibkkbxvcklHnPPqCat1N8H4mKJp3QPpmvyEyJxObatEQq4xD2zu0AQ8yBYZf7GePeGIoEEF=w1033-h1033-s-no-gm?authuser=0">
+
     <!-- Windows対応 -->
-    <meta name="msapplication-TileImage" content="https://lh3.googleusercontent.com/pw/AP1GczPtDAtqRlRZY8yBF0ajASVZzyEDa1uq1vlm3Dw7a7TIXMQUzwOjquumsabe_DDWZiM6tg2Ruxgtb-kvWibkkbxvcklHnPPqCat1N8H4mKJp3QPpmvyEyJxObatEQq4xD2zu0AQ8yBYZf7GePeGIoEEF=w1033-h1033-s-no-gm?authuser=0">
-    <meta name="msapplication-square70x70logo" content="https://lh3.googleusercontent.com/pw/AP1GczPtDAtqRlRZY8yBF0ajASVZzyEDa1uq1vlm3Dw7a7TIXMQUzwOjquumsabe_DDWZiM6tg2Ruxgtb-kvWibkkbxvcklHnPPqCat1N8H4mKJp3QPpmvyEyJxObatEQq4xD2zu0AQ8yBYZf7GePeGIoEEF=w1033-h1033-s-no-gm?authuser=0">
-    <meta name="msapplication-square150x150logo" content="https://lh3.googleusercontent.com/pw/AP1GczPtDAtqRlRZY8yBF0ajASVZzyEDa1uq1vlm3Dw7a7TIXMQUzwOjquumsabe_DDWZiM6tg2Ruxgtb-kvWibkkbxvcklHnPPqCat1N8H4mKJp3QPpmvyEyJxObatEQq4xD2zu0AQ8yBYZf7GePeGIoEEF=w1033-h1033-s-no-gm?authuser=0">
-    <meta name="msapplication-wide310x150logo" content="https://lh3.googleusercontent.com/pw/AP1GczPtDAtqRlRZY8yBF0ajASVZzyEDa1uq1vlm3Dw7a7TIXMQUzwOjquumsabe_DDWZiM6tg2Ruxgtb-kvWibkkbxvcklHnPPqCat1N8H4mKJp3QPpmvyEyJxObatEQq4xD2zu0AQ8yBYZf7GePeGIoEEF=w1033-h1033-s-no-gm?authuser=0">
-    <meta name="msapplication-square310x310logo" content="https://lh3.googleusercontent.com/pw/AP1GczPtDAtqRlRZY8yBF0ajASVZzyEDa1uq1vlm3Dw7a7TIXMQUzwOjquumsabe_DDWZiM6tg2Ruxgtb-kvWibkkbxvcklHnPPqCat1N8H4mKJp3QPpmvyEyJxObatEQq4xD2zu0AQ8yBYZf7GePeGIoEEF=w1033-h1033-s-no-gm?authuser=0">
+    <meta name="msapplication-TileImage"
+        content="https://lh3.googleusercontent.com/pw/AP1GczPtDAtqRlRZY8yBF0ajASVZzyEDa1uq1vlm3Dw7a7TIXMQUzwOjquumsabe_DDWZiM6tg2Ruxgtb-kvWibkkbxvcklHnPPqCat1N8H4mKJp3QPpmvyEyJxObatEQq4xD2zu0AQ8yBYZf7GePeGIoEEF=w1033-h1033-s-no-gm?authuser=0">
+    <meta name="msapplication-square70x70logo"
+        content="https://lh3.googleusercontent.com/pw/AP1GczPtDAtqRlRZY8yBF0ajASVZzyEDa1uq1vlm3Dw7a7TIXMQUzwOjquumsabe_DDWZiM6tg2Ruxgtb-kvWibkkbxvcklHnPPqCat1N8H4mKJp3QPpmvyEyJxObatEQq4xD2zu0AQ8yBYZf7GePeGIoEEF=w1033-h1033-s-no-gm?authuser=0">
+    <meta name="msapplication-square150x150logo"
+        content="https://lh3.googleusercontent.com/pw/AP1GczPtDAtqRlRZY8yBF0ajASVZzyEDa1uq1vlm3Dw7a7TIXMQUzwOjquumsabe_DDWZiM6tg2Ruxgtb-kvWibkkbxvcklHnPPqCat1N8H4mKJp3QPpmvyEyJxObatEQq4xD2zu0AQ8yBYZf7GePeGIoEEF=w1033-h1033-s-no-gm?authuser=0">
+    <meta name="msapplication-wide310x150logo"
+        content="https://lh3.googleusercontent.com/pw/AP1GczPtDAtqRlRZY8yBF0ajASVZzyEDa1uq1vlm3Dw7a7TIXMQUzwOjquumsabe_DDWZiM6tg2Ruxgtb-kvWibkkbxvcklHnPPqCat1N8H4mKJp3QPpmvyEyJxObatEQq4xD2zu0AQ8yBYZf7GePeGIoEEF=w1033-h1033-s-no-gm?authuser=0">
+    <meta name="msapplication-square310x310logo"
+        content="https://lh3.googleusercontent.com/pw/AP1GczPtDAtqRlRZY8yBF0ajASVZzyEDa1uq1vlm3Dw7a7TIXMQUzwOjquumsabe_DDWZiM6tg2Ruxgtb-kvWibkkbxvcklHnPPqCat1N8H4mKJp3QPpmvyEyJxObatEQq4xD2zu0AQ8yBYZf7GePeGIoEEF=w1033-h1033-s-no-gm?authuser=0">
     <!-- Supabase CDN -->
     <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
 </head>
+
 <body>
     <!-- サイドバー -->
     <div class="sidebar" id="sidebar">
@@ -77,6 +90,12 @@
                     </a>
                 </li>
                 <li>
+                    <a href="schedule.html">
+                        <i class="fas fa-calendar-check"></i>
+                        <span>行事カレンダー</span>
+                    </a>
+                </li>
+                <li>
                     <a href="survey.html">
                         <i class="fas fa-poll"></i>
                         <span>アンケート</span>
@@ -85,7 +104,7 @@
             </ul>
         </nav>
     </div>
-    
+
     <!-- サイドバーオーバーレイ -->
     <div class="sidebar-overlay" id="sidebar-overlay"></div>
     <header>
@@ -122,7 +141,8 @@
                         <p>私たち生徒会は、全校生徒の代表として学校生活の向上に取り組んでいます。生徒一人ひとりの声を大切にし、みんなが楽しく充実した学校生活を送れるよう、様々な活動を行っています。</p>
                         <div class="mission-points">
                             <div class="about-image">
-                                <img src="" alt="生徒会" class="council-image" onerror="this.onerror=null; this.src='images/IMG_5086.jpg';" />
+                                <img src="" alt="生徒会" class="council-image"
+                                    onerror="this.onerror=null; this.src='images/IMG_5086.jpg';" />
                             </div>
                             <div class="mission-point">
                                 <i class="fas fa-heart"></i>
@@ -250,7 +270,7 @@
                         <h3>学校行事の企画・運営</h3>
                         <p>体育祭、文化祭、卒業式などの学校行事の企画・運営を行っています。生徒のみなさんに楽しんでもらえるよう、工夫を凝らした企画を考えています。</p>
                     </div>
-                    
+
                     <div class="activity-card">
                         <div class="activity-icon">
                             <i class="fas fa-bullhorn"></i>
@@ -258,7 +278,7 @@
                         <h3>生徒の意見集約</h3>
                         <p>なずなフォーラムやアンケートを通じて、生徒のみなさんの意見や要望を集め、学校側との橋渡し役を務めています。</p>
                     </div>
-                    
+
                     <div class="activity-card">
                         <div class="activity-icon">
                             <i class="fas fa-handshake"></i>
@@ -266,7 +286,7 @@
                         <h3>部活動サポート</h3>
                         <p>各部活動の活動支援や、部活動間の交流促進、新入生への部活動紹介などを行っています。</p>
                     </div>
-                    
+
                     <div class="activity-card">
                         <div class="activity-icon">
                             <i class="fas fa-newspaper"></i>
@@ -331,4 +351,5 @@
     <script src="js/pwa-update.js"></script>
     <script src="js/maintenance-checker.js"></script>
 </body>
+
 </html>

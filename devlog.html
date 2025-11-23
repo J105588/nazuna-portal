@@ -40,7 +40,6 @@
         /* ページヘッダー */
         .page-header {
             background-color: #4a7c59;
-            /* テーマカラー */
             color: white;
             padding: 5rem 1rem;
             text-align: center;
@@ -57,6 +56,8 @@
             max-width: 800px;
             margin: 0 auto;
             padding: 0 1.5rem 4rem;
+            min-height: 300px;
+            /* 読み込み中に潰れないように */
         }
 
         /* ログエントリー（カード） */
@@ -68,6 +69,17 @@
             box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
             border-left: 5px solid #4a7c59;
             transition: transform 0.2s;
+            opacity: 0;
+            /* アニメーション用初期状態 */
+            transform: translateY(20px);
+            animation: fadeInUp 0.5s forwards;
+        }
+
+        @keyframes fadeInUp {
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
         }
 
         .devlog-entry:hover {
@@ -108,9 +120,15 @@
             padding-bottom: 0.5rem;
         }
 
+        .devlog-desc {
+            margin-bottom: 1rem;
+            color: #555;
+        }
+
         .devlog-entry ul {
             list-style-type: none;
             padding-left: 0;
+            margin-top: 0;
         }
 
         .devlog-entry li {
@@ -122,7 +140,6 @@
 
         .devlog-entry li::before {
             content: "\f00c";
-            /* FontAwesome Check */
             font-family: "Font Awesome 6 Free";
             font-weight: 900;
             position: absolute;
@@ -143,23 +160,31 @@
 
         .badge-feature {
             background-color: #1976d2;
+            /* Blue */
         }
 
         .badge-fix {
             background-color: #d32f2f;
+            /* Red */
         }
 
-        .badge-maintenance {
+        .badge-maintenance,
+        .badge-maint {
             background-color: #f57c00;
+            /* Orange */
+        }
+
+        .loading-msg {
+            text-align: center;
+            color: #888;
+            padding: 2rem;
         }
     </style>
 
     <!-- Supabase & Firebase SDK -->
     <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"
-        onload="console.log('Firebase App SDK loaded'); if (typeof firebase !== 'undefined') { setTimeout(function() { window.dispatchEvent(new Event('firebaseSDKLoaded')); }, 50); }"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-messaging-compat.js"
-        onload="console.log('Firebase Messaging SDK loaded'); if (typeof firebase !== 'undefined' && typeof firebase.messaging !== 'undefined') { window.dispatchEvent(new Event('firebaseSDKLoaded')); }"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-messaging-compat.js"></script>
 </head>
 
 <body>
@@ -174,50 +199,15 @@
         </div>
         <nav class="sidebar-nav">
             <ul>
-                <li>
-                    <a href="index.html">
-                        <i class="fas fa-home"></i>
-                        <span>ホーム</span>
-                    </a>
-                </li>
-                <li>
-                    <a href="council.html">
-                        <i class="fas fa-users"></i>
-                        <span>生徒会紹介</span>
-                    </a>
-                </li>
-                <li>
-                    <a href="clubs.html">
-                        <i class="fas fa-running"></i>
-                        <span>部活動</span>
-                    </a>
-                </li>
-                <li>
-                    <a href="forum.html">
-                        <i class="fas fa-comments"></i>
-                        <span>なずなフォーラム</span>
-                    </a>
-                </li>
-                <li>
-                    <a href="news.html">
-                        <i class="fas fa-bell"></i>
-                        <span>お知らせ</span>
-                    </a>
-                </li>
-                <li>
-                    <a href="survey.html">
-                        <i class="fas fa-poll"></i>
-                        <span>アンケート</span>
-                    </a>
-                </li>
+                <li><a href="index.html"><i class="fas fa-home"></i><span>ホーム</span></a></li>
+                <li><a href="council.html"><i class="fas fa-users"></i><span>生徒会紹介</span></a></li>
+                <li><a href="clubs.html"><i class="fas fa-running"></i><span>部活動</span></a></li>
+                <li><a href="forum.html"><i class="fas fa-comments"></i><span>なずなフォーラム</span></a></li>
+                <li><a href="news.html"><i class="fas fa-bell"></i><span>お知らせ</span></a></li>
+                <li><a href="schedule.html"><i class="fas fa-calendar-check"></i><span>行事カレンダー</span></a></li>
+                <li><a href="survey.html"><i class="fas fa-poll"></i><span>アンケート</span></a></li>
                 <!-- 開発日誌へのリンクをアクティブ表示 -->
-                <li>
-                    <a href="devlog.html" class="active"
-                        style="background-color: rgba(255, 255, 255, 0.1); border-left: 4px solid #fff;">
-                        <i class="fas fa-code"></i>
-                        <span>開発日誌</span>
-                    </a>
-                </li>
+                <li><a href="devlog.html" class="active"><i class="fas fa-code"></i><span>開発日誌</span></a></li>
             </ul>
         </nav>
     </div>
@@ -247,66 +237,9 @@
             </div>
         </section>
 
-        <!-- ログ一覧 -->
-        <div class="devlog-container">
-
-            <!-- 最新の更新 -->
-            <article class="devlog-entry reveal-on-scroll">
-                <div class="entry-header">
-                    <span class="version-tag">v1.2.0</span>
-                    <span class="entry-date">2025.11.23</span>
-                </div>
-                <h3>PWA対応とプッシュ通知機能の実装</h3>
-                <p>iOSおよびAndroid端末でのアプリのような操作感を実現しました。</p>
-                <ul>
-                    <li><span class="badge badge-feature">Feature</span> iOS/Androidのホーム画面への追加に対応（manifest.json）</li>
-                    <li><span class="badge badge-feature">Feature</span> Firebaseを使用したプッシュ通知機能の基盤追加</li>
-                    <li><span class="badge badge-fix">Fix</span> iOS Safariでのステータスバー表示の調整</li>
-                    <li><span class="badge badge-maintenance">Maint</span> ファビコンおよびアプリアイコンの高解像度化</li>
-                </ul>
-            </article>
-
-            <!-- 過去のログ -->
-            <article class="devlog-entry reveal-on-scroll">
-                <div class="entry-header">
-                    <span class="version-tag">v1.1.5</span>
-                    <span class="entry-date">2025.11.15</span>
-                </div>
-                <h3>フォーラム機能の不具合修正</h3>
-                <ul>
-                    <li><span class="badge badge-fix">Fix</span> コメント投稿時に画面がリロードされる問題を修正</li>
-                    <li><span class="badge badge-fix">Fix</span> 一部のユーザーアイコンが表示されないバグを修正</li>
-                    <li><span class="badge badge-maintenance">Maint</span> Supabaseへの接続処理の最適化</li>
-                </ul>
-            </article>
-
-            <article class="devlog-entry reveal-on-scroll">
-                <div class="entry-header">
-                    <span class="version-tag">v1.1.0</span>
-                    <span class="entry-date">2025.11.01</span>
-                </div>
-                <h3>「なずなフォーラム」ベータ版公開</h3>
-                <p>生徒同士で意見交換ができる掲示板機能をリリースしました。</p>
-                <ul>
-                    <li><span class="badge badge-feature">Feature</span> 新規スレッド作成機能の実装</li>
-                    <li><span class="badge badge-feature">Feature</span> コメント機能および「いいね」ボタンの実装</li>
-                    <li><span class="badge badge-feature">Feature</span> 不適切な投稿の自動フィルター機能（β版）</li>
-                </ul>
-            </article>
-
-            <article class="devlog-entry reveal-on-scroll">
-                <div class="entry-header">
-                    <span class="version-tag">v1.0.0</span>
-                    <span class="entry-date">2025.10.20</span>
-                </div>
-                <h3>なずなポータル サイトオープン</h3>
-                <p>市川学園生徒会の公式サイトとして正式リリースしました。</p>
-                <ul>
-                    <li><span class="badge badge-feature">Feature</span> トップページ、生徒会紹介、部活動一覧ページの公開</li>
-                    <li><span class="badge badge-feature">Feature</span> 全校アンケート機能の実装</li>
-                </ul>
-            </article>
-
+        <!-- ログ一覧 (ここにJSで注入) -->
+        <div class="devlog-container" id="devlogContainer">
+            <div class="loading-msg">読み込み中...</div>
         </div>
     </main>
 
@@ -347,6 +280,89 @@
     <!-- Notifications -->
     <script src="js/firebase-config.js"></script>
     <script src="js/notification-manager.js"></script>
+
+    <!-- CSV読み込みスクリプト -->
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            loadDevLog();
+        });
+
+        async function loadDevLog() {
+            const container = document.getElementById('devlogContainer');
+            const csvUrl = 'data/devlog.csv'; // パスを確認してください
+
+            try {
+                const response = await fetch(csvUrl);
+                if (!response.ok) throw new Error('CSV load failed');
+
+                const text = await response.text();
+                const rows = text.trim().split('\n');
+                // CSVヘッダー: version,date,title,description,details_type,details_text
+                const dataRows = rows.slice(1);
+
+                container.innerHTML = ''; // ローディング消去
+
+                dataRows.forEach((row, index) => {
+                    // 簡易的なCSVパース (カンマ区切り、パイプ区切り)
+                    // ※実際の運用ではCSV内にカンマが含まれる場合のエスケープ処理が必要ですが、
+                    // ここでは簡易的に split(',') で実装しています。
+                    const cols = row.split(',');
+
+                    // データ不足行をスキップ
+                    if (cols.length < 6) return;
+
+                    const version = cols[0].trim();
+                    const date = cols[1].trim();
+                    const title = cols[2].trim();
+                    const description = cols[3].trim(); // 空の場合あり
+
+                    // パイプ区切りを配列に戻す
+                    const types = cols[4].split('|').map(s => s.trim());
+                    const details = cols[5].split('|').map(s => s.trim());
+
+                    // HTML生成
+                    const article = document.createElement('article');
+                    article.className = 'devlog-entry';
+                    // アニメーションの遅延を少しずつずらす
+                    article.style.animationDelay = `${index * 0.1}s`;
+
+                    // リストアイテムのHTML作成
+                    let listHtml = '';
+                    details.forEach((detail, i) => {
+                        // 対応するタイプがない場合は 'maint' とする
+                        const type = types[i] || 'maint';
+                        // バッジの表示名 (先頭大文字など)
+                        const typeLabel = type.charAt(0).toUpperCase() + type.slice(1);
+
+                        listHtml += `
+                            <li>
+                                <span class="badge badge-${type.toLowerCase()}">${typeLabel}</span>
+                                ${detail}
+                            </li>
+                        `;
+                    });
+
+                    article.innerHTML = `
+                        <div class="entry-header">
+                            <span class="version-tag">${version}</span>
+                            <span class="entry-date">${date}</span>
+                        </div>
+                        <h3>${title}</h3>
+                        ${description ? `<p class="devlog-desc">${description}</p>` : ''}
+                        <ul>
+                            ${listHtml}
+                        </ul>
+                    `;
+
+                    container.appendChild(article);
+                });
+
+            } catch (error) {
+                console.error(error);
+                container.innerHTML = '<p style="text-align:center; color:red;">ログの読み込みに失敗しました。</p>';
+            }
+        }
+    </script>
 </body>
 
 </html>

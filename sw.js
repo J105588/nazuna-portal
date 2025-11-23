@@ -21,6 +21,7 @@ const STATIC_CACHE_FILES = [
   'member-detail.html',
   'news.html',
   'survey.html',
+  'schedule.html',
   'css/style.css',
   'css/admin.css',
   'js/app.js',
@@ -35,7 +36,6 @@ const STATIC_CACHE_FILES = [
 
 // オプションのリソース（存在しない場合はスキップ）
 const OPTIONAL_CACHE_FILES = [
-  'schedule.html',
   'js/api-client.js',
 ];
 
