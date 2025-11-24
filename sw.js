@@ -7,7 +7,7 @@
 // キャッシュ設定
 // =====================================
 
-const CACHE_VERSION = 4;
+const CACHE_VERSION = 5;
 const CACHE_NAME = `nazuna-portal-v${CACHE_VERSION}`;
 const CACHE_PREFIX = 'nazuna-portal-v';
 
