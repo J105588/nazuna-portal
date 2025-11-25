@@ -1,21 +1,25 @@
 <!DOCTYPE html>
 <html lang="ja">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description" content="なずなポータル管理画面 - お知らせ・アンケート・部活動・生徒会情報の管理">
     <meta name="theme-color" content="#4a7c59">
     <title>管理画面 - なずなポータル</title>
-    <link rel="icon" type="image/png" href="https://lh3.googleusercontent.com/pw/AP1GczPtDAtqRlRZY8yBF0ajASVZzyEDa1uq1vlm3Dw7a7TIXMQUzwOjquumsabe_DDWZiM6tg2Ruxgtb-kvWibkkbxvcklHnPPqCat1N8H4mKJp3QPpmvyEyJxObatEQq4xD2zu0AQ8yBYZf7GePeGIoEEF=w1033-h1033-s-no-gm?authuser=0">
+    <link rel="icon" type="image/png"
+        href="https://lh3.googleusercontent.com/pw/AP1GczPtDAtqRlRZY8yBF0ajASVZzyEDa1uq1vlm3Dw7a7TIXMQUzwOjquumsabe_DDWZiM6tg2Ruxgtb-kvWibkkbxvcklHnPPqCat1N8H4mKJp3QPpmvyEyJxObatEQq4xD2zu0AQ8yBYZf7GePeGIoEEF=w1033-h1033-s-no-gm?authuser=0">
     <link rel="stylesheet" href="css/style.css">
     <link rel="stylesheet" href="css/admin.css">
     <link rel="manifest" href="manifest.json">
-    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&display=swap"
+        rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
     <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-messaging-compat.js"></script>
 </head>
+
 <body>
     <!-- 管理画面メイン -->
     <div class="admin-main" id="admin-main" style="display: none;">
@@ -55,17 +59,28 @@
             </div>
             <nav class="admin-menu">
                 <ul>
-                    <li><a href="#dashboard" class="menu-item active" data-section="dashboard"><i class="fas fa-tachometer-alt"></i><span>ダッシュボード</span></a></li>
-                    <li><a href="#news" class="menu-item" data-section="news"><i class="fas fa-newspaper"></i><span>お知らせ管理</span></a></li>
-                    <li><a href="#surveys" class="menu-item" data-section="surveys"><i class="fas fa-poll"></i><span>アンケート管理</span></a></li>
-                    <li><a href="#clubs" class="menu-item" data-section="clubs"><i class="fas fa-running"></i><span>部活動管理</span></a></li>
-                    <li><a href="#council" class="menu-item" data-section="council"><i class="fas fa-users"></i><span>生徒会情報</span></a></li>
-                    <li><a href="#achievements" class="menu-item" data-section="achievements"><i class="fas fa-trophy"></i><span>活動実績管理</span></a></li>
-                    <li><a href="#notifications" class="menu-item" data-section="notifications"><i class="fas fa-bell"></i><span>通知配信</span></a></li>
-                    <li><a href="#statistics" class="menu-item" data-section="statistics"><i class="fas fa-chart-line"></i><span>統計</span></a></li>
-                    <li><a href="#accounts" class="menu-item" data-section="accounts"><i class="fas fa-user-shield"></i><span>アカウント管理</span></a></li>
-                    <li><a href="#forum" class="menu-item" data-section="forum"><i class="fas fa-comments"></i><span>フォーラム管理</span></a></li>
-                    <li><a href="#system" class="menu-item" data-section="system"><i class="fas fa-cog"></i><span>システム管理</span></a></li>
+                    <li><a href="#dashboard" class="menu-item active" data-section="dashboard"><i
+                                class="fas fa-tachometer-alt"></i><span>ダッシュボード</span></a></li>
+                    <li><a href="#news" class="menu-item" data-section="news"><i
+                                class="fas fa-newspaper"></i><span>お知らせ管理</span></a></li>
+                    <li><a href="#surveys" class="menu-item" data-section="surveys"><i
+                                class="fas fa-poll"></i><span>アンケート管理</span></a></li>
+                    <li><a href="#clubs" class="menu-item" data-section="clubs"><i
+                                class="fas fa-running"></i><span>部活動管理</span></a></li>
+                    <li><a href="#council" class="menu-item" data-section="council"><i
+                                class="fas fa-users"></i><span>生徒会情報</span></a></li>
+                    <li><a href="#achievements" class="menu-item" data-section="achievements"><i
+                                class="fas fa-trophy"></i><span>活動実績管理</span></a></li>
+                    <li><a href="#notifications" class="menu-item" data-section="notifications"><i
+                                class="fas fa-bell"></i><span>通知配信</span></a></li>
+                    <li><a href="#statistics" class="menu-item" data-section="statistics"><i
+                                class="fas fa-chart-line"></i><span>統計</span></a></li>
+                    <li><a href="#accounts" class="menu-item" data-section="accounts"><i
+                                class="fas fa-user-shield"></i><span>アカウント管理</span></a></li>
+                    <li><a href="#forum" class="menu-item" data-section="forum"><i
+                                class="fas fa-comments"></i><span>フォーラム管理</span></a></li>
+                    <li><a href="#system" class="menu-item" data-section="system"><i
+                                class="fas fa-cog"></i><span>システム管理</span></a></li>
                 </ul>
             </nav>
         </div>
@@ -197,12 +212,15 @@
                         </div>
                         <div class="form-group">
                             <label>権限（JSON）</label>
-                            <input id="account-permissions" class="form-control" placeholder='{"news":true,"surveys":true}'>
+                            <input id="account-permissions" class="form-control"
+                                placeholder='{"news":true,"surveys":true}'>
                         </div>
                     </div>
                     <div class="form-actions">
-                        <button class="btn btn-primary" id="account-create-btn"><i class="fas fa-user-plus"></i> 作成/更新</button>
-                        <button class="btn btn-danger" id="account-delete-btn"><i class="fas fa-user-times"></i> 削除</button>
+                        <button class="btn btn-primary" id="account-create-btn"><i class="fas fa-user-plus"></i>
+                            作成/更新</button>
+                        <button class="btn btn-danger" id="account-delete-btn"><i class="fas fa-user-times"></i>
+                            削除</button>
                         <button class="btn btn-outline" id="account-debug-btn"><i class="fas fa-bug"></i> デバッグ</button>
                     </div>
                 </div>
@@ -290,7 +308,8 @@
                         <select id="member-filter" class="form-control">
                             <option value="">メンバーを選択</option>
                         </select>
-                        <button class="btn btn-primary" id="add-achievement-btn"><i class="fas fa-plus"></i> 実績追加</button>
+                        <button class="btn btn-primary" id="add-achievement-btn"><i class="fas fa-plus"></i>
+                            実績追加</button>
                     </div>
                 </div>
                 <div class="filter-section">
@@ -303,10 +322,18 @@
                         </select>
                         <select id="achievement-month-filter" class="form-control">
                             <option value="">すべての月</option>
-                            <option value="1">1月</option><option value="2">2月</option><option value="3">3月</option>
-                            <option value="4">4月</option><option value="5">5月</option><option value="6">6月</option>
-                            <option value="7">7月</option><option value="8">8月</option><option value="9">9月</option>
-                            <option value="10">10月</option><option value="11">11月</option><option value="12">12月</option>
+                            <option value="1">1月</option>
+                            <option value="2">2月</option>
+                            <option value="3">3月</option>
+                            <option value="4">4月</option>
+                            <option value="5">5月</option>
+                            <option value="6">6月</option>
+                            <option value="7">7月</option>
+                            <option value="8">8月</option>
+                            <option value="9">9月</option>
+                            <option value="10">10月</option>
+                            <option value="11">11月</option>
+                            <option value="12">12月</option>
                         </select>
                         <select id="achievement-category-filter" class="form-control">
                             <option value="">すべてのカテゴリ</option>
@@ -318,7 +345,8 @@
                             <option value="volunteer">ボランティア</option>
                             <option value="event">イベント</option>
                         </select>
-                        <button class="btn btn-outline" id="clear-filters-btn"><i class="fas fa-times"></i> フィルタークリア</button>
+                        <button class="btn btn-outline" id="clear-filters-btn"><i class="fas fa-times"></i>
+                            フィルタークリア</button>
                     </div>
                 </div>
                 <div class="admin-table-container">
@@ -353,11 +381,13 @@
                         </div>
                         <div class="form-group">
                             <label for="notification-message">メッセージ</label>
-                            <textarea id="notification-message" class="form-control" rows="3" placeholder="通知メッセージを入力" maxlength="500"></textarea>
+                            <textarea id="notification-message" class="form-control" rows="3" placeholder="通知メッセージを入力"
+                                maxlength="500"></textarea>
                         </div>
                         <div class="form-group">
                             <label for="notification-url">リンク先URL</label>
-                            <input type="text" id="notification-url" class="form-control" placeholder="例: /news.html または https://...">
+                            <input type="text" id="notification-url" class="form-control"
+                                placeholder="例: /news.html または https://...">
                         </div>
                         <div class="form-group">
                             <label for="notification-target">配信対象</label>
@@ -369,8 +399,10 @@
                             </select>
                         </div>
                         <div class="form-actions">
-                            <button class="btn btn-primary" id="send-notification-btn"><i class="fas fa-paper-plane"></i> 通知を送信</button>
-                            <button type="button" class="btn btn-outline" id="clear-notification-form"><i class="fas fa-eraser"></i> クリア</button>
+                            <button class="btn btn-primary" id="send-notification-btn"><i
+                                    class="fas fa-paper-plane"></i> 通知を送信</button>
+                            <button type="button" class="btn btn-outline" id="clear-notification-form"><i
+                                    class="fas fa-eraser"></i> クリア</button>
                         </div>
                     </div>
                     <div class="notification-history">
@@ -385,14 +417,15 @@
                 <div class="section-header">
                     <h2><i class="fas fa-cog"></i> システム管理</h2>
                 </div>
-                
+
                 <!-- メンテナンスモード -->
                 <div class="admin-card">
                     <h3><i class="fas fa-tools"></i> メンテナンスモード</h3>
                     <div class="maintenance-controls">
                         <div class="form-group">
                             <label>メンテナンスメッセージ</label>
-                            <textarea id="maintenance-message" class="form-control" rows="3" placeholder="システムメンテナンス中です。しばらくお待ちください。"></textarea>
+                            <textarea id="maintenance-message" class="form-control" rows="3"
+                                placeholder="システムメンテナンス中です。しばらくお待ちください。"></textarea>
                         </div>
                         <div class="form-group">
                             <label>終了予定時刻（任意）</label>
@@ -413,7 +446,7 @@
                         </div>
                     </div>
                 </div>
-                
+
                 <!-- PWA管理 -->
                 <div class="admin-card">
                     <h3><i class="fas fa-mobile-alt"></i> PWA（Progressive Web App）管理</h3>
@@ -434,7 +467,7 @@
                         </div>
                     </div>
                 </div>
-                
+
                 <!-- 通知システム管理 -->
                 <div class="admin-card">
                     <h3><i class="fas fa-bell"></i> 通知システム管理</h3>
@@ -453,7 +486,7 @@
                     </div>
                 </div>
             </section>
-            
+
             <!-- フォーラム管理 -->
             <section class="admin-section" id="forum-section">
                 <div class="section-header">
@@ -480,14 +513,15 @@
                             <option value="resolved">解決済み</option>
                         </select>
                         <input type="text" id="forum-search" class="form-control" placeholder="内容で検索">
-                        <button class="btn btn-outline" id="forum-refresh-btn"><i class="fas fa-refresh"></i> 更新</button>
+                        <button class="btn btn-outline" id="forum-refresh-btn"><i class="fas fa-refresh"></i>
+                            更新</button>
                     </div>
                 </div>
                 <div class="admin-table-container">
                     <table class="admin-table">
                         <thead>
                             <tr>
-                                <th>投稿ID</th>
+                                <th>生徒番号</th>
                                 <th>内容（抜粋）</th>
                                 <th>カテゴリ</th>
                                 <th>承認状態</th>
@@ -548,4 +582,5 @@
     <script src="js/admin.js"></script>
     <script src="js/admin-operations.js"></script>
 </body>
+
 </html>

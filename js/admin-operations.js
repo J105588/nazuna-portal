@@ -7,48 +7,48 @@
 // 初期化
 // =====================================
 if (typeof window.setupAdminDataOperations === 'undefined') {
-    window.setupAdminDataOperations = function() {
+    window.setupAdminDataOperations = function () {
         // お知らせ管理
         const addNewsBtn = document.getElementById('add-news-btn');
         if (addNewsBtn) {
             addNewsBtn.addEventListener('click', () => openNewsModal());
         }
-        
+
         // アンケート管理
         const addSurveyBtn = document.getElementById('add-survey-btn');
         if (addSurveyBtn) {
             addSurveyBtn.addEventListener('click', () => openSurveyModal());
         }
-        
+
         // 部活動管理
         const addClubBtn = document.getElementById('add-club-btn');
         if (addClubBtn) {
             addClubBtn.addEventListener('click', () => openClubModal());
         }
-        
+
         // 生徒会メンバー管理
         const addMemberBtn = document.getElementById('add-member-btn');
         if (addMemberBtn) {
             addMemberBtn.addEventListener('click', () => openMemberModal());
         }
-        
+
         // 活動実績管理
         const addAchievementBtn = document.getElementById('add-achievement-btn');
         if (addAchievementBtn) {
             addAchievementBtn.addEventListener('click', () => openAchievementModal());
         }
-        
+
         // フィルター
         const yearFilter = document.getElementById('achievement-year-filter');
         const monthFilter = document.getElementById('achievement-month-filter');
         const categoryFilter = document.getElementById('achievement-category-filter');
         const memberFilter = document.getElementById('member-filter');
         const clearFiltersBtn = document.getElementById('clear-filters-btn');
-        
+
         [yearFilter, monthFilter, categoryFilter, memberFilter].forEach(el => {
             if (el) el.addEventListener('change', () => loadAdminAchievementsList());
         });
-        
+
         if (clearFiltersBtn) {
             clearFiltersBtn.addEventListener('click', () => {
                 if (yearFilter) yearFilter.value = '';
@@ -58,7 +58,7 @@ if (typeof window.setupAdminDataOperations === 'undefined') {
                 loadAdminAchievementsList();
             });
         }
-        
+
         // 通知送信
         const sendNotificationBtn = document.getElementById('send-notification-btn');
         if (sendNotificationBtn) {
@@ -67,12 +67,12 @@ if (typeof window.setupAdminDataOperations === 'undefined') {
                 await sendNotification();
             });
         }
-        
+
         const clearNotificationFormBtn = document.getElementById('clear-notification-form');
         if (clearNotificationFormBtn) {
             clearNotificationFormBtn.addEventListener('click', clearNotificationForm);
         }
-        
+
         // アカウント管理
         const accountCreateBtn = document.getElementById('account-create-btn');
         if (accountCreateBtn) {
@@ -80,14 +80,14 @@ if (typeof window.setupAdminDataOperations === 'undefined') {
                 await createOrUpdateAdminAccount();
             });
         }
-        
+
         const accountDeleteBtn = document.getElementById('account-delete-btn');
         if (accountDeleteBtn) {
             accountDeleteBtn.addEventListener('click', async () => {
                 await deleteAdminAccountByEmail();
             });
         }
-        
+
         const accountDebugBtn = document.getElementById('account-debug-btn');
         if (accountDebugBtn) {
             accountDebugBtn.addEventListener('click', async () => {
@@ -100,23 +100,23 @@ if (typeof window.setupAdminDataOperations === 'undefined') {
                 }
             });
         }
-        
+
         // メンテナンスモード管理
         const enableMaintenanceBtn = document.getElementById('enable-maintenance-btn');
         if (enableMaintenanceBtn) {
             enableMaintenanceBtn.addEventListener('click', enableMaintenanceMode);
         }
-        
+
         const disableMaintenanceBtn = document.getElementById('disable-maintenance-btn');
         if (disableMaintenanceBtn) {
             disableMaintenanceBtn.addEventListener('click', disableMaintenanceMode);
         }
-        
+
         const refreshMaintenanceStatusBtn = document.getElementById('refresh-maintenance-status-btn');
         if (refreshMaintenanceStatusBtn) {
             refreshMaintenanceStatusBtn.addEventListener('click', loadMaintenanceStatus);
         }
-        
+
         const maintenanceToggle = document.getElementById('maintenance-toggle');
         if (maintenanceToggle) {
             maintenanceToggle.addEventListener('change', async (e) => {
@@ -131,40 +131,40 @@ if (typeof window.setupAdminDataOperations === 'undefined') {
                 }
             });
         }
-        
+
         // PWA管理
         const pwaCheckUpdatesBtn = document.getElementById('pwa-check-updates-btn');
         if (pwaCheckUpdatesBtn) {
             pwaCheckUpdatesBtn.addEventListener('click', checkPWAUpdates);
         }
-        
+
         const pwaShowModuleBtn = document.getElementById('pwa-show-module-btn');
         if (pwaShowModuleBtn) {
             pwaShowModuleBtn.addEventListener('click', showPWAModule);
         }
-        
+
         const pwaClearCacheBtn = document.getElementById('pwa-clear-cache-btn');
         if (pwaClearCacheBtn) {
             pwaClearCacheBtn.addEventListener('click', clearPWACache);
         }
-        
+
         // 通知システム管理
         const notificationTestBtn = document.getElementById('notification-test-btn');
         if (notificationTestBtn) {
             notificationTestBtn.addEventListener('click', sendTestNotification);
         }
-        
+
         const notificationRefreshStatusBtn = document.getElementById('notification-refresh-status-btn');
         if (notificationRefreshStatusBtn) {
             notificationRefreshStatusBtn.addEventListener('click', loadNotificationSystemStatus);
         }
-        
+
         // フォーラム管理
         const approvalFilter = document.getElementById('forum-approval-filter');
         if (approvalFilter) {
             approvalFilter.addEventListener('change', loadAdminForumPosts);
         }
-        
+
         const forumRefreshBtn = document.getElementById('forum-refresh-btn');
         if (forumRefreshBtn) {
             forumRefreshBtn.addEventListener('click', loadAdminForumPosts);
@@ -175,7 +175,7 @@ if (typeof window.setupAdminDataOperations === 'undefined') {
 // =====================================
 // お知らせ管理
 // =====================================
-window.loadAdminNewsList = async function() {
+window.loadAdminNewsList = async function () {
     const tbody = document.getElementById('news-table-body');
     if (!tbody) return;
     tbody.innerHTML = '<tr><td colspan="4" class="loading-state">読み込み中...</td></tr>';
@@ -192,7 +192,7 @@ window.loadAdminNewsList = async function() {
             // GASエラーは静かに処理（Spreadsheet未設定など）
             console.warn('GAS getNews failed, using Supabase fallback:', gasError.message);
         }
-        
+
         // GASからデータが取得できなかった場合、Supabaseから取得
         if (!data || data.length === 0) {
             try {
@@ -237,7 +237,7 @@ window.loadAdminNewsList = async function() {
                 openNewsModal(data || null);
             });
         });
-        
+
         tbody.querySelectorAll('button[data-action="delete-news"]').forEach(btn => {
             btn.addEventListener('click', async () => {
                 const id = btn.getAttribute('data-id');
@@ -353,7 +353,7 @@ async function deleteNews(id) {
 // =====================================
 // アンケート管理
 // =====================================
-window.loadAdminSurveysList = async function() {
+window.loadAdminSurveysList = async function () {
     const tbody = document.getElementById('surveys-table-body');
     if (!tbody) return;
     tbody.innerHTML = '<tr><td colspan="5" class="loading-state">読み込み中...</td></tr>';
@@ -369,7 +369,7 @@ window.loadAdminSurveysList = async function() {
         } catch (gasError) {
             console.warn('GAS getSurveys failed, using Supabase fallback:', gasError.message);
         }
-        
+
         // GASからデータが取得できなかった場合、Supabaseから取得
         if (!data || data.length === 0) {
             try {
@@ -415,7 +415,7 @@ window.loadAdminSurveysList = async function() {
                 openSurveyModal(data || null);
             });
         });
-        
+
         tbody.querySelectorAll('button[data-action="delete-survey"]').forEach(btn => {
             btn.addEventListener('click', async () => {
                 const id = btn.getAttribute('data-id');
@@ -457,7 +457,7 @@ function openSurveyModal(item = null) {
 
     if (item?.deadline) {
         const d = new Date(item.deadline);
-        const iso = new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0,16);
+        const iso = new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
         const el = document.getElementById('survey-deadline');
         if (el) el.value = iso;
     }
@@ -532,7 +532,7 @@ async function deleteSurvey(id) {
 // =====================================
 // 部活動管理
 // =====================================
-window.loadAdminClubsList = async function() {
+window.loadAdminClubsList = async function () {
     const tbody = document.getElementById('clubs-table-body');
     if (!tbody) return;
     tbody.innerHTML = '<tr><td colspan="5" class="loading-state">読み込み中...</td></tr>';
@@ -548,7 +548,7 @@ window.loadAdminClubsList = async function() {
         } catch (gasError) {
             console.warn('GAS getClubs failed, using Supabase fallback:', gasError.message);
         }
-        
+
         // GASからデータが取得できなかった場合、Supabaseから取得
         if (!data || data.length === 0) {
             try {
@@ -611,7 +611,7 @@ window.loadAdminClubsList = async function() {
                 openClubModal(data || null);
             });
         });
-        
+
         tbody.querySelectorAll('button[data-action="delete-club"]').forEach(btn => {
             btn.addEventListener('click', async () => {
                 const id = btn.getAttribute('data-id');
@@ -729,7 +729,7 @@ function showModal(title, content) {
     let modalOverlay = document.getElementById('modal-overlay');
     let modalTitle = modalOverlay ? modalOverlay.querySelector('#modal-title') : null;
     let modalBody = modalOverlay ? modalOverlay.querySelector('#modal-body') : null;
-    
+
     // モーダル要素が存在しない場合は動的に作成
     if (!modalOverlay) {
         modalOverlay = document.createElement('div');
@@ -749,47 +749,47 @@ function showModal(title, content) {
             </div>
         `;
         document.body.appendChild(modalOverlay);
-        
+
         // 閉じるボタンのイベントリスナーを設定
         const closeBtn = modalOverlay.querySelector('#modal-close');
         const cancelBtn = modalOverlay.querySelector('#modal-cancel');
-        
+
         if (closeBtn) {
             closeBtn.addEventListener('click', () => {
                 modalOverlay.classList.remove('active');
             });
         }
-        
+
         if (cancelBtn) {
             cancelBtn.addEventListener('click', () => {
                 modalOverlay.classList.remove('active');
             });
         }
-        
+
         modalOverlay.addEventListener('click', (e) => {
             if (e.target === modalOverlay) {
                 modalOverlay.classList.remove('active');
             }
         });
-        
+
         // 要素を再取得
         modalTitle = modalOverlay.querySelector('#modal-title');
         modalBody = modalOverlay.querySelector('#modal-body');
     }
-    
+
     // タイトルと本文を設定（nullチェック付き）
     if (modalTitle) {
         modalTitle.textContent = title || '';
     } else {
         console.error('Modal title element not found');
     }
-    
+
     if (modalBody) {
         modalBody.innerHTML = content || '';
     } else {
         console.error('Modal body element not found');
     }
-    
+
     // モーダルを表示
     modalOverlay.classList.add('active');
 }
@@ -812,7 +812,7 @@ function clearNotificationForm() {
 // =====================================
 // 生徒会メンバー管理
 // =====================================
-window.loadAdminCouncilMembersList = async function() {
+window.loadAdminCouncilMembersList = async function () {
     const grid = document.getElementById('members-grid');
     const memberFilter = document.getElementById('member-filter');
     if (!grid) return;
@@ -860,7 +860,7 @@ window.loadAdminCouncilMembersList = async function() {
                 openMemberModal(data || null);
             });
         });
-        
+
         grid.querySelectorAll('button[data-action="delete-member"]').forEach(btn => {
             btn.addEventListener('click', async () => {
                 const id = btn.getAttribute('data-id');
@@ -876,12 +876,12 @@ window.loadAdminCouncilMembersList = async function() {
 function openMemberModal(item = null) {
     const isEdit = !!item;
     const title = isEdit ? 'メンバーを編集' : 'メンバーを追加';
-    
+
     // responsibilitiesを配列から改行区切りの文字列に変換
-    const responsibilitiesText = Array.isArray(item?.responsibilities) 
-        ? item.responsibilities.join('\n') 
+    const responsibilitiesText = Array.isArray(item?.responsibilities)
+        ? item.responsibilities.join('\n')
         : (item?.responsibilities || '');
-    
+
     // bio から構造化データを抽出（text/hobbies/activities）
     let bioText = item?.bio || '';
     let hobbiesText = '';
@@ -902,8 +902,8 @@ function openMemberModal(item = null) {
                 }).join('\n');
             }
         }
-    } catch (_) {}
-    
+    } catch (_) { }
+
     const content = `
         ${!isEdit ? `
         <div class="form-row">
@@ -942,7 +942,7 @@ function openMemberModal(item = null) {
         <div class="form-row">
             <div class="form-group">
                 <label>活動開始日（join_date）</label>
-                <input id="member-join-date" type="date" class="form-control" value="${item?.join_date ? new Date(item.join_date).toISOString().slice(0,10) : ''}" />
+                <input id="member-join-date" type="date" class="form-control" value="${item?.join_date ? new Date(item.join_date).toISOString().slice(0, 10) : ''}" />
             </div>
             <div class="form-group">
                 <label>短いメッセージ</label>
@@ -997,20 +997,20 @@ function openMemberModal(item = null) {
     saveBtn.onclick = async () => {
         const name = document.getElementById('member-name').value.trim();
         const role = document.getElementById('member-role').value.trim();
-        
+
         if (!name || !role) {
             window.adminPanel?.showError('氏名と役職は必須項目です');
             return;
         }
-        
+
         // responsibilitiesを改行区切りの文字列から配列に変換
         const responsibilitiesText = document.getElementById('member-responsibilities').value.trim();
-        const responsibilities = responsibilitiesText 
+        const responsibilities = responsibilitiesText
             ? responsibilitiesText.split('\n')
                 .map(line => line.trim())
                 .filter(line => line.length > 0)
             : [];
-        
+
         const payload = {
             name: name,
             role: role,
@@ -1050,7 +1050,7 @@ function openMemberModal(item = null) {
         // join_date
         const joinDate = document.getElementById('member-join-date').value;
         if (joinDate) payload.join_date = joinDate;
-        
+
         // 新規追加時にIDが指定されている場合は取得
         let specifiedId = null;
         if (!isEdit) {
@@ -1062,7 +1062,7 @@ function openMemberModal(item = null) {
                 }
             }
         }
-        
+
         await saveMember(item?.id || specifiedId || null, payload);
     };
 }
@@ -1078,14 +1078,14 @@ async function saveMember(id, payload) {
                 cleanPayload[key] = value;
             }
         }
-        
+
         // responsibilitiesがnullの場合は空配列として扱う
         if (cleanPayload.responsibilities === null) {
             cleanPayload.responsibilities = [];
         }
-        
+
         console.log('Saving member:', { id, payload: cleanPayload });
-        
+
         if (id) {
             const { error } = await window.supabaseClient
                 .from('council_members')
@@ -1102,26 +1102,26 @@ async function saveMember(id, payload) {
                     .select('id')
                     .eq('id', cleanPayload.id)
                     .maybeSingle();
-                
+
                 if (checkError) throw checkError;
-                
+
                 if (existing) {
                     throw new Error(`ID ${cleanPayload.id} は既に使用されています。別のIDを指定してください。`);
                 }
-                
+
                 // シーケンスを更新（PostgreSQLの場合）
                 // 注: Supabaseでは直接シーケンスを操作できないため、
                 // IDを明示的に指定する場合は、データベース側でシーケンスを更新する必要があります
                 const specifiedId = cleanPayload.id;
                 delete cleanPayload.id; // 一旦削除
-                
+
                 // IDを含めてinsert（PostgreSQLではこれで動作するはずですが、
                 // SERIAL型のシーケンスが更新されない可能性があります）
                 const { data: insertedData, error: insertError } = await window.supabaseClient
                     .from('council_members')
                     .insert([{ ...cleanPayload, id: specifiedId }])
                     .select();
-                
+
                 if (insertError) {
                     // 重複エラーの場合、より詳細なメッセージを表示
                     if (insertError.code === '23505') {
@@ -1129,7 +1129,7 @@ async function saveMember(id, payload) {
                     }
                     throw insertError;
                 }
-                
+
                 // シーケンスを更新（SQLクエリを実行）
                 // 注: SupabaseのRPCまたはSQLクエリで実行する必要があります
                 // ここでは警告のみ表示
@@ -1142,15 +1142,15 @@ async function saveMember(id, payload) {
                     .insert([cleanPayload]);
                 if (error) throw error;
             }
-            
+
             window.adminPanel?.showSuccess('メンバーを追加しました');
         }
-        
+
         document.getElementById('modal-overlay').classList.remove('active');
         await window.loadAdminCouncilMembersList();
     } catch (err) {
         console.error('Failed to save member:', err);
-        
+
         // RLSポリシーエラーの場合、より詳細なメッセージを表示
         let errorMessage = 'メンバーの保存に失敗しました';
         if (err.code === '42501') {
@@ -1162,7 +1162,7 @@ async function saveMember(id, payload) {
         } else if (err.message) {
             errorMessage = `エラー: ${err.message}`;
         }
-        
+
         window.adminPanel?.showError(errorMessage);
     }
 }
@@ -1183,7 +1183,7 @@ async function deleteMember(id) {
 // =====================================
 // 活動実績管理
 // =====================================
-window.loadAdminAchievementsList = async function() {
+window.loadAdminAchievementsList = async function () {
     const tbody = document.getElementById('achievements-table-body');
     if (!tbody) return;
     tbody.innerHTML = '<tr><td colspan="7" class="loading-state">読み込み中...</td></tr>';
@@ -1215,7 +1215,7 @@ window.loadAdminAchievementsList = async function() {
         tbody.innerHTML = data.map(a => `
             <tr>
                 <td>${a.member_id}</td>
-                <td>${a.achievement_year}/${String(a.achievement_month).padStart(2,'0')}</td>
+                <td>${a.achievement_year}/${String(a.achievement_month).padStart(2, '0')}</td>
                 <td>${window.adminPanel?.escapeHtml(a.title || '')}</td>
                 <td>${window.adminPanel?.escapeHtml(a.category || '')}</td>
                 <td>${window.adminPanel?.escapeHtml(a.description || '')}</td>
@@ -1238,7 +1238,7 @@ window.loadAdminAchievementsList = async function() {
                 openAchievementModal(data || null);
             });
         });
-        
+
         tbody.querySelectorAll('button[data-action="delete-achievement"]').forEach(btn => {
             btn.addEventListener('click', async () => {
                 const id = btn.getAttribute('data-id');
@@ -1347,18 +1347,18 @@ async function sendNotification() {
     const bodyEl = document.getElementById('notification-message');
     const targetEl = document.getElementById('notification-target');
     const sendButton = document.getElementById('send-notification-btn');
-    
+
     const title = (titleEl && titleEl.value.trim()) || '';
     const body = (bodyEl && bodyEl.value.trim()) || '';
     const target = (targetEl && targetEl.value) || 'all';
-    
+
     if (!title || !body) {
         window.adminPanel?.showError('タイトルと本文を入力してください');
         return;
     }
-    
+
     if (sendButton) { sendButton.disabled = true; sendButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 送信中...'; }
-    
+
     try {
         const result = await window.apiClient.sendRequest('sendNotification', {
             title: title,
@@ -1367,16 +1367,16 @@ async function sendNotification() {
             targetType: target || 'all',
             adminEmail: window.adminPanel?.currentUser()?.email || ''
         });
-        
+
         if (result.success) {
             const successCount = (result.data?.successfulSends ?? result.data?.success) || 0;
             const failureCount = (result.data?.failedSends ?? result.data?.failed) || 0;
             const totalRecipients = (result.data?.totalRecipients ?? (successCount + failureCount)) || 0;
             window.adminPanel?.showSuccess(`通知を送信しました（送信先: ${totalRecipients}件、成功: ${successCount}件、失敗: ${failureCount}件）`);
-            
+
             if (titleEl) titleEl.value = '';
             if (bodyEl) bodyEl.value = '';
-            
+
             await window.loadAdminNotificationHistory();
         } else {
             throw new Error(result.error || '通知の送信に失敗しました');
@@ -1401,12 +1401,12 @@ async function sendNotification() {
 // =====================================
 // 通知履歴読み込み
 // =====================================
-window.loadAdminNotificationHistory = async function() {
+window.loadAdminNotificationHistory = async function () {
     const historyContainer = document.getElementById('notification-history');
     if (!historyContainer) return;
-    
+
     historyContainer.innerHTML = '<p class="loading">読み込み中...</p>';
-    
+
     try {
         // まずGAS APIを試す
         try {
@@ -1417,7 +1417,7 @@ window.loadAdminNotificationHistory = async function() {
                     historyContainer.innerHTML = '<p class="no-data">通知履歴がありません</p>';
                     return;
                 }
-                
+
                 const html = data.map(log => `
                     <div class="notification-log-item">
                         <div class="log-title">${window.adminPanel?.escapeHtml(log.title || '')}</div>
@@ -1429,21 +1429,21 @@ window.loadAdminNotificationHistory = async function() {
                         </div>
                     </div>
                 `).join('');
-                
+
                 historyContainer.innerHTML = html;
                 return;
             }
         } catch (gasError) {
             console.warn('GAS notification history failed, trying Supabase:', gasError);
         }
-        
+
         // GASが失敗した場合、Supabaseを試す
         const { data, error } = await window.supabaseClient
             .from('notification_history')
             .select('*')
             .order('sent_at', { ascending: false })
             .limit(50);
-        
+
         if (error) {
             // テーブルが存在しない場合は空のメッセージを表示
             if (error.code === 'PGRST205' || error.message?.includes('Could not find the table')) {
@@ -1453,12 +1453,12 @@ window.loadAdminNotificationHistory = async function() {
             }
             throw error;
         }
-        
+
         if (!data || data.length === 0) {
             historyContainer.innerHTML = '<p class="no-data">通知履歴がありません</p>';
             return;
         }
-        
+
         const html = data.map(log => `
             <div class="notification-log-item">
                 <div class="log-title">${window.adminPanel?.escapeHtml(log.title || '')}</div>
@@ -1470,7 +1470,7 @@ window.loadAdminNotificationHistory = async function() {
                 </div>
             </div>
         `).join('');
-        
+
         historyContainer.innerHTML = html;
     } catch (error) {
         console.error('Failed to load notification history:', error);
@@ -1481,21 +1481,21 @@ window.loadAdminNotificationHistory = async function() {
 // =====================================
 // 通知統計読み込み
 // =====================================
-window.loadAdminNotificationStatistics = async function() {
+window.loadAdminNotificationStatistics = async function () {
     try {
         const res = await window.apiClient.sendRequest('getNotificationStatistics', {}, { useCache: false });
-        
+
         // GASがエラーを返した場合、デフォルト値を表示
         if (!res || !res.success) {
             console.warn('GAS notification statistics failed:', res?.error);
-            
+
             // デフォルト値を設定
             const setText = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = String(v ?? 0); };
             setText('stat-notifications-sent', 0);
             setText('stat-devices-registered', 0);
             setText('stat-delivery-success', 0);
             setText('stat-delivery-failed', 0);
-            
+
             const tbody = document.getElementById('statistics-table-body');
             if (tbody) {
                 tbody.innerHTML = '<tr><td colspan="4" class="empty-state">統計データを取得できませんでした</td></tr>';
@@ -1530,7 +1530,7 @@ window.loadAdminNotificationStatistics = async function() {
         setText('stat-devices-registered', 0);
         setText('stat-delivery-success', 0);
         setText('stat-delivery-failed', 0);
-        
+
         const tbody = document.getElementById('statistics-table-body');
         if (tbody) {
             tbody.innerHTML = '<tr><td colspan="4" class="empty-state">統計の取得に失敗しました</td></tr>';
@@ -1541,18 +1541,18 @@ window.loadAdminNotificationStatistics = async function() {
 // =====================================
 // フォーラム管理
 // =====================================
-window.loadAdminForumPosts = async function() {
+window.loadAdminForumPosts = async function () {
     const container = document.getElementById('forum-table-body');
     const alertDiv = document.getElementById('approval-alert');
     const pendingCountSpan = document.getElementById('pending-count');
-    
+
     if (!container) return;
-    
+
     container.innerHTML = '<tr><td colspan="7" class="loading-state">読み込み中...</td></tr>';
-    
+
     try {
         const approvalFilter = document.getElementById('forum-approval-filter')?.value || 'all';
-        
+
         let data = [];
         // まずGAS APIを試す（失敗してもエラーにしない）
         try {
@@ -1565,7 +1565,7 @@ window.loadAdminForumPosts = async function() {
         } catch (gasError) {
             console.warn('GAS getPosts failed, using Supabase fallback:', gasError.message);
         }
-        
+
         // GASからデータが取得できなかった場合、Supabaseから取得
         if (!data || data.length === 0) {
             try {
@@ -1582,19 +1582,19 @@ window.loadAdminForumPosts = async function() {
                 throw supaError;
             }
         }
-        
+
         if (pendingCountSpan && data) {
             const pendingCount = data.filter(p => p.approval_status === 'pending').length;
             pendingCountSpan.textContent = pendingCount;
-            
+
             if (alertDiv) {
                 alertDiv.style.display = pendingCount > 0 ? 'block' : 'none';
             }
         }
-        
+
         if (data && data.length > 0) {
             container.innerHTML = data.map(post => renderForumPostRow(post)).join('');
-            
+
             // 承認・却下・保留ボタンのイベントリスナー
             container.querySelectorAll('button[data-action="approve"]').forEach(btn => {
                 btn.addEventListener('click', () => {
@@ -1602,25 +1602,32 @@ window.loadAdminForumPosts = async function() {
                     approvePost(id);
                 });
             });
-            
+
             container.querySelectorAll('button[data-action="reject"]').forEach(btn => {
                 btn.addEventListener('click', () => {
                     const id = btn.getAttribute('data-id');
                     rejectPostPrompt(id);
                 });
             });
-            
+
             container.querySelectorAll('button[data-action="set-pending"]').forEach(btn => {
                 btn.addEventListener('click', () => {
                     const id = btn.getAttribute('data-id');
                     setPendingStatus(id);
                 });
             });
-            
+
             container.querySelectorAll('button[data-action="view"]').forEach(btn => {
                 btn.addEventListener('click', () => {
                     const id = btn.getAttribute('data-id');
                     viewPostDetails(id);
+                });
+            });
+
+            container.querySelectorAll('button[data-action="edit-status"]').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const id = btn.getAttribute('data-id');
+                    editPostStatus(id);
                 });
             });
         } else {
@@ -1636,11 +1643,11 @@ function renderForumPostRow(post) {
     const approvalBadge = getApprovalStatusBadge(post.approval_status);
     const statusBadge = getStatusBadge(post.status || 'pending');
     const category = getCategoryLabel(post.category);
-    const contentPreview = post.content.length > 100 
-        ? post.content.substring(0, 100) + '...' 
+    const contentPreview = post.content.length > 100
+        ? post.content.substring(0, 100) + '...'
         : post.content;
     const createdDate = window.adminPanel?.formatDateTime(post.created_at);
-    
+
     let actionButtons = '';
     if (post.approval_status === 'pending') {
         actionButtons = `
@@ -1649,6 +1656,9 @@ function renderForumPostRow(post) {
             </button>
             <button class="btn btn-danger btn-sm" data-action="reject" data-id="${post.id}">
                 <i class="fas fa-times"></i> 却下
+            </button>
+            <button class="btn btn-outline btn-sm" data-action="edit-status" data-id="${post.id}">
+                <i class="fas fa-edit"></i> ステータス
             </button>
         `;
     } else if (post.approval_status === 'approved') {
@@ -1659,6 +1669,9 @@ function renderForumPostRow(post) {
             <button class="btn btn-danger btn-sm" data-action="reject" data-id="${post.id}">
                 <i class="fas fa-times"></i> 却下
             </button>
+            <button class="btn btn-outline btn-sm" data-action="edit-status" data-id="${post.id}">
+                <i class="fas fa-edit"></i> ステータス
+            </button>
         `;
     } else if (post.approval_status === 'rejected') {
         actionButtons = `
@@ -1668,12 +1681,15 @@ function renderForumPostRow(post) {
             <button class="btn btn-success btn-sm" data-action="approve" data-id="${post.id}">
                 <i class="fas fa-check"></i> 承認
             </button>
+            <button class="btn btn-outline btn-sm" data-action="edit-status" data-id="${post.id}">
+                <i class="fas fa-edit"></i> ステータス
+            </button>
         `;
     }
-    
+
     return `
         <tr>
-            <td>${post.id.substring(0, 8)}...</td>
+            <td>${post.student_number || '不明'}</td>
             <td>${window.adminPanel?.escapeHtml(contentPreview)}</td>
             <td>${category}</td>
             <td>${approvalBadge}</td>
@@ -1723,10 +1739,10 @@ function getCategoryLabel(category) {
 
 async function approvePost(postId) {
     if (!confirm('この投稿を承認しますか？')) return;
-    
+
     try {
         const currentUserEmail = window.adminPanel?.currentUser()?.email || 'admin@school.ac.jp';
-        
+
         const { error } = await window.supabaseClient
             .from('posts')
             .update({
@@ -1735,9 +1751,9 @@ async function approvePost(postId) {
                 approval_date: new Date().toISOString()
             })
             .eq('id', postId);
-        
+
         if (error) throw error;
-        
+
         window.adminPanel?.showSuccess('投稿を承認しました');
         await window.loadAdminForumPosts();
     } catch (error) {
@@ -1778,7 +1794,7 @@ async function setPendingStatus(postId) {
 async function rejectPost(postId, reason = '') {
     try {
         const currentUserEmail = window.adminPanel?.currentUser()?.email || 'admin@school.ac.jp';
-        
+
         const { error } = await window.supabaseClient
             .from('posts')
             .update({
@@ -1788,9 +1804,9 @@ async function rejectPost(postId, reason = '') {
                 rejection_reason: reason
             })
             .eq('id', postId);
-        
+
         if (error) throw error;
-        
+
         window.adminPanel?.showSuccess('投稿を却下しました');
         await window.loadAdminForumPosts();
     } catch (error) {
@@ -1806,9 +1822,9 @@ async function viewPostDetails(postId) {
             .select('*')
             .eq('id', postId)
             .single();
-        
+
         if (error) throw error;
-        
+
         showModal('投稿詳細', `
             <div class="post-details">
                 <p><strong>投稿ID:</strong> ${data.id}</p>
@@ -1826,6 +1842,73 @@ async function viewPostDetails(postId) {
     }
 }
 
+async function editPostStatus(postId) {
+    try {
+        const { data, error } = await window.supabaseClient
+            .from('posts')
+            .select('*')
+            .eq('id', postId)
+            .single();
+
+        if (error) throw error;
+
+        const currentStatus = data.status || 'pending';
+
+        showModal('ステータス編集', `
+            <div class="form-group">
+                <label for="post-status-select">投稿ステータス</label>
+                <select id="post-status-select" class="form-control">
+                    <option value="pending" ${currentStatus === 'pending' ? 'selected' : ''}>対応待ち</option>
+                    <option value="in_progress" ${currentStatus === 'in_progress' ? 'selected' : ''}>対応中</option>
+                    <option value="resolved" ${currentStatus === 'resolved' ? 'selected' : ''}>解決済み</option>
+                    <option value="closed" ${currentStatus === 'closed' ? 'selected' : ''}>終了</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="status-note">備考（任意）</label>
+                <textarea id="status-note" class="form-control" rows="3" placeholder="ステータス変更の理由や備考を入力"></textarea>
+            </div>
+        `);
+
+        const saveBtn = document.getElementById('modal-save');
+        saveBtn.onclick = async () => {
+            const newStatus = document.getElementById('post-status-select').value;
+            const note = document.getElementById('status-note')?.value || '';
+            await updatePostStatus(postId, newStatus, note);
+        };
+    } catch (error) {
+        console.error('Error editing post status:', error);
+        window.adminPanel?.showError('ステータス編集の準備に失敗しました');
+    }
+}
+
+async function updatePostStatus(postId, newStatus, note = '') {
+    try {
+        const updateData = {
+            status: newStatus,
+            status_updated_at: new Date().toISOString()
+        };
+
+        if (note) {
+            updateData.status_note = note;
+        }
+
+        const { error } = await window.supabaseClient
+            .from('posts')
+            .update(updateData)
+            .eq('id', postId);
+
+        if (error) throw error;
+
+        document.getElementById('modal-overlay').classList.remove('active');
+        window.adminPanel?.showSuccess('ステータスを更新しました');
+        await window.loadAdminForumPosts();
+    } catch (error) {
+        console.error('Error updating post status:', error);
+        window.adminPanel?.showError('ステータスの更新に失敗しました');
+    }
+}
+
 // =====================================
 // アカウント管理
 // =====================================
@@ -1835,19 +1918,19 @@ async function createOrUpdateAdminAccount() {
     const name = document.getElementById('account-name')?.value.trim() || '';
     const role = document.getElementById('account-role')?.value || 'admin';
     const permissionsText = document.getElementById('account-permissions')?.value || '{}';
-    
+
     if (!email || !password) {
         window.adminPanel?.showError('メールとパスワードを入力してください');
         return;
     }
-    
+
     let permissions;
     try {
         permissions = JSON.parse(permissionsText || '{}');
     } catch {
         permissions = {};
     }
-    
+
     try {
         const passwordHash = await hashPassword(password);
         const res = await window.apiClient.sendRequest('createAdminAccount', {
@@ -1857,11 +1940,11 @@ async function createOrUpdateAdminAccount() {
             role,
             permissions: JSON.stringify(permissions)
         });
-        
+
         if (!res || !res.success) {
             throw new Error(res?.error || 'アカウント作成に失敗しました');
         }
-        
+
         window.adminPanel?.showSuccess('アカウントを作成/更新しました');
     } catch (e) {
         console.error('Account create/update failed:', e);
@@ -1875,9 +1958,9 @@ async function deleteAdminAccountByEmail() {
         window.adminPanel?.showError('メールを入力してください');
         return;
     }
-    
+
     if (!confirm('このアカウントを削除しますか？')) return;
-    
+
     try {
         const res = await window.apiClient.sendRequest('deleteAdminAccount', { email });
         if (!res || !res.success) {
@@ -1904,15 +1987,15 @@ async function hashPassword(password) {
 async function loadMaintenanceStatus() {
     const statusDiv = document.getElementById('maintenance-status');
     if (!statusDiv) return;
-    
+
     try {
         const result = await window.apiClient.sendRequest('checkMaintenance', {}, { useCache: false });
         if (!result || !result.success) throw new Error(result?.error || 'Failed to get maintenance status');
-        
+
         const isEnabled = result.maintenance || false;
         const message = result.message || '';
         const endTime = result.endTime || null;
-        
+
         const maintenanceToggle = document.getElementById('maintenance-toggle');
         if (maintenanceToggle) {
             maintenanceToggle.checked = !!isEnabled;
@@ -1950,24 +2033,24 @@ async function loadMaintenanceStatus() {
 async function enableMaintenanceMode() {
     const messageEl = document.getElementById('maintenance-message');
     const endTimeEl = document.getElementById('maintenance-end-time');
-    
+
     const message = messageEl?.value.trim() || 'システムメンテナンス中です。しばらくお待ちください。';
     const endTime = endTimeEl?.value || null;
-    
+
     if (!confirm('メンテナンスモードを有効にしますか？\n一般ユーザーはアクセスできなくなります。')) {
         return;
     }
-    
+
     try {
         const result = await window.apiClient.sendRequest('enableMaintenance', {
             message: message,
             endTime: endTime ? new Date(endTime).toISOString() : null
         });
-        
+
         if (result.success) {
             window.adminPanel?.showSuccess('メンテナンスモードを有効にしました');
             await loadMaintenanceStatus();
-            
+
             // メンテナンスチェッカーにも通知
             if (window.maintenanceChecker) {
                 await window.maintenanceChecker.checkMaintenanceStatus();
@@ -1985,14 +2068,14 @@ async function disableMaintenanceMode() {
     if (!confirm('メンテナンスモードを無効にしますか？')) {
         return;
     }
-    
+
     try {
         const result = await window.apiClient.sendRequest('disableMaintenance');
-        
+
         if (result.success) {
             window.adminPanel?.showSuccess('メンテナンスモードを無効にしました');
             await loadMaintenanceStatus();
-            
+
             // メンテナンスチェッカーにも通知
             if (window.maintenanceChecker) {
                 await window.maintenanceChecker.checkMaintenanceStatus();
@@ -2012,7 +2095,7 @@ async function disableMaintenanceMode() {
 async function loadPWAStatus() {
     const statusDiv = document.getElementById('pwa-status');
     if (!statusDiv) return;
-    
+
     try {
         const status = window.pwaUpdater?.getPWAStatus() || {
             registered: false,
@@ -2020,7 +2103,7 @@ async function loadPWAStatus() {
             controller: false,
             scope: null
         };
-        
+
         statusDiv.innerHTML = `
             <div class="pwa-status-info">
                 <div class="status-item">
@@ -2077,7 +2160,7 @@ async function clearPWACache() {
     if (!confirm('キャッシュをクリアしてページを再読み込みしますか？')) {
         return;
     }
-    
+
     try {
         if (window.pwaUpdater) {
             await window.pwaUpdater.manualCacheClearAndReload();
@@ -2096,18 +2179,18 @@ async function clearPWACache() {
 async function loadNotificationSystemStatus() {
     const statusDiv = document.getElementById('notification-system-status');
     if (!statusDiv) return;
-    
+
     try {
         const manager = window.notificationManager;
         if (!manager) {
             statusDiv.innerHTML = '<p class="error">通知マネージャーが初期化されていません</p>';
             return;
         }
-        
+
         const permission = manager.permission || 'default';
         const fcmToken = manager.fcmToken || null;
         const isInitialized = manager.isInitialized || false;
-        
+
         statusDiv.innerHTML = `
             <div class="notification-system-info">
                 <div class="status-item">
@@ -2145,7 +2228,7 @@ async function sendTestNotification() {
             targetType: 'all',
             adminEmail: window.adminPanel?.currentUser()?.email || ''
         });
-        
+
         if (result.success) {
             window.adminPanel?.showSuccess('テスト通知を送信しました');
         } else {
@@ -2158,7 +2241,7 @@ async function sendTestNotification() {
 }
 
 // システム管理セクションのデータ読み込み
-window.loadAdminSystemData = async function() {
+window.loadAdminSystemData = async function () {
     await loadMaintenanceStatus();
     await loadPWAStatus();
     await loadNotificationSystemStatus();

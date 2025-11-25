@@ -63,7 +63,7 @@ const CONFIG = {
     APP: {
         NAME: 'なずなポータル',
         VERSION: '1.0.0',
-        DESCRIPTION: 'みんなでつくる学校生活',
+        DESCRIPTION: '市川学園生徒会',
 
         // ページネーション
         ITEMS_PER_PAGE: 10,
@@ -75,10 +75,10 @@ const CONFIG = {
         NOTIFICATION_ICON: 'https://lh3.googleusercontent.com/pw/AP1GczPtDAtqRlRZY8yBF0ajASVZzyEDa1uq1vlm3Dw7a7TIXMQUzwOjquumsabe_DDWZiM6tg2Ruxgtb-kvWibkkbxvcklHnPPqCat1N8H4mKJp3QPpmvyEyJxObatEQq4xD2zu0AQ8yBYZf7GePeGIoEEF=w1033-h1033-s-no-gm?authuser=0',
 
         // デバッグモード
-        DEBUG: false,
+        DEBUG: true,
 
         // コンソールログ出力の有効/無効
-        ENABLE_CONSOLE_LOG: false,
+        ENABLE_CONSOLE_LOG: true,
 
 
         // ページごとの公開フラグ（falseで準備中）

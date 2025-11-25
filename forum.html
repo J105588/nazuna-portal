@@ -6,6 +6,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>なずなフォーラム - なずなポータル</title>
     <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/forum-modal.css">
+    <link rel="stylesheet" href="css/forum-enhancements.css">
     <link rel="manifest" href="manifest.json">
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&display=swap"
         rel="stylesheet">
@@ -171,37 +173,47 @@
         <section class="forum-post">
             <div class="container">
                 <div class="forum-container">
-                    <div class="post-form">
-                        <h2><i class="fas fa-edit"></i> 新しい投稿</h2>
-                        <div class="form-group">
-                            <label for="post-category">カテゴリ</label>
-                            <select id="post-category" class="form-control">
-                                <option value="suggestion">提案・要望</option>
-                                <option value="complaint">苦情・問題</option>
-                                <option value="question">質問</option>
-                                <option value="event">イベント関連</option>
-                                <option value="facility">施設・設備</option>
-                                <option value="other">その他</option>
-                            </select>
+                    <div class="post-form post-form-enhanced">
+                        <div class="post-form-header">
+                            <h2><i class="fas fa-edit"></i> 新しい投稿</h2>
+                            <p class="post-form-description">あなたの声を生徒会に届けましょう</p>
                         </div>
-                        <div class="form-group">
-                            <label for="forum-content">内容</label>
-                            <textarea id="forum-content" class="form-control"
-                                placeholder="あなたの声を聞かせてください（匿名投稿可）&#10;&#10;例：&#10;・図書室の開館時間を延長してほしい&#10;・体育祭の種目について提案があります&#10;・校内の設備で困っていることがあります"
-                                maxlength="1000"></textarea>
-                            <div class="char-counter" id="forum-char-counter"
-                                style="text-align:right; font-size:12px; color:#666; margin-top:4px;">0 / 1000</div>
-                        </div>
-                        <div class="form-actions">
-                            <button id="submit-post" class="btn btn-primary">
-                                <i class="fas fa-paper-plane"></i>
-                                投稿する
-                            </button>
-                            <div class="post-guidelines">
-                                <small>
-                                    <i class="fas fa-info-circle"></i>
-                                    投稿前に<a href="#guidelines">投稿ガイドライン</a>をご確認ください
-                                </small>
+                        <div class="post-form-body">
+                            <div class="form-group">
+                                <label for="post-category">
+                                    <i class="fas fa-tag"></i> カテゴリ
+                                </label>
+                                <select id="post-category" class="form-control form-control-large">
+                                    <option value="suggestion">💡 提案・要望</option>
+                                    <option value="complaint">⚠️ 苦情・問題</option>
+                                    <option value="question">❓ 質問</option>
+                                    <option value="event">🎉 イベント関連</option>
+                                    <option value="facility">🏫 施設・設備</option>
+                                    <option value="other">📌 その他</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="forum-content">
+                                    <i class="fas fa-pen"></i> 内容
+                                </label>
+                                <textarea id="forum-content" class="form-control form-control-large"
+                                    placeholder="あなたの声を聞かせてください（匿名投稿可）&#10;&#10;例：&#10;・図書室の開館時間を延長してほしい&#10;・体育祭の種目について提案があります&#10;・校内の設備で困っていることがあります"
+                                    maxlength="1000" rows="6"></textarea>
+                                <div class="char-counter-enhanced" id="forum-char-counter">
+                                    <span class="char-count">0</span> / 1000 文字
+                                </div>
+                            </div>
+                            <div class="form-actions">
+                                <button id="submit-post" class="btn btn-primary btn-large btn-submit">
+                                    <i class="fas fa-paper-plane"></i>
+                                    <span>投稿する</span>
+                                </button>
+                                <div class="post-guidelines">
+                                    <small>
+                                        <i class="fas fa-info-circle"></i>
+                                        投稿前に<a href="#guidelines">投稿ガイドライン</a>をご確認ください
+                                    </small>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -244,16 +256,6 @@
                 </div>
                 <div class="posts-list" id="posts-container">
                     <div class="loading">読み込み中...</div>
-                </div>
-                <div class="chat-panel" id="chat-panel" style="display:none; margin-top:16px;">
-                    <h3><i class="fas fa-comments"></i> 生徒会とのチャット</h3>
-                    <div id="chat-messages" class="chat-messages"
-                        style="border:1px solid #ddd; border-radius:8px; padding:12px; min-height:120px; max-height:240px; overflow:auto;">
-                    </div>
-                    <div class="chat-input" style="display:flex; gap:8px; margin-top:8px;">
-                        <input type="text" id="chat-text" class="form-control" placeholder="メッセージを入力">
-                        <button id="chat-send" class="btn btn-primary"><i class="fas fa-paper-plane"></i></button>
-                    </div>
                 </div>
             </div>
         </section>
@@ -337,32 +339,84 @@
 
 </body>
 <div class="modal-overlay" id="auth-modal-overlay">
-    <div class="modal" id="auth-modal">
+    <div class="modal auth-modal-modern" id="auth-modal">
         <div class="modal-header">
-            <h3 id="auth-modal-title">ログイン</h3>
-            <button class="modal-close" id="auth-modal-close">
+            <div class="modal-header-content">
+                <i class="fas fa-user-circle modal-icon"></i>
+                <div>
+                    <h3 id="auth-modal-title">ログイン</h3>
+                    <p class="modal-subtitle" id="auth-modal-subtitle">生徒番号でログイン</p>
+                </div>
+            </div>
+            <button class="modal-close" id="auth-modal-close" aria-label="閉じる">
                 <i class="fas fa-times"></i>
             </button>
         </div>
-        <div class="modal-body">
-            <div id="step-student-number" class="auth-step">
-                <p style="margin-top:0; color:#555; font-size:14px;">生徒番号を入力してください。</p>
-                <div class="form-group">
-                    <label for="student-number-input">生徒番号</label>
-                    <input type="text" id="student-number-input" class="form-control" placeholder="例: 2400123"
-                        autocomplete="off">
-                </div>
-                <button id="check-student-number" class="btn btn-primary">次へ</button>
+
+        <!-- Step Indicator -->
+        <div class="auth-step-indicator">
+            <div class="step-item active" data-step="1">
+                <div class="step-number">1</div>
+                <div class="step-label">生徒番号</div>
             </div>
-            <div id="step-register" class="auth-step" style="display:none;">
-                <p style="margin-top:0; color:#555; font-size:14px;">パスワードを設定してください。</p>
+            <div class="step-line"></div>
+            <div class="step-item" data-step="2">
+                <div class="step-number">2</div>
+                <div class="step-label">確認</div>
+            </div>
+            <div class="step-line"></div>
+            <div class="step-item" data-step="3">
+                <div class="step-number">3</div>
+                <div class="step-label">認証</div>
+            </div>
+        </div>
+
+        <div class="modal-body">
+            <!-- Step 1: Student Number -->
+            <div id="step-student-number" class="auth-step active">
+                <p class="step-description">生徒番号を入力してください</p>
                 <div class="form-group">
-                    <label for="student-name-input">氏名</label>
+                    <label for="student-number-input">
+                        <i class="fas fa-id-card"></i> 生徒番号
+                    </label>
+                    <input type="text" id="student-number-input" class="form-control" placeholder="例: 2400123"
+                        autocomplete="off" autofocus>
+                </div>
+                <button id="check-student-number" class="btn btn-primary btn-large">
+                    <span>次へ</span>
+                    <i class="fas fa-arrow-right"></i>
+                </button>
+            </div>
+
+            <!-- Step 2: Confirm Name -->
+            <div id="step-confirm-name" class="auth-step">
+                <p class="step-description">登録されている名前を確認してください</p>
+                <div class="form-group">
+                    <label><i class="fas fa-user"></i> 氏名（確認用）</label>
+                    <div id="student-name-display" class="student-name-display">
+                        <!-- 名前がここに表示されます -->
+                    </div>
+                </div>
+                <button id="confirm-name-proceed" class="btn btn-primary btn-large">
+                    <span>次へ</span>
+                    <i class="fas fa-arrow-right"></i>
+                </button>
+            </div>
+
+            <!-- Step 3: Register (First time) -->
+            <div id="step-register" class="auth-step">
+                <p class="step-description">新しいパスワードを設定してください</p>
+                <div class="form-group">
+                    <label for="student-name-input">
+                        <i class="fas fa-user"></i> 氏名
+                    </label>
                     <input type="text" id="student-name-input" class="form-control" placeholder="山田 太郎"
                         autocomplete="off">
                 </div>
                 <div class="form-group">
-                    <label for="password-set-input">パスワード設定</label>
+                    <label for="password-set-input">
+                        <i class="fas fa-lock"></i> パスワード設定
+                    </label>
                     <div class="password-input-wrapper">
                         <input type="password" id="password-set-input" class="form-control" placeholder="6文字以上"
                             autocomplete="new-password">
@@ -373,7 +427,9 @@
                     </div>
                 </div>
                 <div class="form-group">
-                    <label for="password-confirm-input">パスワード確認</label>
+                    <label for="password-confirm-input">
+                        <i class="fas fa-lock"></i> パスワード確認
+                    </label>
                     <div class="password-input-wrapper">
                         <input type="password" id="password-confirm-input" class="form-control" placeholder="パスワードを再度入力"
                             autocomplete="new-password">
@@ -383,22 +439,19 @@
                         </button>
                     </div>
                 </div>
-                <button id="register-student" class="btn btn-primary">登録してログイン</button>
+                <button id="register-student" class="btn btn-primary btn-large">
+                    <span>登録してログイン</span>
+                    <i class="fas fa-check"></i>
+                </button>
             </div>
-            <div id="step-confirm-name" class="auth-step" style="display:none;">
-                <p style="margin-top:0; color:#555; font-size:14px;">登録されている名前を確認してください。</p>
+
+            <!-- Step 3: Login (Existing user) -->
+            <div id="step-login" class="auth-step">
+                <p class="step-description">パスワードを入力してください</p>
                 <div class="form-group">
-                    <label>氏名（確認用）</label>
-                    <div id="student-name-display" class="student-name-display">
-                        <!-- 名前がここに表示されます -->
-                    </div>
-                </div>
-                <button id="confirm-name-proceed" class="btn btn-primary">次へ</button>
-            </div>
-            <div id="step-login" class="auth-step" style="display:none;">
-                <p style="margin-top:0; color:#555; font-size:14px;">パスワードを入力してください。</p>
-                <div class="form-group">
-                    <label for="password-login-input">パスワード</label>
+                    <label for="password-login-input">
+                        <i class="fas fa-key"></i> パスワード
+                    </label>
                     <div class="password-input-wrapper">
                         <input type="password" id="password-login-input" class="form-control" placeholder="パスワードを入力"
                             autocomplete="current-password">
@@ -408,9 +461,36 @@
                         </button>
                     </div>
                 </div>
-                <button id="login-student" class="btn btn-primary">ログイン</button>
+                <button id="login-student" class="btn btn-primary btn-large">
+                    <span>ログイン</span>
+                    <i class="fas fa-sign-in-alt"></i>
+                </button>
             </div>
-            <div id="auth-error" class="login-error" style="display:none; margin-top:8px; color:#c00;"></div>
+
+            <!-- Error Message -->
+            <div id="auth-error" class="auth-error"></div>
+
+            <!-- Loading Indicator -->
+            <div id="auth-loading" class="auth-loading">
+                <div class="spinner"></div>
+                <p>処理中...</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Logout Confirmation Modal -->
+<div class="confirm-modal-overlay" id="logout-confirm-overlay">
+    <div class="confirm-modal">
+        <div class="confirm-modal-header">
+            <h3><i class="fas fa-sign-out-alt"></i> ログアウトしますか？</h3>
+        </div>
+        <div class="confirm-modal-body">
+            <p>ログアウトすると、投稿や閲覧の機能が制限されます。</p>
+        </div>
+        <div class="confirm-modal-actions">
+            <button class="btn btn-cancel" id="logout-cancel">キャンセル</button>
+            <button class="btn btn-confirm-logout" id="logout-confirm">ログアウト</button>
         </div>
     </div>
 </div>

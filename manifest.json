@@ -1,7 +1,7 @@
 {
   "name": "なずなポータル",
   "short_name": "なずなポータル",
-  "description": "学校生活をより良くするためのポータルサイト",
+  "description": "市川学園生徒会",
   "start_url": "./",
   "display": "standalone",
   "background_color": "#ffffff",
@@ -10,7 +10,10 @@
   "scope": "./",
   "id": "nazuna-portal-pwa",
   "launch_handler": {
-    "client_mode": ["focus-existing", "auto"]
+    "client_mode": [
+      "focus-existing",
+      "auto"
+    ]
   },
   "handle_links": "preferred",
   "icons": [
@@ -75,7 +78,11 @@
       "purpose": "maskable"
     }
   ],
-  "categories": ["education", "social", "productivity"],
+  "categories": [
+    "education",
+    "social",
+    "productivity"
+  ],
   "lang": "ja",
   "dir": "ltr",
   "prefer_related_applications": false,
