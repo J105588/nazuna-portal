@@ -4,142 +4,330 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>アクセス拒否 - なずなポータル</title>
-    <link rel="stylesheet" href="css/style.css">
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&display=swap"
+    <title>アクセス制限 - なずなポータル</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500&family=Shippori+Mincho:wght@400;600&display=swap"
         rel="stylesheet">
-    <meta name="theme-color" content="#4a7c59">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+
+    <meta name="theme-color" content="#2c4a3b">
     <link rel="icon" type="image/png"
         href="https://lh3.googleusercontent.com/pw/AP1GczPtDAtqRlRZY8yBF0ajASVZzyEDa1uq1vlm3Dw7a7TIXMQUzwOjquumsabe_DDWZiM6tg2Ruxgtb-kvWibkkbxvcklHnPPqCat1N8H4mKJp3QPpmvyEyJxObatEQq4xD2zu0AQ8yBYZf7GePeGIoEEF=w1033-h1033-s-no-gm?authuser=0">
+
     <style>
+        :root {
+            /* 自然界の色パレット */
+            --bg-deep: #1a2f25;
+            --bg-accent: #2c4a3b;
+            --text-main: #f0f4f2;
+            --text-muted: #a8b8b0;
+            --accent-gold: #d4c498;
+            --glass-bg: rgba(255, 255, 255, 0.08);
+            --glass-border: rgba(255, 255, 255, 0.12);
+            --glass-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Noto Sans JP', sans-serif;
+            background-color: var(--bg-deep);
+            color: var(--text-main);
+            overflow-x: hidden;
+            min-height: 100vh;
+            position: relative;
+        }
+
+        /* 背景のアートワーク（木漏れ日とボケ） */
+        body::before,
+        body::after {
+            content: '';
+            position: fixed;
+            border-radius: 50%;
+            filter: blur(80px);
+            z-index: -1;
+            opacity: 0.6;
+            animation: float 20s infinite ease-in-out alternate;
+        }
+
+        body::before {
+            width: 60vw;
+            height: 60vw;
+            background: radial-gradient(circle, var(--bg-accent), transparent);
+            top: -10%;
+            left: -10%;
+        }
+
+        body::after {
+            width: 50vw;
+            height: 50vw;
+            background: radial-gradient(circle, #4a6b5d, transparent);
+            bottom: -10%;
+            right: -10%;
+            animation-delay: -10s;
+        }
+
+        @keyframes float {
+            0% {
+                transform: translate(0, 0);
+            }
+
+            100% {
+                transform: translate(30px, 50px);
+            }
+        }
+
+        /* ノイズテクスチャで紙のような質感をプラス */
+        .texture-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.05'/%3E%3C/svg%3E");
+            pointer-events: none;
+            z-index: -1;
+        }
+
         .denied-wrapper {
             min-height: 100vh;
             display: flex;
             align-items: center;
             justify-content: center;
-            padding: 40px 20px;
-            background: linear-gradient(135deg, #66eabc 0%, #d79769 100%);
+            padding: 20px;
+            box-sizing: border-box;
         }
 
+        /* グラスモーフィズムカード */
         .denied-card {
-            background: var(--surface-color);
-            border: 1px solid var(--border-color);
-            border-radius: 16px;
-            box-shadow: var(--shadow-xl);
-            max-width: 600px;
+            background: var(--glass-bg);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid var(--glass-border);
+            border-radius: 24px;
+            box-shadow: var(--glass-shadow);
+            max-width: 540px;
             width: 100%;
-            padding: 32px;
+            padding: 48px 40px;
             text-align: center;
+            position: relative;
+            overflow: hidden;
+            transition: transform 0.3s ease;
+        }
+
+        /* カード上部の光の反射エフェクト */
+        .denied-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -50%;
+            width: 200%;
+            height: 100%;
+            background: linear-gradient(to right, transparent, rgba(255, 255, 255, 0.03), transparent);
+            transform: rotate(25deg);
+            pointer-events: none;
         }
 
         .denied-icon {
-            width: 80px;
-            height: 80px;
-            border-radius: 50%;
-            background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%);
+            width: 64px;
+            height: 64px;
+            margin: 0 auto 24px;
             display: flex;
             align-items: center;
             justify-content: center;
-            margin: 0 auto 16px;
+            color: var(--accent-gold);
+            position: relative;
         }
 
         .denied-icon i {
-            color: #fff;
-            font-size: 2rem;
+            font-size: 2.5rem;
+            filter: drop-shadow(0 0 10px rgba(212, 196, 152, 0.3));
+        }
+
+        /* 波紋アニメーション */
+        .denied-icon::after {
+            content: '';
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            border: 1px solid var(--accent-gold);
+            border-radius: 50%;
+            opacity: 0;
+            animation: ripple 2s infinite;
+        }
+
+        @keyframes ripple {
+            0% {
+                transform: scale(0.8);
+                opacity: 0.8;
+            }
+
+            100% {
+                transform: scale(2);
+                opacity: 0;
+            }
         }
 
         .denied-card h1 {
-            margin: 0 0 8px;
-            color: var(--primary-color);
-            font-size: 1.5rem;
+            margin: 0 0 16px;
+            color: var(--text-main);
+            font-family: 'Shippori Mincho', serif;
+            font-size: 1.8rem;
+            font-weight: 600;
+            letter-spacing: 0.1em;
         }
 
         .denied-card p {
-            color: var(--text-light);
-            margin: 0 0 16px;
-            line-height: 1.6;
+            color: var(--text-muted);
+            margin: 0 0 24px;
+            line-height: 1.8;
+            font-size: 0.95rem;
+            font-weight: 300;
         }
 
+        /* 位置情報エリアのデザイン */
         .location-info {
-            background: var(--background-color);
-            border: 1px solid var(--border-color);
-            border-radius: 8px;
-            padding: 16px;
-            margin: 16px 0;
+            background: rgba(0, 0, 0, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: 12px;
+            padding: 20px;
+            margin: 32px 0;
             text-align: left;
         }
 
         .location-info h3 {
-            margin: 0 0 8px;
-            font-size: 1rem;
-            color: var(--text-color);
+            margin: 0 0 12px;
+            font-size: 0.9rem;
+            color: var(--accent-gold);
             display: flex;
             align-items: center;
-            gap: 8px;
-        }
-
-        .location-info h3 i {
-            color: var(--primary-color);
+            gap: 10px;
+            font-family: 'Shippori Mincho', serif;
+            letter-spacing: 0.05em;
         }
 
         .location-coords {
             font-family: 'Courier New', monospace;
-            font-size: 0.9rem;
-            color: var(--text-color);
-            margin: 8px 0 0 0;
-            padding: 8px;
-            background: rgba(0, 0, 0, 0.02);
-            border-radius: 4px;
+            /* テクニカルな印象 */
+            font-size: 0.85rem;
+            color: var(--text-main);
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
         }
 
         .location-coords span {
-            display: block;
-            margin: 4px 0;
+            display: flex;
+            flex-direction: column;
         }
 
         .location-coords .label {
-            font-weight: 600;
-            color: var(--text-light);
-            margin-right: 8px;
+            font-size: 0.7rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            margin-bottom: 4px;
+            font-family: 'Noto Sans JP', sans-serif;
         }
 
         .denied-actions {
             display: flex;
-            gap: 8px;
+            gap: 16px;
             justify-content: center;
-            flex-wrap: wrap;
-            margin-top: 24px;
+            margin-top: 40px;
+        }
+
+        /* ボタンデザイン */
+        .btn {
+            text-decoration: none;
+            padding: 12px 28px;
+            border-radius: 50px;
+            font-size: 0.9rem;
+            transition: all 0.3s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            letter-spacing: 0.05em;
+        }
+
+        .btn-primary {
+            background: var(--text-main);
+            color: var(--bg-deep);
+            font-weight: 500;
+        }
+
+        .btn-primary:hover {
+            background: white;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(255, 255, 255, 0.2);
+        }
+
+        .btn-secondary {
+            background: transparent;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            color: var(--text-main);
+        }
+
+        .btn-secondary:hover {
+            background: rgba(255, 255, 255, 0.1);
+            border-color: var(--text-main);
         }
 
         .error-message {
-            color: #e74c3c;
-            font-size: 0.9rem;
-            margin-top: 8px;
+            color: #ff8a80;
+            /* ソフトな赤 */
+            font-size: 0.85rem;
+            margin-top: 16px;
+            background: rgba(255, 82, 82, 0.1);
+            padding: 10px;
+            border-radius: 8px;
+            border: 1px solid rgba(255, 82, 82, 0.2);
+        }
+
+        /* モバイル対応 */
+        @media (max-width: 600px) {
+            .denied-card {
+                padding: 32px 24px;
+            }
+
+            .denied-actions {
+                flex-direction: column;
+            }
+
+            .btn {
+                width: 100%;
+                justify-content: center;
+                box-sizing: border-box;
+            }
         }
     </style>
 </head>
 
 <body>
+    <div class="texture-overlay"></div>
     <div class="denied-wrapper">
         <div class="denied-card">
             <div class="denied-icon">
-                <i class="fas fa-map-marker-alt"></i>
+                <i class="fas fa-compass"></i>
             </div>
             <h1>アクセスできません</h1>
-            <p>このページは位置情報の確認により、アクセスが許可されていません。</p>
-            <p style="font-size: 0.9rem; color: var(--text-light);">
-                位置情報の取得が拒否されたか、許可ゾーン外からのアクセスである可能性があります。
+            <p>
+                現在地からのアクセスは許可されていません。<br>
+                <span style="font-size: 0.85rem; opacity: 0.7; display: block; margin-top: 8px;">
+                    位置情報の確認ができないか、<br>指定されたエリアの外にいらっしゃるようです。
+                </span>
             </p>
 
             <div class="location-info" id="location-info" style="display: none;">
                 <h3>
-                    <i class="fas fa-location-dot"></i>
-                    現在地の座標
+                    <i class="fas fa-map-pin"></i>
+                    CURRENT LOCATION
                 </h3>
                 <div class="location-coords" id="location-coords">
-                    <span><span class="label">緯度:</span> <span id="lat-value">-</span></span>
-                    <span><span class="label">経度:</span> <span id="lng-value">-</span></span>
+                    <span><span class="label">Latitude</span> <span id="lat-value">-</span></span>
+                    <span><span class="label">Longitude</span> <span id="lng-value">-</span></span>
                 </div>
             </div>
 

@@ -75,7 +75,11 @@ const CONFIG = {
         NOTIFICATION_ICON: 'https://lh3.googleusercontent.com/pw/AP1GczPtDAtqRlRZY8yBF0ajASVZzyEDa1uq1vlm3Dw7a7TIXMQUzwOjquumsabe_DDWZiM6tg2Ruxgtb-kvWibkkbxvcklHnPPqCat1N8H4mKJp3QPpmvyEyJxObatEQq4xD2zu0AQ8yBYZf7GePeGIoEEF=w1033-h1033-s-no-gm?authuser=0',
 
         // デバッグモード
-        DEBUG: true,
+        DEBUG: false,
+
+        // コンソールログ出力の有効/無効
+        ENABLE_CONSOLE_LOG: false,
+
 
         // ページごとの公開フラグ（falseで準備中）
         PAGES: {
@@ -214,10 +218,67 @@ const CONFIG = {
     }
 };
 
+// コンソールログ制御用ユーティリティ
+// オリジナルのconsoleメソッドを保存
+const originalConsole = {
+    log: console.log.bind(console),
+    warn: console.warn.bind(console),
+    error: console.error.bind(console),
+    info: console.info.bind(console),
+    debug: console.debug.bind(console),
+    trace: console.trace.bind(console)
+};
+
+// loggerオブジェクト（後方互換性のため）
+const logger = {
+    log: (...args) => {
+        if (CONFIG.APP.ENABLE_CONSOLE_LOG) {
+            originalConsole.log(...args);
+        }
+    },
+    warn: (...args) => {
+        if (CONFIG.APP.ENABLE_CONSOLE_LOG) {
+            originalConsole.warn(...args);
+        }
+    },
+    error: (...args) => {
+        if (CONFIG.APP.ENABLE_CONSOLE_LOG) {
+            originalConsole.error(...args);
+        }
+    },
+    info: (...args) => {
+        if (CONFIG.APP.ENABLE_CONSOLE_LOG) {
+            originalConsole.info(...args);
+        }
+    },
+    debug: (...args) => {
+        if (CONFIG.APP.ENABLE_CONSOLE_LOG) {
+            originalConsole.debug(...args);
+        }
+    },
+    trace: (...args) => {
+        if (CONFIG.APP.ENABLE_CONSOLE_LOG) {
+            originalConsole.trace(...args);
+        }
+    }
+};
+
+// グローバルconsoleオブジェクトをオーバーライド
+if (!CONFIG.APP.ENABLE_CONSOLE_LOG) {
+    console.log = () => { };
+    console.warn = () => { };
+    console.error = () => { };
+    console.info = () => { };
+    console.debug = () => { };
+    console.trace = () => { };
+}
+
 // 設定の検証
-if (CONFIG.APP.DEBUG) {
+if (CONFIG.APP.DEBUG && CONFIG.APP.ENABLE_CONSOLE_LOG) {
     console.log('なずなポータル設定:', CONFIG);
 }
 
 // 設定をグローバルに公開
 window.CONFIG = CONFIG;
+window.logger = logger;
+window.originalConsole = originalConsole; // デバッグ用に元のconsoleも公開
