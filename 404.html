@@ -5,82 +5,296 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>404 Not Found - なずなポータル</title>
-    <link rel="stylesheet" href="css/style.css">
+
+    <!-- Google Fonts: 水彩画に合う明朝体と手書き風欧文フォント -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Zen+Old+Mincho:wght@400;600;700&family=Caveat:wght@700&display=swap"
+        rel="stylesheet">
+
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
-    <meta name="theme-color" content="#2c3e50">
+    <meta name="theme-color" content="#eaf4fc">
+
+    <!-- アイコン設定は既存のまま維持 -->
     <link rel="icon" type="image/png"
         href="https://lh3.googleusercontent.com/pw/AP1GczPtDAtqRlRZY8yBF0ajASVZzyEDa1uq1vlm3Dw7a7TIXMQUzwOjquumsabe_DDWZiM6tg2Ruxgtb-kvWibkkbxvcklHnPPqCat1N8H4mKJp3QPpmvyEyJxObatEQq4xD2zu0AQ8yBYZf7GePeGIoEEF=w1033-h1033-s-no-gm?authuser=0">
-    <link rel="apple-touch-icon"
-        href="https://lh3.googleusercontent.com/pw/AP1GczPtDAtqRlRZY8yBF0ajASVZzyEDa1uq1vlm3Dw7a7TIXMQUzwOjquumsabe_DDWZiM6tg2Ruxgtb-kvWibkkbxvcklHnPPqCat1N8H4mKJp3QPpmvyEyJxObatEQq4xD2zu0AQ8yBYZf7GePeGIoEEF=w1033-h1033-s-no-gm?authuser=0">
-    <link rel="apple-touch-icon" sizes="152x152"
-        href="https://lh3.googleusercontent.com/pw/AP1GczPtDAtqRlRZY8yBF0ajASVZzyEDa1uq1vlm3Dw7a7TIXMQUzwOjquumsabe_DDWZiM6tg2Ruxgtb-kvWibkkbxvcklHnPPqCat1N8H4mKJp3QPpmvyEyJxObatEQq4xD2zu0AQ8yBYZf7GePeGIoEEF=w1033-h1033-s-no-gm?authuser=0">
-    <link rel="apple-touch-icon" sizes="180x180"
-        href="https://lh3.googleusercontent.com/pw/AP1GczPtDAtqRlRZY8yBF0ajASVZzyEDa1uq1vlm3Dw7a7TIXMQUzwOjquumsabe_DDWZiM6tg2Ruxgtb-kvWibkkbxvcklHnPPqCat1N8H4mKJp3QPpmvyEyJxObatEQq4xD2zu0AQ8yBYZf7GePeGIoEEF=w1033-h1033-s-no-gm?authuser=0">
-    <link rel="apple-touch-icon" sizes="167x167"
-        href="https://lh3.googleusercontent.com/pw/AP1GczPtDAtqRlRZY8yBF0ajASVZzyEDa1uq1vlm3Dw7a7TIXMQUzwOjquumsabe_DDWZiM6tg2Ruxgtb-kvWibkkbxvcklHnPPqCat1N8H4mKJp3QPpmvyEyJxObatEQq4xD2zu0AQ8yBYZf7GePeGIoEEF=w1033-h1033-s-no-gm?authuser=0">
-    <meta name="msapplication-TileImage"
-        content="https://lh3.googleusercontent.com/pw/AP1GczPtDAtqRlRZY8yBF0ajASVZzyEDa1uq1vlm3Dw7a7TIXMQUzwOjquumsabe_DDWZiM6tg2Ruxgtb-kvWibkkbxvcklHnPPqCat1N8H4mKJp3QPpmvyEyJxObatEQq4xD2zu0AQ8yBYZf7GePeGIoEEF=w1033-h1033-s-no-gm?authuser=0">
-    <meta name="msapplication-square70x70logo"
-        content="https://lh3.googleusercontent.com/pw/AP1GczPtDAtqRlRZY8yBF0ajASVZzyEDa1uq1vlm3Dw7a7TIXMQUzwOjquumsabe_DDWZiM6tg2Ruxgtb-kvWibkkbxvcklHnPPqCat1N8H4mKJp3QPpmvyEyJxObatEQq4xD2zu0AQ8yBYZf7GePeGIoEEF=w1033-h1033-s-no-gm?authuser=0">
-    <meta name="msapplication-square150x150logo"
-        content="https://lh3.googleusercontent.com/pw/AP1GczPtDAtqRlRZY8yBF0ajASVZzyEDa1uq1vlm3Dw7a7TIXMQUzwOjquumsabe_DDWZiM6tg2Ruxgtb-kvWibkkbxvcklHnPPqCat1N8H4mKJp3QPpmvyEyJxObatEQq4xD2zu0AQ8yBYZf7GePeGIoEEF=w1033-h1033-s-no-gm?authuser=0">
-    <meta name="msapplication-wide310x150logo"
-        content="https://lh3.googleusercontent.com/pw/AP1GczPtDAtqRlRZY8yBF0ajASVZzyEDa1uq1vlm3Dw7a7TIXMQUzwOjquumsabe_DDWZiM6tg2Ruxgtb-kvWibkkbxvcklHnPPqCat1N8H4mKJp3QPpmvyEyJxObatEQq4xD2zu0AQ8yBYZf7GePeGIoEEF=w1033-h1033-s-no-gm?authuser=0">
-    <meta name="msapplication-square310x310logo"
-        content="https://lh3.googleusercontent.com/pw/AP1GczPtDAtqRlRZY8yBF0ajASVZzyEDa1uq1vlm3Dw7a7TIXMQUzwOjquumsabe_DDWZiM6tg2Ruxgtb-kvWibkkbxvcklHnPPqCat1N8H4mKJp3QPpmvyEyJxObatEQq4xD2zu0AQ8yBYZf7GePeGIoEEF=w1033-h1033-s-no-gm?authuser=0">
+
     <style>
+        :root {
+            /* 水彩テーマのカラーパレット */
+            --wc-bg: #fdfbf7;
+            /* 画用紙のようなオフホワイト */
+            --wc-primary: #5d8cae;
+            /* 落ち着いた水色 */
+            --wc-secondary: #98b5cc;
+            /* 淡い水色 */
+            --wc-accent: #e2a3a3;
+            /* 優しいピンク（なずな色） */
+            --wc-text: #4a5568;
+            /* 墨色のようなダークグレー */
+            --wc-text-light: #718096;
+            --wc-shadow: rgba(93, 140, 174, 0.15);
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Zen Old Mincho', serif;
+            background-color: var(--wc-bg);
+            color: var(--wc-text);
+            /* 紙の質感をノイズで表現 */
+            background-image:
+                radial-gradient(circle at 10% 20%, rgba(226, 163, 163, 0.05) 0%, transparent 20%),
+                radial-gradient(circle at 90% 80%, rgba(93, 140, 174, 0.05) 0%, transparent 20%),
+                url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.05'/%3E%3C/svg%3E");
+            overflow-x: hidden;
+        }
+
+        /* 背景に大きな水彩のシミを配置 */
+        body::before,
+        body::after {
+            content: '';
+            position: fixed;
+            border-radius: 50%;
+            filter: blur(60px);
+            z-index: -1;
+        }
+
+        body::before {
+            width: 50vw;
+            height: 50vw;
+            background: var(--wc-secondary);
+            top: -20vw;
+            left: -10vw;
+            opacity: 0.3;
+            mix-blend-mode: multiply;
+            animation: float 10s ease-in-out infinite alternate;
+        }
+
+        body::after {
+            width: 40vw;
+            height: 40vw;
+            background: var(--wc-accent);
+            bottom: -10vw;
+            right: -5vw;
+            opacity: 0.2;
+            mix-blend-mode: multiply;
+            animation: float 12s ease-in-out infinite alternate-reverse;
+        }
+
+        @keyframes float {
+            0% {
+                transform: translate(0, 0) scale(1);
+            }
+
+            100% {
+                transform: translate(20px, 30px) scale(1.05);
+            }
+        }
+
         .maintenance-wrapper {
             min-height: 100vh;
             display: flex;
             align-items: center;
             justify-content: center;
             padding: 40px 20px;
+            box-sizing: border-box;
         }
 
         .maintenance-card {
-            background: var(--surface-color);
-            border: 1px solid var(--border-color);
-            border-radius: 16px;
-            box-shadow: var(--shadow-lg);
-            max-width: 560px;
+            background: rgba(255, 255, 255, 0.8);
+            backdrop-filter: blur(5px);
+            border: 1px solid rgba(255, 255, 255, 0.4);
+            border-radius: 24px;
+            /* 有機的な影 */
+            box-shadow:
+                0 10px 30px -5px var(--wc-shadow),
+                0 0 0 8px rgba(255, 255, 255, 0.5) inset;
+            max-width: 520px;
             width: 100%;
-            padding: 32px;
+            padding: 48px 32px;
             text-align: center;
+            position: relative;
+            overflow: hidden;
         }
 
-        .maintenance-icon {
-            width: 80px;
-            height: 80px;
-            border-radius: 50%;
-            background: var(--gradient-primary);
+        /* カード上部の水彩風装飾ライン */
+        .maintenance-card::top {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 6px;
+            background: linear-gradient(90deg, var(--wc-primary), var(--wc-accent), var(--wc-secondary));
+            opacity: 0.6;
+        }
+
+        .maintenance-icon-wrapper {
+            position: relative;
+            width: 100px;
+            height: 100px;
+            margin: 0 auto 24px;
             display: flex;
             align-items: center;
             justify-content: center;
-            margin: 0 auto 16px;
+        }
+
+        /* 水彩の滲みを表現した背景円 */
+        .maintenance-icon-bg {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            background: var(--wc-primary);
+            border-radius: 63% 37% 54% 46% / 55% 48% 52% 45%;
+            /* 不定形な円 */
+            opacity: 0.2;
+            animation: morph 8s ease-in-out infinite;
+            mix-blend-mode: multiply;
+        }
+
+        .maintenance-icon-bg::before {
+            content: '';
+            position: absolute;
+            top: 10%;
+            left: 10%;
+            width: 80%;
+            height: 80%;
+            background: var(--wc-accent);
+            border-radius: 40% 60% 50% 50% / 40% 50% 50% 60%;
+            opacity: 0.5;
+            animation: morph 6s ease-in-out infinite reverse;
+        }
+
+        @keyframes morph {
+            0% {
+                border-radius: 63% 37% 54% 46% / 55% 48% 52% 45%;
+            }
+
+            50% {
+                border-radius: 40% 60% 54% 46% / 49% 60% 40% 51%;
+            }
+
+            100% {
+                border-radius: 63% 37% 54% 46% / 55% 48% 52% 45%;
+            }
         }
 
         .maintenance-icon i {
-            color: #fff;
-            font-size: 2rem;
+            color: var(--wc-primary);
+            font-size: 2.5rem;
+            position: relative;
+            z-index: 2;
+            /* アイコンにも少しテクスチャ感を */
+            background: linear-gradient(45deg, var(--wc-primary), var(--wc-text));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
         }
 
         .maintenance-card h1 {
-            margin: 0 0 8px;
-            color: var(--primary-color);
-            font-size: 1.5rem;
+            margin: 0 0 12px;
+            color: var(--wc-primary);
+            font-size: 1.8rem;
+            font-weight: 600;
+            letter-spacing: 0.05em;
+        }
+
+        .english-sub {
+            display: block;
+            font-family: 'Caveat', cursive;
+            font-size: 1.4rem;
+            color: var(--wc-accent);
+            margin-bottom: 8px;
+            line-height: 1;
         }
 
         .maintenance-card p {
-            color: var(--text-light);
-            margin: 0 0 16px;
+            color: var(--wc-text);
+            margin: 0 0 12px;
+            line-height: 1.8;
+            font-size: 0.95rem;
+        }
+
+        #from-info {
+            font-family: 'Caveat', cursive;
+            /* パス名は手書き風に */
+            font-size: 1.1rem;
+            color: var(--wc-text-light);
+            background: rgba(255, 255, 255, 0.6);
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 4px;
+            margin-bottom: 20px;
         }
 
         .maintenance-actions {
             display: flex;
-            gap: 8px;
+            gap: 16px;
             justify-content: center;
             flex-wrap: wrap;
-            margin-top: 8px;
+            margin-top: 32px;
+        }
+
+        .btn {
+            text-decoration: none;
+            padding: 10px 24px;
+            border-radius: 50px;
+            transition: all 0.3s ease;
+            font-size: 0.95rem;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            letter-spacing: 0.05em;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .btn-primary {
+            background-color: var(--wc-primary);
+            color: white;
+            border: 1px solid transparent;
+            box-shadow: 0 4px 15px rgba(93, 140, 174, 0.3);
+        }
+
+        .btn-primary:hover {
+            background-color: #4a7695;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(93, 140, 174, 0.4);
+        }
+
+        .btn-secondary {
+            background-color: transparent;
+            color: var(--wc-text);
+            border: 1px solid var(--wc-secondary);
+        }
+
+        .btn-secondary:hover {
+            background-color: rgba(152, 181, 204, 0.1);
+            color: var(--wc-primary);
+            border-color: var(--wc-primary);
+        }
+
+        /* レスポンシブ対応 */
+        @media (max-width: 480px) {
+            .maintenance-card {
+                padding: 32px 20px;
+            }
+
+            .maintenance-card h1 {
+                font-size: 1.5rem;
+            }
+
+            .maintenance-actions {
+                flex-direction: column;
+                gap: 12px;
+            }
+
+            .btn {
+                width: 100%;
+                justify-content: center;
+                box-sizing: border-box;
+            }
         }
     </style>
     <script>
@@ -89,7 +303,9 @@
             const from = params.get('from');
             const info = document.getElementById('from-info');
             if (from && info) {
-                info.textContent = `要求されたページ: ${from}.html`;
+                info.textContent = `${from}.html not found`; // 英語表記にして雰囲気を合わせる
+            } else if (info) {
+                info.style.display = 'none';
             }
         });
     </script>
@@ -98,16 +314,32 @@
 <body>
     <div class="maintenance-wrapper">
         <div class="maintenance-card">
-            <div class="maintenance-icon">
-                <i class="fas fa-tools"></i>
+            <div class="maintenance-icon-wrapper">
+                <div class="maintenance-icon-bg"></div>
+                <div class="maintenance-icon">
+                    <i class="fas fa-paint-brush"></i> <!-- アイコンを筆に変更 -->
+                </div>
             </div>
-            <h1>このページは現在準備中です</h1>
+
+            <h1>
+                <span class="english-sub">Coming Soon</span>
+                準備中です
+            </h1>
+
             <p id="from-info"></p>
-            <p>公開までしばらくお待ちください。トップページから他のコンテンツをご覧いただけます。</p>
+
+            <p>
+                このページは現在、色を塗り重ねている途中です。<br>
+                完成までもうしばらくお待ちください。
+            </p>
+
             <div class="maintenance-actions">
-                <a href="index.html" class="btn btn-primary"><i class="fas fa-home"></i> ホームへ戻る</a>
-                <a href="javascript:history.back()" class="btn btn-secondary"><i class="fas fa-arrow-left"></i>
-                    前のページ</a>
+                <a href="index.html" class="btn btn-primary">
+                    <i class="fas fa-home"></i> ホームへ戻る
+                </a>
+                <a href="javascript:history.back()" class="btn btn-secondary">
+                    <i class="fas fa-arrow-left"></i> 前のページ
+                </a>
             </div>
         </div>
     </div>

@@ -21,59 +21,59 @@ const CONFIG = {
             }
         }
     },
-    
+
     // Google Apps Script WebApp URL
     // デプロイ後にこのURLを更新してください
     GAS_URL: 'https://script.google.com/macros/s/AKfycbxpmHJfKdc0nmAI3dG8-1-qlex9Sr9iy5LPZ1ri2EXkG1y5oFVlfrXs6Cy8QlbjgWQI/exec',
-    
+
     // Firebase設定（通知システム用）
     FIREBASE: {
         PROJECT_ID: 'nazuna-portal',
         VAPID_KEY: 'BCEnp7nRdNubcooPI86iEEFqavkUxRal0t3AKkjsC1nB-PYLOUiE-EnGITJKfdANSRCG7zjyRzR6ERX3ZT0tZMQ',
         MESSAGING_SENDER_ID: '181514532945'
     },
-    
+
     // APIエンドポイント
     API: {
         // 部活動関連
         GET_CLUBS: 'getClubs',
         ADD_CLUB: 'addClub',
         UPDATE_CLUB: 'updateClub',
-        
+
         // フォーラム関連
         GET_POSTS: 'getPosts',
         SUBMIT_POST: 'submitPost',
         UPDATE_POST_STATUS: 'updatePostStatus',
-        
+
         // お知らせ関連
         GET_NEWS: 'getNews',
         ADD_NEWS: 'addNews',
-        
+
         // アンケート関連
         GET_SURVEYS: 'getSurveys',
         SUBMIT_SURVEY: 'submitSurvey',
         GET_SURVEY_RESULTS: 'getSurveyResults',
-        
+
         // 生徒会メンバー関連
         GET_MEMBERS: 'getMembers',
         UPDATE_MEMBERS: 'updateMembers'
     },
-    
+
     // アプリケーション設定
     APP: {
         NAME: 'なずなポータル',
         VERSION: '1.0.0',
         DESCRIPTION: 'みんなでつくる学校生活',
-        
+
         // ページネーション
         ITEMS_PER_PAGE: 10,
-        
+
         // キャッシュ設定（ミリ秒）
         CACHE_DURATION: 5 * 60 * 1000, // 5分
-        
+
         // 通知設定
         NOTIFICATION_ICON: 'https://lh3.googleusercontent.com/pw/AP1GczPtDAtqRlRZY8yBF0ajASVZzyEDa1uq1vlm3Dw7a7TIXMQUzwOjquumsabe_DDWZiM6tg2Ruxgtb-kvWibkkbxvcklHnPPqCat1N8H4mKJp3QPpmvyEyJxObatEQq4xD2zu0AQ8yBYZf7GePeGIoEEF=w1033-h1033-s-no-gm?authuser=0',
-        
+
         // デバッグモード
         DEBUG: true,
 
@@ -87,6 +87,8 @@ const CONFIG = {
             'survey': true,
             'member-detail': true,
             'admin': true,
+            'devlog': false,
+            'schedule': true,
             '404': true,
             'location-denied': true
         }
@@ -123,18 +125,18 @@ const CONFIG = {
             CONSENT_MESSAGE: '個人情報保護の観点より、本ページは校内限定配信に設定されています。データ流出を防止するため、位置情報の取得を行います。取得した位置情報は、校内滞在の判定のみに用い、保存・記録はいたしません。'
         }
     },
-    
+
     // UI設定
     UI: {
         // アニメーション時間（ミリ秒）
         ANIMATION_DURATION: 300,
-        
+
         // ローディング表示時間
         MIN_LOADING_TIME: 1000,
-        
+
         // 自動リフレッシュ間隔（ミリ秒）
         AUTO_REFRESH_INTERVAL: 30 * 60 * 1000, // 30分
-        
+
         // フォーム設定
         FORM: {
             MAX_POST_LENGTH: 1000,
@@ -142,7 +144,7 @@ const CONFIG = {
             REQUIRED_FIELDS_MARK: '*'
         }
     },
-    
+
     // カテゴリ設定
     CATEGORIES: {
         CLUBS: {
@@ -152,7 +154,7 @@ const CONFIG = {
             'music': '音楽部',
             'volunteer': 'ボランティア'
         },
-        
+
         NEWS: {
             'event': 'イベント',
             'newsletter': '生徒会だより',
@@ -160,7 +162,7 @@ const CONFIG = {
             'important': '重要',
             'general': '一般'
         },
-        
+
         FORUM: {
             'suggestion': '提案・要望',
             'complaint': '苦情・問題',
@@ -170,7 +172,7 @@ const CONFIG = {
             'other': 'その他'
         }
     },
-    
+
     // ステータス設定
     STATUS: {
         POSTS: {
@@ -179,14 +181,14 @@ const CONFIG = {
             'resolved': '対応済み',
             'closed': '終了'
         },
-        
+
         SURVEYS: {
             'active': '実施中',
             'closed': '終了',
             'draft': '下書き'
         }
     },
-    
+
     // エラーメッセージ
     MESSAGES: {
         ERROR: {
@@ -196,13 +198,13 @@ const CONFIG = {
             PERMISSION: 'この操作を実行する権限がありません。',
             NOT_FOUND: '要求されたデータが見つかりません。'
         },
-        
+
         SUCCESS: {
             POST_SUBMITTED: '投稿が完了しました！担当者が確認後、返信いたします。',
             SURVEY_SUBMITTED: 'アンケートの回答を送信しました。ご協力ありがとうございました！',
             NOTIFICATION_ENABLED: '通知が有効になりました！重要なお知らせをお届けします。'
         },
-        
+
         INFO: {
             LOADING: '読み込み中...',
             NO_DATA: 'データがありません。',

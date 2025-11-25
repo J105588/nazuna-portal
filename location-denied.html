@@ -1,14 +1,17 @@
 <!DOCTYPE html>
 <html lang="ja">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>アクセス不可 - なずなポータル</title>
+    <title>アクセス拒否 - なずなポータル</title>
     <link rel="stylesheet" href="css/style.css">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&display=swap"
+        rel="stylesheet">
     <meta name="theme-color" content="#4a7c59">
-    <link rel="icon" type="image/png" href="https://lh3.googleusercontent.com/pw/AP1GczPtDAtqRlRZY8yBF0ajASVZzyEDa1uq1vlm3Dw7a7TIXMQUzwOjquumsabe_DDWZiM6tg2Ruxgtb-kvWibkkbxvcklHnPPqCat1N8H4mKJp3QPpmvyEyJxObatEQq4xD2zu0AQ8yBYZf7GePeGIoEEF=w1033-h1033-s-no-gm?authuser=0">
+    <link rel="icon" type="image/png"
+        href="https://lh3.googleusercontent.com/pw/AP1GczPtDAtqRlRZY8yBF0ajASVZzyEDa1uq1vlm3Dw7a7TIXMQUzwOjquumsabe_DDWZiM6tg2Ruxgtb-kvWibkkbxvcklHnPPqCat1N8H4mKJp3QPpmvyEyJxObatEQq4xD2zu0AQ8yBYZf7GePeGIoEEF=w1033-h1033-s-no-gm?authuser=0">
     <style>
         .denied-wrapper {
             min-height: 100vh;
@@ -18,6 +21,7 @@
             padding: 40px 20px;
             background: linear-gradient(135deg, #66eabc 0%, #d79769 100%);
         }
+
         .denied-card {
             background: var(--surface-color);
             border: 1px solid var(--border-color);
@@ -28,6 +32,7 @@
             padding: 32px;
             text-align: center;
         }
+
         .denied-icon {
             width: 80px;
             height: 80px;
@@ -38,20 +43,24 @@
             justify-content: center;
             margin: 0 auto 16px;
         }
+
         .denied-icon i {
             color: #fff;
             font-size: 2rem;
         }
+
         .denied-card h1 {
             margin: 0 0 8px;
             color: var(--primary-color);
             font-size: 1.5rem;
         }
+
         .denied-card p {
             color: var(--text-light);
             margin: 0 0 16px;
             line-height: 1.6;
         }
+
         .location-info {
             background: var(--background-color);
             border: 1px solid var(--border-color);
@@ -60,6 +69,7 @@
             margin: 16px 0;
             text-align: left;
         }
+
         .location-info h3 {
             margin: 0 0 8px;
             font-size: 1rem;
@@ -68,9 +78,11 @@
             align-items: center;
             gap: 8px;
         }
+
         .location-info h3 i {
             color: var(--primary-color);
         }
+
         .location-coords {
             font-family: 'Courier New', monospace;
             font-size: 0.9rem;
@@ -80,15 +92,18 @@
             background: rgba(0, 0, 0, 0.02);
             border-radius: 4px;
         }
+
         .location-coords span {
             display: block;
             margin: 4px 0;
         }
+
         .location-coords .label {
             font-weight: 600;
             color: var(--text-light);
             margin-right: 8px;
         }
+
         .denied-actions {
             display: flex;
             gap: 8px;
@@ -96,6 +111,7 @@
             flex-wrap: wrap;
             margin-top: 24px;
         }
+
         .error-message {
             color: #e74c3c;
             font-size: 0.9rem;
@@ -103,6 +119,7 @@
         }
     </style>
 </head>
+
 <body>
     <div class="denied-wrapper">
         <div class="denied-card">
@@ -114,7 +131,7 @@
             <p style="font-size: 0.9rem; color: var(--text-light);">
                 位置情報の取得が拒否されたか、許可ゾーン外からのアクセスである可能性があります。
             </p>
-            
+
             <div class="location-info" id="location-info" style="display: none;">
                 <h3>
                     <i class="fas fa-location-dot"></i>
@@ -125,9 +142,9 @@
                     <span><span class="label">経度:</span> <span id="lng-value">-</span></span>
                 </div>
             </div>
-            
+
             <div class="error-message" id="error-message" style="display: none;"></div>
-            
+
             <div class="denied-actions">
                 <a href="index.html" class="btn btn-primary">
                     <i class="fas fa-home"></i> ホームへ戻る
@@ -140,18 +157,18 @@
     </div>
 
     <script>
-        document.addEventListener('DOMContentLoaded', function() {
+        document.addEventListener('DOMContentLoaded', function () {
             const params = new URLSearchParams(window.location.search);
             const lat = params.get('lat');
             const lng = params.get('lng');
             const error = params.get('error');
-            
+
             const locationInfo = document.getElementById('location-info');
             const locationCoords = document.getElementById('location-coords');
             const latValue = document.getElementById('lat-value');
             const lngValue = document.getElementById('lng-value');
             const errorMessage = document.getElementById('error-message');
-            
+
             // URLパラメータから座標を取得して表示
             if (lat && lng) {
                 try {
@@ -166,7 +183,7 @@
                     console.warn('Failed to parse location coordinates:', e);
                 }
             }
-            
+
             // エラーメッセージを表示
             if (error) {
                 let message = '';
@@ -189,19 +206,19 @@
                 errorMessage.textContent = message;
                 errorMessage.style.display = 'block';
             }
-            
+
             // 位置情報が取得できていない場合、再度取得を試みる（ユーザーが許可した場合）
             if (!lat || !lng) {
                 if ('geolocation' in navigator) {
                     navigator.geolocation.getCurrentPosition(
-                        function(position) {
+                        function (position) {
                             const currentLat = position.coords.latitude;
                             const currentLng = position.coords.longitude;
                             latValue.textContent = currentLat.toFixed(6);
                             lngValue.textContent = currentLng.toFixed(6);
                             locationInfo.style.display = 'block';
                         },
-                        function(err) {
+                        function (err) {
                             // エラーは無視（既にエラーメッセージが表示されている可能性がある）
                         },
                         {
@@ -215,5 +232,5 @@
         });
     </script>
 </body>
-</html>
 
+</html>
