@@ -7,7 +7,7 @@
 // キャッシュ設定
 // =====================================
 
-const CACHE_VERSION = 6;
+const CACHE_VERSION = 7;
 const CACHE_NAME = `nazuna-portal-v${CACHE_VERSION}`;
 const CACHE_PREFIX = 'nazuna-portal-v';
 
@@ -18,8 +18,10 @@ const STATIC_CACHE_FILES = [
   'clubs.html',
   'council.html',
   'forum.html',
+  'offline.html',
   'member-detail.html',
   'news.html',
+  'devlog.html',
   'survey.html',
   'schedule.html',
   'css/style.css',
@@ -137,7 +139,7 @@ self.addEventListener('install', (event) => {
 });
 
 // =====================================
-// アクティベーション（古いキャッシュ削除）
+// アクティベーション（すべてのキャッシュを削除して再キャッシュ）
 // =====================================
 
 self.addEventListener('activate', (event) => {
@@ -151,25 +153,71 @@ self.addEventListener('activate', (event) => {
 
         console.log('[SW] Found caches:', cacheNames);
 
-        // 古いキャッシュを削除
+        // nazuna-portalで始まるキャッシュをすべて削除（現在のバージョンも含む）
         const deletePromises = cacheNames.map((cacheName) => {
-          // nazuna-portalで始まるキャッシュのみ対象
           if (cacheName.startsWith(CACHE_PREFIX)) {
-            const version = parseInt(cacheName.replace(CACHE_PREFIX, ''));
-
-            // 現在のバージョンより古い場合削除
-            if (!isNaN(version) && version < CACHE_VERSION) {
-              console.log('[SW] Deleting old cache:', cacheName);
-              return caches.delete(cacheName);
-            }
+            console.log('[SW] Deleting cache:', cacheName);
+            return caches.delete(cacheName);
           }
-
           return Promise.resolve();
         });
 
         await Promise.all(deletePromises);
 
-        console.log('[SW] Old caches deleted successfully');
+        console.log('[SW] All caches deleted successfully');
+
+        // 新しいキャッシュを作成して再キャッシュ
+        const cache = await caches.open(CACHE_NAME);
+
+        const toAbsolute = (url) => {
+          const normalized = url.startsWith('/') ? url.slice(1) : url;
+          return new URL(normalized, self.registration.scope).toString();
+        };
+
+        // 必須リソースを再キャッシュ
+        const requiredFiles = STATIC_CACHE_FILES.map(async (url) => {
+          try {
+            const absUrl = toAbsolute(url);
+            const response = await fetch(absUrl, { cache: 'reload' }); // キャッシュをバイパスして最新を取得
+            if (response.ok) {
+              await cache.put(absUrl, response);
+              console.log(`[SW] Re-cached (required): ${absUrl}`);
+              return true;
+            } else {
+              console.warn(`[SW] Failed to re-cache required file ${absUrl}: ${response.status}`);
+              return false;
+            }
+          } catch (error) {
+            console.warn(`[SW] Failed to re-cache required file ${url}:`, error.message);
+            return false;
+          }
+        });
+
+        // オプションリソースを再キャッシュ
+        const optionalFiles = OPTIONAL_CACHE_FILES.map(async (url) => {
+          try {
+            const absUrl = toAbsolute(url);
+            const response = await fetch(absUrl, { cache: 'reload' });
+            if (response.ok) {
+              await cache.put(absUrl, response);
+              console.log(`[SW] Re-cached (optional): ${absUrl}`);
+              return true;
+            } else {
+              console.log(`[SW] Skipped optional file ${absUrl}: ${response.status}`);
+              return false;
+            }
+          } catch (error) {
+            console.log(`[SW] Skipped optional file ${url}:`, error.message);
+            return false;
+          }
+        });
+
+        const cachePromises = [...requiredFiles, ...optionalFiles];
+        const results = await Promise.allSettled(cachePromises);
+        const successCount = results.filter(r => r.status === 'fulfilled' && r.value === true).length;
+
+        const totalFiles = STATIC_CACHE_FILES.length + OPTIONAL_CACHE_FILES.length;
+        console.log(`[SW] Re-caching complete: ${successCount}/${totalFiles} files cached successfully`);
 
         // 即座に全てのクライアントをコントロール
         await self.clients.claim();

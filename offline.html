@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>オフライン - なずなポータル</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500&family=Shippori+Mincho:wght@400;600&display=swap"
+        rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+
+    <style>
+        :root {
+            /* 宇宙カラーパレット */
+            --bg-space-top: #090a0f;
+            --bg-space-bottom: #1b2735;
+            --nebula-purple: #6b2c91;
+            --nebula-pink: #c04d85;
+
+            --text-main: #e2e8f0;
+            --text-muted: #94a3b8;
+            --star-white: #ffffff;
+            --accent-cyan: #64ffda;
+            /* サイバー感のあるアクセント */
+
+            --glass-bg: rgba(11, 12, 16, 0.6);
+            --glass-border: rgba(255, 255, 255, 0.1);
+            --glass-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.8);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Noto Sans JP', sans-serif;
+            background: radial-gradient(ellipse at bottom, var(--bg-space-bottom) 0%, var(--bg-space-top) 100%);
+            color: var(--text-main);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            padding: 20px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        /* 背景の星空生成 */
+        .stars {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -2;
+            background-image:
+                radial-gradient(2px 2px at 20px 30px, #eee, rgba(0, 0, 0, 0)),
+                radial-gradient(2px 2px at 40px 70px, #fff, rgba(0, 0, 0, 0)),
+                radial-gradient(2px 2px at 50px 160px, #ddd, rgba(0, 0, 0, 0)),
+                radial-gradient(2px 2px at 90px 40px, #fff, rgba(0, 0, 0, 0)),
+                radial-gradient(2px 2px at 130px 80px, #fff, rgba(0, 0, 0, 0)),
+                radial-gradient(2px 2px at 160px 120px, #ddd, rgba(0, 0, 0, 0));
+            background-repeat: repeat;
+            background-size: 200px 200px;
+            animation: star-twinkle 4s infinite ease-in-out;
+            opacity: 0.8;
+        }
+
+        @keyframes star-twinkle {
+
+            0%,
+            100% {
+                opacity: 0.8;
+            }
+
+            50% {
+                opacity: 0.5;
+            }
+        }
+
+        /* 星雲のような光のぼかし */
+        body::before {
+            content: '';
+            position: fixed;
+            top: -20%;
+            right: -20%;
+            width: 80vw;
+            height: 80vw;
+            background: radial-gradient(circle, var(--nebula-purple), transparent 60%);
+            filter: blur(80px);
+            opacity: 0.4;
+            z-index: -1;
+            animation: nebula-float 20s infinite alternate;
+        }
+
+        body::after {
+            content: '';
+            position: fixed;
+            bottom: -20%;
+            left: -20%;
+            width: 70vw;
+            height: 70vw;
+            background: radial-gradient(circle, var(--nebula-pink), transparent 60%);
+            filter: blur(90px);
+            opacity: 0.3;
+            z-index: -1;
+            animation: nebula-float 25s infinite alternate-reverse;
+        }
+
+        @keyframes nebula-float {
+            0% {
+                transform: translate(0, 0);
+            }
+
+            100% {
+                transform: translate(30px, -20px);
+            }
+        }
+
+        /* 流れ星アニメーション */
+        .shooting-star {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 4px;
+            height: 4px;
+            background: #fff;
+            border-radius: 50%;
+            box-shadow: 0 0 0 4px rgba(255, 255, 255, 0.1), 0 0 0 8px rgba(255, 255, 255, 0.1), 0 0 20px rgba(255, 255, 255, 1);
+            animation: shoot 3s linear infinite;
+            opacity: 0;
+        }
+
+        .shooting-star::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 300px;
+            height: 1px;
+            background: linear-gradient(90deg, #fff, transparent);
+        }
+
+        .shooting-star:nth-child(1) {
+            top: 0;
+            left: 80%;
+            animation-delay: 1s;
+        }
+
+        .shooting-star:nth-child(2) {
+            top: 20%;
+            left: 100%;
+            animation-delay: 4s;
+        }
+
+        .shooting-star:nth-child(3) {
+            top: 60%;
+            left: 110%;
+            animation-delay: 7s;
+        }
+
+        @keyframes shoot {
+            0% {
+                transform: rotate(215deg) translateX(0);
+                opacity: 1;
+            }
+
+            70% {
+                opacity: 1;
+            }
+
+            100% {
+                transform: rotate(215deg) translateX(-1000px);
+                opacity: 0;
+            }
+        }
+
+        .offline-container {
+            background: var(--glass-bg);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid var(--glass-border);
+            border-radius: 20px;
+            box-shadow: var(--glass-shadow);
+            padding: 56px 40px;
+            max-width: 480px;
+            width: 100%;
+            text-align: center;
+            position: relative;
+            z-index: 1;
+            overflow: hidden;
+        }
+
+        .offline-container::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, var(--accent-cyan), transparent);
+            opacity: 0.7;
+        }
+
+        .offline-icon {
+            width: 96px;
+            height: 96px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 24px;
+            font-size: 48px;
+            color: var(--accent-cyan);
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 50%;
+            border: 1px solid rgba(100, 255, 218, 0.3);
+            box-shadow: 0 0 30px rgba(100, 255, 218, 0.15);
+        }
+
+        /* 衛星の回転アニメーション */
+        .offline-icon i {
+            animation: float-rotate 6s ease-in-out infinite;
+        }
+
+        @keyframes float-rotate {
+            0% {
+                transform: rotate(0deg) scale(1);
+            }
+
+            50% {
+                transform: rotate(15deg) scale(1.1);
+            }
+
+            100% {
+                transform: rotate(0deg) scale(1);
+            }
+        }
+
+        h1 {
+            font-family: 'Shippori Mincho', serif;
+            font-size: 1.8rem;
+            color: var(--star-white);
+            margin-bottom: 16px;
+            font-weight: 600;
+            letter-spacing: 0.1em;
+        }
+
+        p {
+            font-size: 0.9rem;
+            color: var(--text-muted);
+            line-height: 2;
+            margin-bottom: 40px;
+            font-weight: 300;
+        }
+
+        .instructions {
+            margin-bottom: 40px;
+            text-align: center;
+        }
+
+        .status-indicator {
+            display: inline-block;
+            padding: 8px 16px;
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 50px;
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            letter-spacing: 0.05em;
+        }
+
+        .status-indicator span {
+            color: #ff6b6b;
+            /* エラーの赤 */
+            font-weight: bold;
+            margin-right: 6px;
+        }
+
+        .retry-button {
+            background: transparent;
+            color: var(--accent-cyan);
+            border: 1px solid var(--accent-cyan);
+            padding: 14px 48px;
+            border-radius: 0;
+            /* 四角くしてSF感を出す */
+            font-size: 1rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.4s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 12px;
+            letter-spacing: 0.2em;
+            text-decoration: none;
+            font-family: 'Noto Sans JP', sans-serif;
+            position: relative;
+            overflow: hidden;
+            z-index: 1;
+        }
+
+        .retry-button::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: var(--accent-cyan);
+            transition: all 0.4s ease;
+            z-index: -1;
+        }
+
+        .retry-button:hover {
+            color: var(--bg-space-top);
+            box-shadow: 0 0 20px rgba(100, 255, 218, 0.4);
+        }
+
+        .retry-button:hover::before {
+            left: 0;
+        }
+
+        @media (max-width: 480px) {
+            .offline-container {
+                padding: 40px 24px;
+            }
+
+            h1 {
+                font-size: 1.5rem;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="stars"></div>
+    <div class="shooting-star"></div>
+    <div class="shooting-star"></div>
+    <div class="shooting-star"></div>
+
+    <div class="offline-container">
+        <div class="offline-icon">
+            <i class="fas fa-satellite-dish"></i>
+        </div>
+
+        <h1>交信が途絶えました</h1>
+
+        <p>
+            はるか遠く、電波の銀河で<br>
+            シグナルを見失ってしまったようです。<br>
+            地上局との接続をご確認ください。
+        </p>
+
+        <div class="instructions">
+            <div class="status-indicator">
+                <span>●</span> CONNECTION LOST
+            </div>
+        </div>
+
+        <button class="retry-button" onclick="location.reload()">
+            RECONNECT
+        </button>
+    </div>
+</body>
+
+</html>
