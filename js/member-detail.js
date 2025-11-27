@@ -36,7 +36,7 @@ document.addEventListener('DOMContentLoaded', function() {
     
     async function waitForSupabaseInitialization() {
         let attempts = 0;
-        const maxAttempts = 50; // 5秒間待機 (100ms × 50)
+        const maxAttempts = 30; // 1.5秒間待機 (50ms × 30) - 最適化: 5秒→1.5秒
         
         while (attempts < maxAttempts) {
             if (typeof window.supabaseQueries !== 'undefined' && window.supabaseQueries !== null) {
@@ -51,7 +51,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 return;
             }
             
-            await new Promise(resolve => setTimeout(resolve, 100));
+            await new Promise(resolve => setTimeout(resolve, 50));
             attempts++;
         }
         

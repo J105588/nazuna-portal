@@ -22,7 +22,7 @@ class MaintenanceChecker {
         }, 5 * 60 * 1000);
     }
     
-    async waitForApiClient(maxAttempts = 20, delay = 100) {
+    async waitForApiClient(maxAttempts = 20, delay = 50) {
         for (let i = 0; i < maxAttempts; i++) {
             if (window.apiClient && typeof window.apiClient.sendRequest === 'function') {
                 return true;

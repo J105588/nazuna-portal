@@ -68,8 +68,8 @@ const CONFIG = {
         // ページネーション
         ITEMS_PER_PAGE: 10,
 
-        // キャッシュ設定（ミリ秒）
-        CACHE_DURATION: 5 * 60 * 1000, // 5分
+        // キャッシュ設定（ミリ秒）（最適化: 5分→15分に延長）
+        CACHE_DURATION: 15 * 60 * 1000, // 15分
 
         // 通知設定
         NOTIFICATION_ICON: 'https://lh3.googleusercontent.com/pw/AP1GczPtDAtqRlRZY8yBF0ajASVZzyEDa1uq1vlm3Dw7a7TIXMQUzwOjquumsabe_DDWZiM6tg2Ruxgtb-kvWibkkbxvcklHnPPqCat1N8H4mKJp3QPpmvyEyJxObatEQq4xD2zu0AQ8yBYZf7GePeGIoEEF=w1033-h1033-s-no-gm?authuser=0',
@@ -135,8 +135,8 @@ const CONFIG = {
         // アニメーション時間（ミリ秒）
         ANIMATION_DURATION: 300,
 
-        // ローディング表示時間
-        MIN_LOADING_TIME: 1000,
+        // ローディング表示時間（最適化: 1000ms→500ms）
+        MIN_LOADING_TIME: 500,
 
         // 自動リフレッシュ間隔（ミリ秒）
         AUTO_REFRESH_INTERVAL: 30 * 60 * 1000, // 30分

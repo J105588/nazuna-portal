@@ -4,10 +4,10 @@ let supabaseQueries = null;
 
 // Supabaseクライアントを初期化
 function initSupabase() {
-    // CONFIGが読み込まれているか確認
+    // CONFIGが読み込まれているか確認（最適化: 100ms→50ms）
     if (typeof CONFIG === 'undefined' || !CONFIG.SUPABASE) {
         console.warn('CONFIG not loaded yet, waiting...');
-        setTimeout(initSupabase, 100);
+        setTimeout(initSupabase, 50);
         return;
     }
 
@@ -561,7 +561,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 if (href.startsWith('#') || href.startsWith('javascript:')) return;
                 // 外部リンクや同じドメインのリンクは対象
                 showIndicator();
-                setTimeout(hideIndicator, 5000);
+                setTimeout(hideIndicator, 2000);
                 return;
             }
 
@@ -581,7 +581,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 if (onclick.includes('location') || onclick.includes('window.location') ||
                     onclick.includes('href') || dataHref || href) {
                     showIndicator();
-                    setTimeout(hideIndicator, 5000);
+                    setTimeout(hideIndicator, 2000);
                 }
             }
         }, true);
@@ -589,7 +589,7 @@ document.addEventListener('DOMContentLoaded', function () {
         // すべてのフォーム送信で表示
         document.addEventListener('submit', () => {
             showIndicator();
-            setTimeout(hideIndicator, 5000);
+            setTimeout(hideIndicator, 2000);
         }, true);
 
         // 画面遷移開始時
@@ -656,9 +656,9 @@ document.addEventListener('DOMContentLoaded', function () {
         return;
     }
 
-    // 最小5秒間はオープニング画面を表示
+    // 最小1.5秒間はオープニング画面を表示（最適化: 5秒→1.5秒）
     const startTime = Date.now();
-    const minDisplayTime = 5000; // 5秒
+    const minDisplayTime = 1500; // 1.5秒
 
     const initializeContent = async () => {
         try {
@@ -721,11 +721,11 @@ document.addEventListener('DOMContentLoaded', function () {
                 document.body.removeEventListener('animationend', onAnimEnd);
             };
             document.body.addEventListener('animationend', onAnimEnd, { once: true });
-            // フォールバック（安全網）
+            // フォールバック（安全網）（最適化: 2000ms→1000ms）
             setTimeout(() => {
                 document.body.classList.remove('page-enter');
                 document.body.classList.remove('page-enter-active');
-            }, 2000);
+            }, 1000);
         });
     }
 
@@ -738,15 +738,15 @@ document.addEventListener('DOMContentLoaded', function () {
         initializeContent();
     }
 
-    // フォールバック：オープニング画面を表示した場合のみ10秒後に強制的に閉じる
+    // フォールバック：オープニング画面を表示した場合のみ5秒後に強制的に閉じる（最適化: 10秒→5秒）
     if (shouldShowOpening) {
         setTimeout(() => {
             const openingScreen = document.getElementById('opening-screen');
             if (openingScreen) {
-                console.log('Force hiding opening screen after 10 seconds');
+                console.log('Force hiding opening screen after 5 seconds');
                 hideOpeningScreen();
             }
-        }, 10000);
+        }, 5000);
     }
 });
 
@@ -870,7 +870,7 @@ function initSidebar() {
                 showLoadingOverlay();
             }
             closeSidebar();
-            setTimeout(() => { window.location.href = href; }, 220);
+            setTimeout(() => { window.location.href = href; }, 50);
         });
     });
 
@@ -1057,13 +1057,13 @@ function hideOpeningScreen() {
             });
         }
 
-        // メインコンテンツの表示を少し遅らせる
+        // メインコンテンツの表示を少し遅らせる（最適化: 200ms→100ms）
         setTimeout(() => {
             const main = document.querySelector('main');
             if (main) {
                 main.classList.add('page-ready');
             }
-        }, 200);
+        }, 100);
 
         setTimeout(() => {
             if (openingScreen.parentNode) {
@@ -1071,17 +1071,17 @@ function hideOpeningScreen() {
                 document.body.classList.remove('opening-active');
                 console.log('Opening screen removed from DOM');
             }
-        }, 800); // フェードアウト時間に合わせて調整
+        }, 400); // フェードアウト時間に合わせて調整（最適化: 800ms→400ms）
     } else {
         console.log('Opening screen not found in DOM');
     }
 }
 
-// データキャッシュ
+// データキャッシュ（最適化: キャッシュ期間を5分→15分に延長）
 const dataCache = {
     councilMembers: null,
     lastFetch: null,
-    cacheDuration: 5 * 60 * 1000 // 5分
+    cacheDuration: 15 * 60 * 1000 // 15分
 };
 
 // キャッシュからデータを取得
@@ -2669,11 +2669,11 @@ function showLoadingOverlay() {
 function hideLoadingOverlay() {
     const overlay = document.getElementById('loading-overlay');
     if (!overlay) return;
-    // fade-out then remove
+    // fade-out then remove（最適化: 220ms→100ms）
     overlay.classList.remove('show');
     setTimeout(() => {
         overlay.remove();
-    }, 220);
+    }, 100);
 }
 window.addEventListener('DOMContentLoaded', hideLoadingOverlay);
 
@@ -2684,9 +2684,9 @@ window.addEventListener('DOMContentLoaded', hideLoadingOverlay);
         try {
             const guard = window.CONFIG?.SECURITY?.GEO_GUARD;
             if (!guard) {
-                // CONFIGがまだ読み込まれていない場合は少し待つ
+                // CONFIGがまだ読み込まれていない場合は少し待つ（最適化: 100ms→50ms）
                 if (document.readyState === 'loading') {
-                    setTimeout(checkAndRun, 100);
+                    setTimeout(checkAndRun, 50);
                     return;
                 }
                 try { console.log('Geo guard: Config not found'); } catch { }

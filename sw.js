@@ -281,36 +281,43 @@ self.addEventListener('fetch', (event) => {
 });
 
 /**
- * ナビゲーションリクエストの処理
- * ネットワーク優先、フォールバックでキャッシュ
+ * ナビゲーションリクエストの処理（最適化: キャッシュ優先戦略）
+ * キャッシュ優先で高速表示、バックグラウンドで更新
  */
 async function handleNavigationRequest(request) {
-  try {
-    // ネットワークから取得を試みる
-    const networkResponse = await fetch(request);
-
+  // まずキャッシュを確認（高速表示のため）
+  const cachedResponse = await caches.match(request);
+  
+  // バックグラウンドでネットワークから更新を試みる（非ブロッキング）
+  const networkPromise = fetch(request).then(async (networkResponse) => {
     // 成功した場合はキャッシュに保存
     if (networkResponse && networkResponse.ok) {
       const cache = await caches.open(CACHE_NAME);
-      cache.put(request, networkResponse.clone());
+      await cache.put(request, networkResponse.clone());
     }
-
     return networkResponse;
+  }).catch(() => null); // ネットワークエラーは無視（キャッシュを使用）
 
-  } catch (error) {
-    console.log('[SW] Network failed, trying cache:', request.url);
-
-    // ネットワークが失敗した場合はキャッシュから取得
-    const cachedResponse = await caches.match(request);
-
-    if (cachedResponse) {
-      return cachedResponse;
-    }
-
-    // キャッシュにもない場合はスコープ相対の index.html
-    const fallbackUrl = new URL('index.html', self.registration.scope).toString();
-    return caches.match(fallbackUrl);
+  // キャッシュがあれば即座に返す（高速表示）
+  if (cachedResponse) {
+    // バックグラウンドで更新を待たない（非ブロッキング）
+    networkPromise.catch(() => {}); // エラーを無視
+    return cachedResponse;
   }
+
+  // キャッシュがない場合はネットワークを待つ
+  try {
+    const networkResponse = await networkPromise;
+    if (networkResponse && networkResponse.ok) {
+      return networkResponse;
+    }
+  } catch (error) {
+    console.log('[SW] Network failed:', request.url);
+  }
+
+  // フォールバック: index.html
+  const fallbackUrl = new URL('index.html', self.registration.scope).toString();
+  return caches.match(fallbackUrl);
 }
 
 /**
